@@ -1,0 +1,10 @@
+@import "tailwindcss";
+
+@theme {
+  /* No prefix needed for 375px baseline; it is the default screen size */
+  --breakpoint-sm: 40rem;    /* 640px - Small tablets / Large phones */
+  --breakpoint-md: 48rem;    /* 768px - Tablets */
+  --breakpoint-lg: 64rem;    /* 1024px - Laptops / Notebooks */
+  --breakpoint-xl: 80rem;    /* 1280px - Desktops */
+  --breakpoint-2xl: 96rem;   /* 1536px - Large displays */
+}

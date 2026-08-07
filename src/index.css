@@ -1,10 +1,87 @@
 @import "tailwindcss";
 
 @theme {
-  /* No prefix needed for 375px baseline; it is the default screen size */
-  --breakpoint-sm: 40rem;    /* 640px - Small tablets / Large phones */
-  --breakpoint-md: 48rem;    /* 768px - Tablets */
-  --breakpoint-lg: 64rem;    /* 1024px - Laptops / Notebooks */
-  --breakpoint-xl: 80rem;    /* 1280px - Desktops */
-  --breakpoint-2xl: 96rem;   /* 1536px - Large displays */
+  /* ── Breakpoints (375px mobile baseline) ── */
+  --breakpoint-sm: 40rem;   /* 640px  – Small tablets / large phones */
+  --breakpoint-md: 48rem;   /* 768px  – Tablets                      */
+  --breakpoint-lg: 64rem;   /* 1024px – Laptops                      */
+  --breakpoint-xl: 80rem;   /* 1280px – Desktops                     */
+  --breakpoint-2xl: 96rem;  /* 1536px – Large displays               */
+
+  /* ── Brand colours ── */
+  --color-brand-yellow: #F5B800;
+  --color-brand-teal:   #00C9A7;
+  --color-brand-dark:   #1A1A1A;
+  --color-brand-cream:  #F5F5F0;
+
+  /* ── Semantic aliases ── */
+  --color-bg-app:       var(--color-brand-cream);
+  --color-bg-dark:      var(--color-brand-dark);
+  --color-primary:      var(--color-brand-yellow);
+  --color-active-nav:   var(--color-brand-teal);
+}
+
+/* ── Base resets ── */
+*, *::before, *::after {
+  box-sizing: border-box;
+}
+
+html {
+  /* Prevent font size inflation on iOS */
+  -webkit-text-size-adjust: 100%;
+  text-size-adjust: 100%;
+}
+
+body {
+  margin: 0;
+  background-color: #F5F5F0;
+  color: #1A1A1A;
+  font-family: ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont,
+    "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
+  /* Smooth font rendering */
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+}
+
+/* ── Safe-area insets (iOS notch / home bar) ── */
+.safe-top    { padding-top:    env(safe-area-inset-top);    }
+.safe-bottom { padding-bottom: env(safe-area-inset-bottom); }
+
+/* ── Tap highlight ── */
+a, button { -webkit-tap-highlight-color: transparent; }
+
+/* ── Input autofill — prevent browser yellow/blue wash ── */
+input:-webkit-autofill,
+input:-webkit-autofill:hover,
+input:-webkit-autofill:focus {
+  -webkit-box-shadow: 0 0 0px 1000px #F9F9F7 inset;
+  -webkit-text-fill-color: #1A1A1A;
+  transition: background-color 5000s ease-in-out 0s;
+}
+
+/* Dark-screen autofill (auth pages with bg-[#1A1A1A]) */
+.autofill-dark input:-webkit-autofill,
+.autofill-dark input:-webkit-autofill:hover,
+.autofill-dark input:-webkit-autofill:focus {
+  -webkit-box-shadow: 0 0 0px 1000px #2A2A2A inset;
+  -webkit-text-fill-color: #ffffff;
+}
+
+/* ── Scrollbar — thin and unobtrusive ── */
+::-webkit-scrollbar       { width: 4px; height: 4px; }
+::-webkit-scrollbar-track { background: transparent; }
+::-webkit-scrollbar-thumb { background: #D1D1D1; border-radius: 2px; }
+
+/* ── Utility: hide scrollbar but keep scroll ── */
+.no-scrollbar {
+  -ms-overflow-style: none;
+  scrollbar-width: none;
+}
+.no-scrollbar::-webkit-scrollbar { display: none; }
+
+/* ── Page shell: centres content on large screens ── */
+#root {
+  min-height: 100dvh;
+  display: flex;
+  flex-direction: column;
 }

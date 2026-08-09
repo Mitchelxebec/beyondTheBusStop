@@ -5,6 +5,8 @@ interface AppLogoProps {
   size?: "sm" | "md" | "lg";
   /** Show the wordmark text beneath the icon. Defaults to true. */
   showWordmark?: boolean;
+  /** Force white wordmark text (for dark backgrounds). Defaults to false. */
+  light?: boolean;
 }
 
 const sizeMap = {
@@ -17,7 +19,7 @@ const sizeMap = {
  * App logo: rounded-square icon card + optional "Beyond the Bus Stop" wordmark.
  * Appears on: Splash, Onboarding, Commuter Home, Login, Register screens.
  */
-const AppLogo = ({ size = "md", showWordmark = true }: AppLogoProps) => {
+const AppLogo = ({ size = "md", showWordmark = true, light = false }: AppLogoProps) => {
   return (
     <div className="flex flex-col items-center gap-3">
       <div
@@ -31,7 +33,7 @@ const AppLogo = ({ size = "md", showWordmark = true }: AppLogoProps) => {
       </div>
 
       {showWordmark && (
-        <p className="text-sm font-medium text-center leading-tight text-current">
+        <p className={`text-sm font-medium text-center leading-tight ${light ? "text-white/90" : "text-gray-700"}`}>
           Beyond the Bus Stop
         </p>
       )}

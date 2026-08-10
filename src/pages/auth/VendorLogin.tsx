@@ -25,7 +25,7 @@ const StoreIcon = () => (
 const VendorLogin = () => {
   const [showPassword, setShowPassword] = useState(false);
   const navigate = useNavigate();
-  const { mutate: doLogin, isPending, error } = useLogin("vendor");
+  const { mutate: doLogin, isPending, error } = useLogin("business");
 
   const { register, handleSubmit, formState: { errors } } = useForm<FormValues>({
     resolver: zodResolver(schema),

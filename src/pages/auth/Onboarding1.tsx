@@ -18,7 +18,7 @@ const Onboarding1 = () => {
       </div>
 
       {/* Illustration */}
-      <div className="flex-1 flex items-center justify-center px-6 py-6">
+      <div className="flex-1 min-h-0 flex items-center justify-center px-6 py-4">
         <div className="relative flex items-center justify-center w-52 h-52">
           <div className="absolute w-40 h-40 rounded-full bg-gray-200/80" />
           <div className="relative z-10 bg-white rounded-2xl border-2 border-[#F5B800] px-5 py-4 shadow-md flex gap-2 items-center">

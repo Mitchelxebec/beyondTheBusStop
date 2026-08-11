@@ -7,6 +7,8 @@ interface PageHeaderProps {
   trailing?: ReactNode;
   /** Optional node rendered on the left before the title (e.g. a back button). */
   leading?: ReactNode;
+  /** Additional custom class names for outer header. */
+  className?: string;
 }
 
 /**
@@ -14,14 +16,16 @@ interface PageHeaderProps {
  * Appears on: Home, Nearby Essentials, Share Trip, Route Details,
  *             Profile, Vendor Dashboard, Search Results.
  */
-const PageHeader = ({ title, trailing, leading }: PageHeaderProps) => {
+const PageHeader = ({ title, trailing, leading, className = "" }: PageHeaderProps) => {
   return (
-    <header className="flex items-center justify-between px-5 pt-12 pb-3">
-      <div className="flex items-center gap-3">
-        {leading}
-        <h1 className="text-base font-semibold text-gray-900">{title}</h1>
+    <header className={`w-full px-5 pt-4 pb-3 ${className}`}>
+      <div className="max-w-md sm:max-w-lg lg:max-w-xl mx-auto flex items-center justify-between">
+        <div className="flex items-center gap-3">
+          {leading}
+          <h1 className="text-base font-semibold text-gray-900">{title}</h1>
+        </div>
+        {trailing && <div>{trailing}</div>}
       </div>
-      {trailing && <div>{trailing}</div>}
     </header>
   );
 };

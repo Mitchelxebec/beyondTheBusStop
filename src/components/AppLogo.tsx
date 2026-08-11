@@ -2,7 +2,7 @@ import heroImg from "../assets/logo.jpg";
 
 interface AppLogoProps {
   /** Size of the logo container square. Defaults to "md". */
-  size?: "sm" | "md" | "lg";
+  size?: "xs" | "sm" | "md" | "lg";
   /** Show the wordmark text beneath the icon. Defaults to true. */
   showWordmark?: boolean;
   /** Force white wordmark text (for dark backgrounds). Defaults to false. */
@@ -10,6 +10,7 @@ interface AppLogoProps {
 }
 
 const sizeMap = {
+  xs: "w-8 h-8",
   sm: "w-14 h-14",
   md: "w-20 h-20",
   lg: "w-28 h-28",

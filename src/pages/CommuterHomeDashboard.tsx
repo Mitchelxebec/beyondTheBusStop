@@ -206,7 +206,7 @@ const QuickRouteCard = ({
         id={`navigate-route-${route.id}`}
         onClick={() => onNavigate(route.id)}
         aria-label={`Navigate from ${route.from} to ${route.to}`}
-        className="flex-shrink-0 w-10 h-10 rounded-full bg-[#FFC72C] flex items-center justify-center transition-transform active:scale-95 hover:brightness-95"
+        className="shrink-0 w-10 h-10 rounded-full bg-[#FFC72C] flex items-center justify-center transition-transform active:scale-95 hover:brightness-95"
       >
         <BusIcon />
       </button>
@@ -227,12 +227,12 @@ const NearbyEssentialItem = ({
     id={`essential-${essential.id}`}
     onClick={() => onSelect(essential.id)}
     aria-label={essential.label}
-    className="flex flex-col items-center gap-2 flex-shrink-0 transition-transform active:scale-95 group"
+    className="flex flex-col items-center gap-2 shrink-0 transition-transform active:scale-95 group"
   >
     <div className="w-14 h-14 rounded-2xl bg-[#F1EDEC] flex items-center justify-center group-hover:bg-[#e8e4e3] transition-colors">
       {essential.icon}
     </div>
-    <span className="text-[#444748] text-[10px] leading-[15px] font-normal">{essential.label}</span>
+    <span className="text-[#444748] text-[10px] leading-3.75 font-normal">{essential.label}</span>
   </button>
 );
 
@@ -254,7 +254,7 @@ const RecentSearchItem = ({
       hasBorderBottom ? "border-b border-neutral-100" : ""
     }`}
   >
-    <div className="w-8 h-8 rounded-full bg-[#EBE7E6] flex items-center justify-center flex-shrink-0">
+    <div className="w-8 h-8 rounded-full bg-[#EBE7E6] flex items-center justify-center shrink-0">
       <ClockIcon />
     </div>
     <span className="text-[#1C1B1B] text-base leading-6 font-normal">{search.label}</span>

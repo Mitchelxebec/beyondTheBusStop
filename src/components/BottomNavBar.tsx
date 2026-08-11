@@ -69,7 +69,7 @@ const BottomNavBar = ({ items }: NavBarProps) => {
 
   return (
     <header
-      className="fixed top-0 left-0 right-0 z-50 bg-[#FDFAF8]/90 backdrop-blur-md border-b border-black/[0.06]"
+      className="fixed top-0 left-0 right-0 z-50 bg-[#FDFAF8]/90 backdrop-blur-md border-b border-black/6"
       aria-label="Site header"
     >
       {/* ── Main bar ───────────────────────────────────────────────── */}
@@ -78,7 +78,7 @@ const BottomNavBar = ({ items }: NavBarProps) => {
         {/* Brand: logo + name */}
         <NavLink
           to="/home"
-          className="flex items-center gap-2.5 flex-shrink-0 group"
+          className="flex items-center gap-2.5 shrink-0 group"
           aria-label="Beyond the Bus Stop — home"
         >
           <AppLogo size="xs" showWordmark={false} />
@@ -103,7 +103,7 @@ const BottomNavBar = ({ items }: NavBarProps) => {
         {/* Hamburger toggle (mobile only) */}
         <button
           id="mobile-menu-toggle"
-          className="md:hidden p-2 -mr-2 rounded-lg text-[#444748] hover:text-[#1C1B1B] hover:bg-black/[0.04] transition-colors"
+          className="md:hidden p-2 -mr-2 rounded-lg text-[#444748] hover:text-[#1C1B1B] hover:bg-black/4 transition-colors"
           onClick={() => setOpen((prev) => !prev)}
           aria-label={open ? "Close navigation menu" : "Open navigation menu"}
           aria-expanded={open}
@@ -117,7 +117,7 @@ const BottomNavBar = ({ items }: NavBarProps) => {
       {open && (
         <div
           id="mobile-menu"
-          className="md:hidden bg-[#FDFAF8] border-t border-black/[0.04]"
+          className="md:hidden bg-[#FDFAF8] border-t border-black/4"
           role="navigation"
           aria-label="Mobile navigation"
         >
@@ -130,7 +130,7 @@ const BottomNavBar = ({ items }: NavBarProps) => {
                 className={({ isActive }) => mobileLinkClass(isActive)}
               >
                 {icon && (
-                  <span className="w-5 h-5 flex items-center justify-center flex-shrink-0" aria-hidden="true">
+                  <span className="w-5 h-5 flex items-center justify-center shrink-0" aria-hidden="true">
                     {icon}
                   </span>
                 )}

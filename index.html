@@ -3,25 +3,26 @@
   <head>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <title>BeyondTheBuStop</title>
+    <title>Beyond the Bus Stop</title>
 
-    <!-- PWA Manifest Connection -->
+    <!-- PWA Manifest -->
     <link rel="manifest" href="/manifest.json" />
 
-    <!-- Standard Favicon -->
-    <link rel="icon" type="image/svg+xml" href="/src/assets/logo.jpg" />
+    <!-- Favicon -->
+    <link rel="icon" type="image/jpeg" href="/logo.jpg" />
 
-    <!-- iOS PWA Optimizations -->
+    <!-- iOS PWA -->
+    <meta name="mobile-web-app-capable" content="yes" />
     <meta name="apple-mobile-web-app-capable" content="yes" />
-    <meta
-      name="apple-mobile-web-app-status-bar-style"
-      content="black-translucent"
-    />
+    <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
     <meta name="apple-mobile-web-app-title" content="ByndBus" />
-    <link rel="apple-touch-icon" href="/pwa-512.png" />
+    <link rel="apple-touch-icon" href="/logo.jpg" />
 
-    <!-- Theme Color for Browser Address Bars -->
+    <!-- Theme -->
     <meta name="theme-color" content="#1A1A1A" />
+
+    <!-- Preconnect to API for faster first request -->
+    <link rel="preconnect" href="https://btbs-backend.onrender.com" />
   </head>
   <body>
     <div id="root"></div>

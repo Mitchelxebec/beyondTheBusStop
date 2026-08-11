@@ -6,7 +6,9 @@ import type { LoginPayload, UserRole } from "../types/auth";
 
 /**
  * Login mutation — shared by CommmuterLogin and VendorLogin.
- * Stores session and redirects based on role.
+ * On success: stores session, then routes based on role.
+ *   - commuter  → /home
+ *   - business  → /vendor/home
  */
 export function useLogin(role: UserRole) {
   const { setSession } = useAuth();
@@ -15,12 +17,8 @@ export function useLogin(role: UserRole) {
   return useMutation({
     mutationFn: (payload: LoginPayload) => login(payload),
     onSuccess: (data) => {
-      setSession({
-        token: data.user.token,
-        user: data.user,
-        role,
-      });
-      navigate(role === "business" ? "/vendor/dashboard" : "/commuter/home");
+      setSession({ token: data.user.token, user: data.user, role });
+      navigate(role === "business" ? "/vendor/home" : "/home", { replace: true });
     },
   });
 }

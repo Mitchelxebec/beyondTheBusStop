@@ -1,35 +1,60 @@
+import { lazy, Suspense } from "react";
 import { createBrowserRouter, Navigate } from "react-router-dom";
+import PageLoader from "./components/PageLoader";
 
-import Splash                  from "./pages/auth/Splash";
-import Onboarding1             from "./pages/auth/Onboarding1";
-import Onboarding2             from "./pages/auth/Onboarding2";
-import Onboarding3             from "./pages/auth/Onboarding3";
-import RoleSelect              from "./pages/auth/RoleSelect";
-import CommmuterLogin          from "./pages/auth/CommmuterLogin";
-import CommuterRegister        from "./pages/auth/CommuterRegister";
-import VendorLogin             from "./pages/auth/VendorLogin";
-import VendorRegister          from "./pages/auth/VendorRegister";
-import ComponentShowcase       from "./pages/ComponentShowcase";
-import CommuterHomeDashboard   from "./pages/CommuterHomeDashboard";
+// ── Lazy page imports ─────────────────────────────────────────────────────
+const Splash                = lazy(() => import("./pages/auth/Splash"));
+const Onboarding1           = lazy(() => import("./pages/auth/Onboarding1"));
+const Onboarding2           = lazy(() => import("./pages/auth/Onboarding2"));
+const Onboarding3           = lazy(() => import("./pages/auth/Onboarding3"));
+const RoleSelect            = lazy(() => import("./pages/auth/RoleSelect"));
+const CommmuterLogin        = lazy(() => import("./pages/auth/CommmuterLogin"));
+const CommuterRegister      = lazy(() => import("./pages/auth/CommuterRegister"));
+const VendorLogin           = lazy(() => import("./pages/auth/VendorLogin"));
+const VendorRegister        = lazy(() => import("./pages/auth/VendorRegister"));
+const VerifyEmail           = lazy(() => import("./pages/auth/VerifyEmail"));
+const ForgotPassword        = lazy(() => import("./pages/auth/ForgotPassword"));
+const ResetPassword         = lazy(() => import("./pages/auth/ResetPassword"));
+const ResetSuccess          = lazy(() => import("./pages/auth/ResetSuccess"));
+const CommuterHomeDashboard = lazy(() => import("./pages/CommuterHomeDashboard"));
+const NotFound              = lazy(() => import("./pages/NotFound"));
+const ComponentShowcase     = lazy(() => import("./pages/ComponentShowcase"));
+
+// Wrap a lazy element in Suspense with the spinner fallback
+const s = (el: React.ReactNode) => (
+  <Suspense fallback={<PageLoader />}>{el}</Suspense>
+);
 
 export const router = createBrowserRouter([
-  { path: "/",                       element: <Splash /> },
+  // ── Launch ──────────────────────────────────────────────────────────────
+  { path: "/",                        element: s(<Splash />) },
 
-  // Redirect bare /onboarding → first slide
-  { path: "/onboarding",             element: <Navigate to="/onboarding/1" replace /> },
-  { path: "/onboarding/1",           element: <Onboarding1 /> },
-  { path: "/onboarding/2",           element: <Onboarding2 /> },
-  { path: "/onboarding/3",           element: <Onboarding3 /> },
+  // ── Onboarding ──────────────────────────────────────────────────────────
+  { path: "/onboarding",              element: <Navigate to="/onboarding/1" replace /> },
+  { path: "/onboarding/1",            element: s(<Onboarding1 />) },
+  { path: "/onboarding/2",            element: s(<Onboarding2 />) },
+  { path: "/onboarding/3",            element: s(<Onboarding3 />) },
 
-  { path: "/auth/role-select",       element: <RoleSelect /> },
-  { path: "/auth/commuter/login",    element: <CommmuterLogin /> },
-  { path: "/auth/commuter/register", element: <CommuterRegister /> },
-  { path: "/auth/vendor/login",      element: <VendorLogin /> },
-  { path: "/auth/vendor/register",   element: <VendorRegister /> },
+  // ── Auth ────────────────────────────────────────────────────────────────
+  { path: "/auth/role-select",        element: s(<RoleSelect />) },
+  { path: "/auth/commuter/login",     element: s(<CommmuterLogin />) },
+  { path: "/auth/commuter/register",  element: s(<CommuterRegister />) },
+  { path: "/auth/vendor/login",       element: s(<VendorLogin />) },
+  { path: "/auth/vendor/register",    element: s(<VendorRegister />) },
 
-  { path: "/components-showcase",    element: <ComponentShowcase /> },
-  { path: "/home",                   element: <CommuterHomeDashboard /> },
-  { path: "/routes",                 element: <CommuterHomeDashboard /> },
-  { path: "/share",                  element: <CommuterHomeDashboard /> },
-  { path: "/profile",                element: <CommuterHomeDashboard /> },
+  // ── OTP + password recovery ──────────────────────────────────────────────
+  { path: "/auth/verify-email",       element: s(<VerifyEmail />) },
+  { path: "/auth/forgot-password",    element: s(<ForgotPassword />) },
+  { path: "/auth/reset-password",     element: s(<ResetPassword />) },
+  { path: "/auth/reset-success",      element: s(<ResetSuccess />) },
+
+  // ── Commuter app ─────────────────────────────────────────────────────────
+  { path: "/home",                    element: s(<CommuterHomeDashboard />) },
+  { path: "/commuter/home",           element: <Navigate to="/home" replace /> },
+
+  // ── Dev ──────────────────────────────────────────────────────────────────
+  { path: "/components-showcase",     element: s(<ComponentShowcase />) },
+
+  // ── Catch-all ────────────────────────────────────────────────────────────
+  { path: "*",                        element: s(<NotFound />) },
 ]);

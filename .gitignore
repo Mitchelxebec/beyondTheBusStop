@@ -22,3 +22,8 @@ dist-ssr
 *.njsproj
 *.sln
 *.sw?
+
+# Files
+*.local
+.env*.local
+.mcp.json

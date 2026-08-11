@@ -1,47 +1,38 @@
+import { useState, useEffect } from "react";
+import { useQuery } from "@tanstack/react-query";
+import { useNavigate } from "react-router-dom";
 import { BottomNavBar, SectionLabel } from "../components";
 import type { NavItem } from "../components/BottomNavBar";
+import { useAuth } from "../contexts/AuthContext";
+import { getAllRoutes, searchRoutes } from "../services/routes";
+import { getSafetyPoints } from "../services/safetyPoints";
+import type { Route, ConfidenceLevel } from "../types/routes";
+import type { SafetyPoint, SafetyPointCategory } from "../types/safetyPoints";
 
-// ─── Type Definitions ──────────────────────────────────────────────────────────
+// ─── localStorage helpers (recent searches — no backend endpoint for this) ──────
 
-interface TrafficStatus {
-  label: string;
-  variant: "heavy" | "clear" | "moderate";
+const RECENT_SEARCHES_KEY = "btbs_recent_searches";
+const MAX_RECENT_SEARCHES = 5;
+
+function loadRecentSearches(): string[] {
+  try {
+    return JSON.parse(localStorage.getItem(RECENT_SEARCHES_KEY) ?? "[]");
+  } catch {
+    return [];
+  }
 }
 
-interface QuickRoute {
-  id: string;
-  from: string;
-  to: string;
-  traffic: TrafficStatus;
-  estimatedTime: string;
+function saveRecentSearch(query: string): string[] {
+  const prev = loadRecentSearches();
+  const updated = [query, ...prev.filter((q) => q !== query)].slice(
+    0,
+    MAX_RECENT_SEARCHES
+  );
+  localStorage.setItem(RECENT_SEARCHES_KEY, JSON.stringify(updated));
+  return updated;
 }
 
-interface NearbyEssential {
-  id: string;
-  label: string;
-  icon: React.ReactNode;
-}
-
-interface RecentSearch {
-  id: string;
-  label: string;
-}
-
-interface CommuterHomeDashboardProps {
-  userName?: string;
-  /** Override the auto time-of-day greeting. */
-  greeting?: string;
-  subtitle?: string;
-  quickRoutes?: QuickRoute[];
-  nearbyEssentials?: NearbyEssential[];
-  recentSearches?: RecentSearch[];
-  onSearchFocus?: () => void;
-  onRouteNavigate?: (routeId: string) => void;
-  onEssentialSelect?: (essentialId: string) => void;
-  onViewAllRoutes?: () => void;
-}
-
-// ─── Icons ─────────────────────────────────────────────────────────────────────
+// ─── Icons ──────────────────────────────────────────────────────────────────────
 
 const SearchIcon = () => (
   <svg width="18" height="18" viewBox="0 0 18 18" fill="none" aria-hidden="true">
@@ -52,31 +43,14 @@ const SearchIcon = () => (
 
 const NavigateTurnIcon = () => (
   <svg width="15" height="15" viewBox="0 0 15 15" fill="none" aria-hidden="true">
-    <path
-      d="M8 2L13 7L8 12"
-      stroke="white"
-      strokeWidth="1.6"
-      strokeLinecap="round"
-      strokeLinejoin="round"
-    />
-    <path
-      d="M3 7H13"
-      stroke="white"
-      strokeWidth="1.6"
-      strokeLinecap="round"
-    />
+    <path d="M8 2L13 7L8 12" stroke="white" strokeWidth="1.6" strokeLinecap="round" strokeLinejoin="round" />
+    <path d="M3 7H13" stroke="white" strokeWidth="1.6" strokeLinecap="round" />
   </svg>
 );
 
 const ArrowRightSmallIcon = () => (
   <svg width="11" height="11" viewBox="0 0 11 11" fill="none" aria-hidden="true">
-    <path
-      d="M2 5.5H9M9 5.5L6 2.5M9 5.5L6 8.5"
-      stroke="#C4C7C7"
-      strokeWidth="1.2"
-      strokeLinecap="round"
-      strokeLinejoin="round"
-    />
+    <path d="M2 5.5H9M9 5.5L6 2.5M9 5.5L6 8.5" stroke="#C4C7C7" strokeWidth="1.2" strokeLinecap="round" strokeLinejoin="round" />
   </svg>
 );
 
@@ -91,12 +65,18 @@ const BusIcon = () => (
   </svg>
 );
 
-const BankIcon = () => (
+const ClockIcon = () => (
+  <svg width="12" height="12" viewBox="0 0 12 12" fill="none" aria-hidden="true">
+    <circle cx="6" cy="6" r="5" stroke="#444748" strokeWidth="1.2" />
+    <path d="M6 3.5V6L7.5 7.5" stroke="#444748" strokeWidth="1.2" strokeLinecap="round" strokeLinejoin="round" />
+  </svg>
+);
+
+// Safety Point category icons — one per backend enum value
+const PoliceIcon = () => (
   <svg width="20" height="20" viewBox="0 0 20 20" fill="none" aria-hidden="true">
-    <path d="M2 18h16M10 2L18 7H2L10 2Z" stroke="#444748" strokeWidth="1.3" strokeLinecap="round" strokeLinejoin="round" />
-    <rect x="4" y="8" width="2" height="7" fill="#444748" />
-    <rect x="9" y="8" width="2" height="7" fill="#444748" />
-    <rect x="14" y="8" width="2" height="7" fill="#444748" />
+    <path d="M10 2L4 5V10C4 13.5 6.5 16.7 10 18C13.5 16.7 16 13.5 16 10V5L10 2Z" stroke="#444748" strokeWidth="1.3" strokeLinejoin="round" />
+    <path d="M7 10L9 12L13 8" stroke="#444748" strokeWidth="1.3" strokeLinecap="round" strokeLinejoin="round" />
   </svg>
 );
 
@@ -107,29 +87,21 @@ const HospitalIcon = () => (
   </svg>
 );
 
-const MarketIcon = () => (
-  <svg width="20" height="18" viewBox="0 0 20 18" fill="none" aria-hidden="true">
-    <path d="M1 6H19L17 16H3L1 6Z" stroke="#444748" strokeWidth="1.3" strokeLinejoin="round" />
-    <path d="M1 6L4 2H16L19 6" stroke="#444748" strokeWidth="1.3" strokeLinecap="round" strokeLinejoin="round" />
-    <rect x="7" y="9" width="6" height="4" rx="0.5" stroke="#444748" strokeWidth="1" />
+const FireIcon = () => (
+  <svg width="16" height="20" viewBox="0 0 16 20" fill="none" aria-hidden="true">
+    <path d="M8 1C8 1 13 6 13 11C13 14.3 10.8 17 8 17C5.2 17 3 14.3 3 11C3 9 4 7.5 5 6.5C5 8 6 9 7 9C5.5 7 6 4 8 1Z" stroke="#444748" strokeWidth="1.3" strokeLinecap="round" strokeLinejoin="round" />
+    <path d="M8 13C8 13 10 11.5 10 10C10 10 9 11 8 11C7 11 6 10 6 10C6 11.5 8 13 8 13Z" stroke="#444748" strokeWidth="1.1" strokeLinejoin="round" />
   </svg>
 );
 
-const FoodIcon = () => (
-  <svg width="15" height="20" viewBox="0 0 15 20" fill="none" aria-hidden="true">
-    <path d="M1 1V6C1 8.2 2.8 10 5 10V19" stroke="#444748" strokeWidth="1.3" strokeLinecap="round" />
-    <path d="M9 1V19M12 1C12 1 14 4 14 7C14 9.2 11 10 9 10" stroke="#444748" strokeWidth="1.3" strokeLinecap="round" />
+const OtherLocationIcon = () => (
+  <svg width="16" height="20" viewBox="0 0 16 20" fill="none" aria-hidden="true">
+    <path d="M8 1C4.7 1 2 3.7 2 7C2 11.5 8 19 8 19C8 19 14 11.5 14 7C14 3.7 11.3 1 8 1Z" stroke="#444748" strokeWidth="1.3" />
+    <circle cx="8" cy="7" r="2.5" stroke="#444748" strokeWidth="1.2" />
   </svg>
 );
 
-const ClockIcon = () => (
-  <svg width="12" height="12" viewBox="0 0 12 12" fill="none" aria-hidden="true">
-    <circle cx="6" cy="6" r="5" stroke="#444748" strokeWidth="1.2" />
-    <path d="M6 3.5V6L7.5 7.5" stroke="#444748" strokeWidth="1.2" strokeLinecap="round" strokeLinejoin="round" />
-  </svg>
-);
-
-// Nav icons (shown in mobile hamburger dropdown)
+// Nav icons
 const HomeNavIcon = () => (
   <svg width="16" height="16" viewBox="0 0 16 18" fill="currentColor" aria-hidden="true">
     <path d="M8 1L15 7V17H10V12H6V17H1V7L8 1Z" />
@@ -157,55 +129,83 @@ const ProfileNavIcon = () => (
   </svg>
 );
 
-// ─── Traffic Badge ─────────────────────────────────────────────────────────────
-// Soft-fill styling per Figma node 178:292 (light bg + coloured text)
+// ─── Confidence Badge ──────────────────────────────────────────────────────────
+// Maps backend confidenceLevel ('High' | 'Medium' | 'Low') to colour classes
 
-const TRAFFIC_CLASSES: Record<TrafficStatus["variant"], string> = {
-  heavy:    "bg-[#FCE8E6] text-[#BA1A1A]",
-  clear:    "bg-[#79F7E3] text-[#005047]",
-  moderate: "bg-[#FFF4D6] text-[#6F5400]",
+const CONFIDENCE_CLASSES: Record<ConfidenceLevel, string> = {
+  High:   "bg-[#79F7E3] text-[#005047]",
+  Medium: "bg-[#FFF4D6] text-[#6F5400]",
+  Low:    "bg-[#FCE8E6] text-[#BA1A1A]",
 };
 
-const TrafficBadge = ({ status }: { status: TrafficStatus }) => (
+const ConfidenceBadge = ({ level }: { level: ConfidenceLevel }) => (
   <span
-    className={`inline-flex items-center px-2 py-0.5 rounded text-[10px] font-bold uppercase tracking-wide leading-none ${TRAFFIC_CLASSES[status.variant]}`}
+    className={`inline-flex items-center px-2 py-0.5 rounded text-[10px] font-bold uppercase tracking-wide leading-none ${CONFIDENCE_CLASSES[level]}`}
   >
-    {status.label}
+    {level} CONFIDENCE
   </span>
 );
 
-// ─── Quick Route Card ──────────────────────────────────────────────────────────
+// ─── Safety Point category → icon map (backend enum values only) ──────────────
 
-const QuickRouteCard = ({
+const CATEGORY_ICON: Record<SafetyPointCategory, React.ReactNode> = {
+  "police station": <PoliceIcon />,
+  "hospital":       <HospitalIcon />,
+  "fire station":   <FireIcon />,
+  "other":          <OtherLocationIcon />,
+};
+
+// ─── Nav items (UI navigation structure) ──────────────────────────────────────
+
+const NAV_ITEMS: NavItem[] = [
+  { label: "Home",    path: "/home",    icon: <HomeNavIcon /> },
+  { label: "Routes",  path: "/routes",  icon: <RoutesNavIcon /> },
+  { label: "Share",   path: "/share",   icon: <ShareNavIcon /> },
+  { label: "Profile", path: "/profile", icon: <ProfileNavIcon /> },
+];
+
+// ─── Route Card ────────────────────────────────────────────────────────────────
+// Uses the real Route type from types/routes.ts — no local QuickRoute interface
+
+const RouteCard = ({
   route,
   onNavigate,
 }: {
-  route: QuickRoute;
+  route: Route;
   onNavigate: (id: string) => void;
 }) => (
   <article className="relative flex items-center bg-white rounded-xl overflow-hidden shadow-xs hover:shadow-sm transition-shadow">
-    {/* 4px teal left accent bar — Figma node 178:280 */}
+    {/* 4px teal left accent bar */}
     <div className="absolute left-0 top-0 bottom-0 w-1 bg-[#79F7E3] rounded-l-xl" aria-hidden="true" />
 
     <div className="flex items-center justify-between w-full pl-5 pr-3 py-3 gap-4">
       <div className="flex flex-col gap-1 min-w-0">
-        {/* From → To */}
+        {/* Origin → Destination */}
         <div className="flex items-center gap-1">
-          <span className="text-[#1C1B1B] text-base leading-6 font-normal truncate">{route.from}</span>
+          <span className="text-[#1C1B1B] text-base leading-6 font-normal truncate">
+            {route.origin}
+          </span>
           <ArrowRightSmallIcon />
-          <span className="text-[#1C1B1B] text-base leading-6 font-normal truncate">{route.to}</span>
+          <span className="text-[#1C1B1B] text-base leading-6 font-normal truncate">
+            {route.destination}
+          </span>
         </div>
-        {/* Badge + ETA */}
+        {/* Confidence + vehicle type + fare range */}
         <div className="flex items-center gap-2 flex-wrap">
-          <TrafficBadge status={route.traffic} />
-          <span className="text-[#444748] text-sm leading-5 font-normal">{route.estimatedTime}</span>
+          <ConfidenceBadge level={route.confidenceLevel} />
+          <span className="text-[#444748] text-sm leading-5 capitalize">
+            {route.vehicleType}
+          </span>
+          <span className="text-[#444748] text-sm leading-5">
+            ₦{route.fareLow.toLocaleString()} – ₦{route.fareHigh.toLocaleString()}
+          </span>
         </div>
       </div>
 
       <button
-        id={`navigate-route-${route.id}`}
-        onClick={() => onNavigate(route.id)}
-        aria-label={`Navigate from ${route.from} to ${route.to}`}
+        id={`navigate-route-${route._id}`}
+        onClick={() => onNavigate(route._id)}
+        aria-label={`View route from ${route.origin} to ${route.destination}`}
         className="flex-shrink-0 w-10 h-10 rounded-full bg-[#FFC72C] flex items-center justify-center transition-transform active:scale-95 hover:brightness-95"
       >
         <BusIcon />
@@ -214,42 +214,42 @@ const QuickRouteCard = ({
   </article>
 );
 
-// ─── Nearby Essential Item ─────────────────────────────────────────────────────
+// ─── Safety Point Item ─────────────────────────────────────────────────────────
+// Uses the real SafetyPoint type from types/safetyPoints.ts
 
-const NearbyEssentialItem = ({
-  essential,
-  onSelect,
-}: {
-  essential: NearbyEssential;
-  onSelect: (id: string) => void;
-}) => (
-  <button
-    id={`essential-${essential.id}`}
-    onClick={() => onSelect(essential.id)}
-    aria-label={essential.label}
-    className="flex flex-col items-center gap-2 flex-shrink-0 transition-transform active:scale-95 group"
-  >
-    <div className="w-14 h-14 rounded-2xl bg-[#F1EDEC] flex items-center justify-center group-hover:bg-[#e8e4e3] transition-colors">
-      {essential.icon}
+const SafetyPointItem = ({ point }: { point: SafetyPoint }) => {
+  const icon =
+    point.category ? CATEGORY_ICON[point.category] : <OtherLocationIcon />;
+
+  return (
+    <div
+      className="flex flex-col items-center gap-2 flex-shrink-0"
+      title={point.address ?? point.name}
+    >
+      <div className="w-14 h-14 rounded-2xl bg-[#F1EDEC] flex items-center justify-center">
+        {icon}
+      </div>
+      <span className="text-[#444748] text-[10px] leading-[15px] font-normal text-center w-14 line-clamp-2">
+        {point.name}
+      </span>
     </div>
-    <span className="text-[#444748] text-[10px] leading-[15px] font-normal">{essential.label}</span>
-  </button>
-);
+  );
+};
 
 // ─── Recent Search Item ────────────────────────────────────────────────────────
 
 const RecentSearchItem = ({
-  search,
-  hasBorderBottom = false,
+  query,
+  hasBorderBottom,
   onSelect,
 }: {
-  search: RecentSearch;
-  hasBorderBottom?: boolean;
-  onSelect: (label: string) => void;
+  query: string;
+  hasBorderBottom: boolean;
+  onSelect: (query: string) => void;
 }) => (
   <button
-    onClick={() => onSelect(search.label)}
-    aria-label={`Search again: ${search.label}`}
+    onClick={() => onSelect(query)}
+    aria-label={`Search again: ${query}`}
     className={`flex items-center gap-3 w-full px-4 py-3 text-left hover:bg-neutral-50 transition-colors ${
       hasBorderBottom ? "border-b border-neutral-100" : ""
     }`}
@@ -257,47 +257,9 @@ const RecentSearchItem = ({
     <div className="w-8 h-8 rounded-full bg-[#EBE7E6] flex items-center justify-center flex-shrink-0">
       <ClockIcon />
     </div>
-    <span className="text-[#1C1B1B] text-base leading-6 font-normal">{search.label}</span>
+    <span className="text-[#1C1B1B] text-base leading-6 font-normal">{query}</span>
   </button>
 );
-
-// ─── Default Data ──────────────────────────────────────────────────────────────
-
-const DEFAULT_QUICK_ROUTES: QuickRoute[] = [
-  {
-    id: "ojota-cms",
-    from: "Ojota",
-    to: "CMS",
-    traffic: { label: "HEAVY TRAFFIC", variant: "heavy" },
-    estimatedTime: "Est. 45 mins",
-  },
-  {
-    id: "egbeda-ikeja",
-    from: "Egbeda",
-    to: "Ikeja",
-    traffic: { label: "CLEAR", variant: "clear" },
-    estimatedTime: "Est. 20 mins",
-  },
-];
-
-const DEFAULT_NEARBY_ESSENTIALS: NearbyEssential[] = [
-  { id: "bank",     label: "Bank",     icon: <BankIcon /> },
-  { id: "hospital", label: "Hospital", icon: <HospitalIcon /> },
-  { id: "market",   label: "Market",   icon: <MarketIcon /> },
-  { id: "food",     label: "Food",     icon: <FoodIcon /> },
-];
-
-const DEFAULT_RECENT_SEARCHES: RecentSearch[] = [
-  { id: "1", label: "Yaba → Obalende" },
-  { id: "2", label: "Oshodi → Berger" },
-];
-
-const DEFAULT_NAV_ITEMS: NavItem[] = [
-  { label: "Home",    path: "/home",    icon: <HomeNavIcon /> },
-  { label: "Routes",  path: "/routes",  icon: <RoutesNavIcon /> },
-  { label: "Share",   path: "/share",   icon: <ShareNavIcon /> },
-  { label: "Profile", path: "/profile", icon: <ProfileNavIcon /> },
-];
 
 // ─── Main Component ────────────────────────────────────────────────────────────
 
@@ -305,42 +267,105 @@ const DEFAULT_NAV_ITEMS: NavItem[] = [
  * CommuterHomeDashboard
  *
  * Figma node 178:248 — "Commuter Home Dashboard".
+ * All data fetched from the live backend — no hardcoded route or safety point data.
  *
  * Layout tiers:
  *   Mobile  (<md) — single column, full-width, hamburger nav.
  *   Tablet  (md)  — single column centred at max-w-lg, navbar links visible.
  *   Desktop (lg+) — single column centred at max-w-2xl, navbar links visible.
- *
- * Shared components used:
- *   BottomNavBar — now a transparent web navbar (hamburger on mobile).
- *   SectionLabel — variant="page" for 16px Figma-spec headings.
  */
-const CommuterHomeDashboard = ({
-  userName = "Tunde",
-  greeting,
-  subtitle = "Lagos is moving fast today. Where to?",
-  quickRoutes = DEFAULT_QUICK_ROUTES,
-  nearbyEssentials = DEFAULT_NEARBY_ESSENTIALS,
-  recentSearches = DEFAULT_RECENT_SEARCHES,
-  onSearchFocus,
-  onRouteNavigate = () => {},
-  onEssentialSelect = () => {},
-  onViewAllRoutes,
-}: CommuterHomeDashboardProps) => {
-  const resolvedGreeting =
-    greeting ??
-    (() => {
-      const h = new Date().getHours();
-      if (h < 12) return `Good morning, ${userName}`;
-      if (h < 17) return `Good afternoon, ${userName}`;
-      return `Good evening, ${userName}`;
-    })();
+const CommuterHomeDashboard = () => {
+  const navigate = useNavigate();
+  const { session } = useAuth();
+
+  // Resolve display name from session (commuter = fullName, business = businessName)
+  const userName =
+    session?.user?.fullName ?? session?.user?.businessName ?? "there";
+
+  // Time-of-day greeting
+  const greeting = (() => {
+    const h = new Date().getHours();
+    if (h < 12) return `Good morning, ${userName}`;
+    if (h < 17) return `Good afternoon, ${userName}`;
+    return `Good evening, ${userName}`;
+  })();
+
+  // ── Search state ────────────────────────────────────────────────────────────
+  const [searchInput, setSearchInput] = useState("");
+  const [activeSearch, setActiveSearch] = useState("");
+  const [recentSearches, setRecentSearches] = useState<string[]>(
+    loadRecentSearches
+  );
+
+  // When the input is cleared, also clear active search so we revert to all routes
+  useEffect(() => {
+    if (!searchInput.trim()) setActiveSearch("");
+  }, [searchInput]);
+
+  const handleSearch = () => {
+    const q = searchInput.trim();
+    if (!q) return;
+    setActiveSearch(q);
+    setRecentSearches(saveRecentSearch(q));
+  };
+
+  const handleRecentClick = (query: string) => {
+    setSearchInput(query);
+    setActiveSearch(query);
+    setRecentSearches(saveRecentSearch(query));
+  };
+
+  // ── Data queries ────────────────────────────────────────────────────────────
+
+  const {
+    data: allRoutesData,
+    isLoading: allRoutesLoading,
+    isError: allRoutesError,
+  } = useQuery({
+    queryKey: ["routes"],
+    queryFn: getAllRoutes,
+  });
+
+  const {
+    data: searchData,
+    isLoading: searchLoading,
+    isError: searchError,
+  } = useQuery({
+    queryKey: ["routes", "search", activeSearch],
+    queryFn: () => searchRoutes(activeSearch),
+    enabled: activeSearch.length > 0,
+  });
+
+  const {
+    data: safetyData,
+    isLoading: safetyLoading,
+    isError: safetyError,
+  } = useQuery({
+    queryKey: ["safety-points"],
+    queryFn: getSafetyPoints,
+  });
+
+  // ── Derived display values ──────────────────────────────────────────────────
+
+  const isSearching = activeSearch.length > 0;
+
+  // When searching, use search results; otherwise use all routes
+  const displayedRoutes: Route[] = isSearching
+    ? (searchData?.routes ?? [])
+    : (allRoutesData?.routes ?? []);
+
+  const routesLoading = isSearching ? searchLoading : allRoutesLoading;
+  const routesError   = isSearching ? searchError   : allRoutesError;
+
+  const safetyPoints: SafetyPoint[] = safetyData?.safetyPoints ?? [];
+
+  // ── Render ──────────────────────────────────────────────────────────────────
 
   return (
     <div className="flex flex-col min-h-dvh bg-[#FDFAF8]">
 
-      {/* ── Web navbar — fixed top, transparent background ─────────── */}
-      <BottomNavBar items={DEFAULT_NAV_ITEMS} />
+      {/* ── Top navbar ──────────────────────────────────────────────────── */}
+      <BottomNavBar items={NAV_ITEMS} />
 
       {/*
         Main content starts below the fixed h-16 navbar.
@@ -353,36 +378,44 @@ const CommuterHomeDashboard = ({
         style={{ maxWidth: "min(100%, 42rem)" }}
         aria-label="Home dashboard content"
       >
-        {/* On lg screens, expand wider and show a two-col hint via padding */}
         <div className="flex flex-col gap-6 px-4 sm:px-6 pt-8 pb-12">
 
-          {/* 1 · Greeting ───────────────────────────────────────────── */}
+          {/* 1 · Greeting ─────────────────────────────────────────────── */}
           <section aria-labelledby="greeting-heading" className="flex flex-col gap-1">
-            <h1 id="greeting-heading" className="text-[#1C1B1B] text-base leading-6 font-normal m-0">
-              {resolvedGreeting}
+            <h1
+              id="greeting-heading"
+              className="text-[#1C1B1B] text-base leading-6 font-normal m-0"
+            >
+              {greeting}
             </h1>
             <p className="text-[#444748] text-base leading-6 font-normal m-0">
-              {subtitle}
+              Lagos is moving fast today. Where to?
             </p>
           </section>
 
-          {/* 2 · Search Bar ─────────────────────────────────────────── */}
+          {/* 2 · Search Bar ───────────────────────────────────────────── */}
           <section aria-label="Search for a destination">
             <div className="relative flex items-center">
-              <span className="absolute left-3 top-1/2 -translate-y-1/2 pointer-events-none" aria-hidden="true">
+              <span
+                className="absolute left-3 top-1/2 -translate-y-1/2 pointer-events-none"
+                aria-hidden="true"
+              >
                 <SearchIcon />
               </span>
               <input
                 id="destination-search"
                 type="search"
+                value={searchInput}
+                onChange={(e) => setSearchInput(e.target.value)}
+                onKeyDown={(e) => { if (e.key === "Enter") handleSearch(); }}
                 placeholder="Where are you going?"
-                onFocus={onSearchFocus}
                 aria-label="Search for your destination"
                 className="w-full h-12 pl-10 pr-14 rounded-lg bg-[#E5E2E1] text-base leading-6 text-[#1C1B1B] placeholder:text-[#C4C7C7] outline-none focus:ring-2 focus:ring-[#79F7E3]/60 transition-shadow"
               />
               <button
                 id="search-navigate-btn"
-                aria-label="Navigate to destination"
+                onClick={handleSearch}
+                aria-label="Search destination"
                 className="absolute right-3 top-1/2 -translate-y-1/2 w-8 h-8 rounded-full bg-[#1C1B1B] flex items-center justify-center transition-transform active:scale-95 hover:bg-black"
               >
                 <NavigateTurnIcon />
@@ -390,66 +423,116 @@ const CommuterHomeDashboard = ({
             </div>
           </section>
 
-          {/* 3 · Quick Routes ───────────────────────────────────────── */}
-          <section aria-labelledby="quick-routes-heading" className="flex flex-col gap-3">
+          {/* 3 · Routes ───────────────────────────────────────────────── */}
+          <section aria-labelledby="routes-heading" className="flex flex-col gap-3">
             <SectionLabel
               variant="page"
               action={
-                onViewAllRoutes != null ? (
+                isSearching ? (
+                  <button
+                    id="clear-search-btn"
+                    onClick={() => { setSearchInput(""); setActiveSearch(""); }}
+                    aria-label="Clear search and show all routes"
+                    className="text-[#59DBC7] text-sm font-medium hover:underline transition-colors"
+                  >
+                    Clear
+                  </button>
+                ) : (
                   <button
                     id="view-all-routes-btn"
-                    onClick={onViewAllRoutes}
-                    aria-label="View all quick routes"
+                    onClick={() => navigate("/routes")}
+                    aria-label="View all routes"
                     className="text-[#59DBC7] text-sm font-medium hover:underline transition-colors"
                   >
                     View All
                   </button>
-                ) : undefined
+                )
               }
             >
-              Quick Routes
+              {isSearching ? `Results for "${activeSearch}"` : "Quick Routes"}
             </SectionLabel>
 
+            {routesLoading && (
+              <p className="text-[#444748] text-sm text-center py-6">
+                Loading routes…
+              </p>
+            )}
+
+            {!routesLoading && routesError && (
+              <p className="text-red-500 text-sm text-center py-6">
+                Failed to load routes. Please try again.
+              </p>
+            )}
+
+            {!routesLoading && !routesError && displayedRoutes.length === 0 && (
+              <p className="text-[#444748] text-sm text-center py-6">
+                {isSearching
+                  ? `No routes found for "${activeSearch}".`
+                  : "No routes available yet."}
+              </p>
+            )}
+
             <div className="flex flex-col gap-3">
-              {quickRoutes.map((route) => (
-                <QuickRouteCard key={route.id} route={route} onNavigate={onRouteNavigate} />
-              ))}
-            </div>
-          </section>
-
-          {/* 4 · Nearby Essentials ──────────────────────────────────── */}
-          <section aria-labelledby="nearby-essentials-heading" className="flex flex-col gap-3">
-            <SectionLabel variant="page">Nearby Essentials</SectionLabel>
-
-            {/* Horizontal scroll on mobile; spaced row on wider screens */}
-            <div className="-mx-4 sm:-mx-6 px-4 sm:px-6 overflow-x-auto no-scrollbar">
-              <div className="flex gap-4 sm:gap-6 pb-1">
-                {nearbyEssentials.map((essential) => (
-                  <NearbyEssentialItem
-                    key={essential.id}
-                    essential={essential}
-                    onSelect={onEssentialSelect}
-                  />
-                ))}
-              </div>
-            </div>
-          </section>
-
-          {/* 5 · Recent Searches ────────────────────────────────────── */}
-          <section aria-labelledby="recent-searches-heading" className="flex flex-col gap-3">
-            <SectionLabel variant="page">Recent Searches</SectionLabel>
-
-            <div className="bg-white rounded-xl overflow-hidden shadow-xs">
-              {recentSearches.map((search, index) => (
-                <RecentSearchItem
-                  key={search.id}
-                  search={search}
-                  hasBorderBottom={index < recentSearches.length - 1}
-                  onSelect={() => onSearchFocus?.()}
+              {displayedRoutes.map((route) => (
+                <RouteCard
+                  key={route._id}
+                  route={route}
+                  onNavigate={(id) => navigate(`/routes/${id}`)}
                 />
               ))}
             </div>
           </section>
+
+          {/* 4 · Nearby Essentials (safety points from backend) ────────── */}
+          <section aria-labelledby="nearby-essentials-heading" className="flex flex-col gap-3">
+            <SectionLabel variant="page">Nearby Essentials</SectionLabel>
+
+            {safetyLoading && (
+              <p className="text-[#444748] text-sm text-center py-6">
+                Loading essentials…
+              </p>
+            )}
+
+            {!safetyLoading && safetyError && (
+              <p className="text-red-500 text-sm text-center py-6">
+                Failed to load safety points.
+              </p>
+            )}
+
+            {!safetyLoading && !safetyError && safetyPoints.length === 0 && (
+              <p className="text-[#444748] text-sm text-center py-6">
+                No safety points available yet.
+              </p>
+            )}
+
+            {!safetyLoading && !safetyError && safetyPoints.length > 0 && (
+              <div className="-mx-4 sm:-mx-6 px-4 sm:px-6 overflow-x-auto no-scrollbar">
+                <div className="flex gap-4 sm:gap-6 pb-1">
+                  {safetyPoints.map((point) => (
+                    <SafetyPointItem key={point._id} point={point} />
+                  ))}
+                </div>
+              </div>
+            )}
+          </section>
+
+          {/* 5 · Recent Searches (stored in localStorage) ──────────────── */}
+          {recentSearches.length > 0 && (
+            <section aria-labelledby="recent-searches-heading" className="flex flex-col gap-3">
+              <SectionLabel variant="page">Recent Searches</SectionLabel>
+
+              <div className="bg-white rounded-xl overflow-hidden shadow-xs">
+                {recentSearches.map((query, index) => (
+                  <RecentSearchItem
+                    key={query}
+                    query={query}
+                    hasBorderBottom={index < recentSearches.length - 1}
+                    onSelect={handleRecentClick}
+                  />
+                ))}
+              </div>
+            </section>
+          )}
 
         </div>
       </main>

@@ -1,6 +1,7 @@
 /* ── Route types ─────────────────────────────────────────────────────────── */
 
-export type VehicleType = "bus" | "keke" | "danfo" | "taxi";
+// Matches backend route.model.js enum exactly: ['bus', 'keke', 'taxi', 'train']
+export type VehicleType = "bus" | "keke" | "Danfo" | "taxi" | "train";
 export type ConfidenceLevel = "Low" | "Medium" | "High";
 
 export interface Route {
@@ -10,7 +11,11 @@ export interface Route {
   vehicleType: VehicleType;
   fareLow: number;
   fareHigh: number;
+  /** Computed average of all confirmed fares for this route */
+  averageFare?: number;
+  confidenceScore?: number;
   confidenceLevel: ConfidenceLevel;
+  lastConfirmedAt?: string;
   createdBy: string;
   __v?: number;
 }
@@ -40,9 +45,12 @@ export interface GetAllRoutesResponse {
 
 /* ── Search routes ───────────────────────────────────────────────────────── */
 
+// Backend returns { success, count, routes } or { success, count, message } when empty
 export interface SearchRoutesResponse {
-  message: string;
-  routes: Route[];
+  success: boolean;
+  count: number;
+  routes?: Route[];
+  message?: string;
 }
 
 /* ── Get route by id ─────────────────────────────────────────────────────── */

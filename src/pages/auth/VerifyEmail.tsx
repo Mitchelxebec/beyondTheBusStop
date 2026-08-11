@@ -64,9 +64,11 @@ const VerifyEmail = () => {
       navigate(role === "business" ? "/vendor/home" : "/home", { replace: true }),
   });
 
-  const { mutate: doResend, isPending: resending, isSuccess: resent } = useMutation({
+  const { mutate: doResend, isPending: resending, isSuccess: resent, error: resendError } = useMutation({
     mutationFn: () => resendOtp(email),
     onSuccess: () => restartCountdown(),
+    // Don't throw — backend endpoint may not be deployed yet
+    onError: () => {},
   });
 
   const handleChange = (i: number, val: string) => {
@@ -151,6 +153,10 @@ const VerifyEmail = () => {
             </p>
           ) : resent ? (
             <span className="text-xs text-[#00C9A7] font-semibold">Code resent!</span>
+          ) : resendError ? (
+            <span className="text-xs text-orange-500 text-center leading-relaxed">
+              Resend unavailable right now.<br />Check your inbox or try again later.
+            </span>
           ) : (
             <button
               type="button"

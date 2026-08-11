@@ -254,7 +254,7 @@ const RecentSearchItem = ({
       hasBorderBottom ? "border-b border-neutral-100" : ""
     }`}
   >
-    <div className="w-8 h-8 rounded-full bg-[#EBE7E6] flex items-center justify-center flex-shrink-0">
+    <div className="w-8 h-8 rounded-full bg-[#EBE7E6] flex items-center justify-center shrink-0">
       <ClockIcon />
     </div>
     <span className="text-[#1C1B1B] text-base leading-6 font-normal">{query}</span>

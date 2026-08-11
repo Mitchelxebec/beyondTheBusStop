@@ -22,8 +22,7 @@ const registerServiceWorker = () => {
   if ("serviceWorker" in navigator) {
     navigator.serviceWorker
       .register("/sw.js")
-      .then((value) => console.log(value))
-      .catch((error) => console.log(error));
+      .catch((error) => console.warn("[SW]", error));
   }
 };
 

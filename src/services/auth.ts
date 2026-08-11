@@ -39,21 +39,17 @@ export async function login(payload: LoginPayload): Promise<LoginResponse> {
   return data;
 }
 
-/** GET /auth/verify-otp — verify the OTP sent after registration */
+/** POST /auth/verify-otp */
 export async function verifyOtp(
   payload: VerifyOtpPayload
 ): Promise<VerifyOtpResponse> {
-  const { data } = await api.get<VerifyOtpResponse>("/auth/verify-otp", {
-    data: payload,
-  });
+  const { data } = await api.post<VerifyOtpResponse>("/auth/verify-otp", payload);
   return data;
 }
 
-/** GET /auth/resend-otp */
+/** POST /auth/resend-otp */
 export async function resendOtp(email: string): Promise<{ message: string }> {
-  const { data } = await api.get<{ message: string }>("/auth/resend-otp", {
-    data: { email },
-  });
+  const { data } = await api.post<{ message: string }>("/auth/resend-otp", { email });
   return data;
 }
 

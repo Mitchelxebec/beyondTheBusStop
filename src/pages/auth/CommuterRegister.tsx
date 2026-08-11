@@ -1,11 +1,29 @@
 import { useState } from "react";
+import { useForm } from "react-hook-form";
+import { zodResolver } from "@hookform/resolvers/zod";
+import { z } from "zod";
 import { useNavigate } from "react-router-dom";
 import { AppLogo, PrimaryButton, SecondaryButton, TextInput } from "../../components";
 import { GoogleIcon, EyeIcon, LockIcon, UserIcon, MailIcon, OrDivider, AuthShell } from "./_shared";
+import { useRegisterCommuter } from "../../hooks/useRegister";
+
+const schema = z.object({
+  fullName: z.string().min(2, "Enter your full name"),
+  email:    z.string().email("Enter a valid email"),
+  password: z.string().min(6, "Password must be at least 6 characters"),
+});
+type FormValues = z.infer<typeof schema>;
 
 const CommuterRegister = () => {
   const [showPassword, setShowPassword] = useState(false);
   const navigate = useNavigate();
+  const { mutate: doRegister, isPending, error } = useRegisterCommuter();
+
+  const { register, handleSubmit, formState: { errors } } = useForm<FormValues>({
+    resolver: zodResolver(schema),
+  });
+
+  const onSubmit = (values: FormValues) => doRegister(values);
 
   return (
     <AuthShell>
@@ -16,12 +34,14 @@ const CommuterRegister = () => {
         <p className="text-xs text-gray-500">Start your journey with real-time transit data.</p>
       </div>
 
-      <div className="flex flex-col gap-3 w-full">
+      <form onSubmit={handleSubmit(onSubmit)} className="flex flex-col gap-3 w-full" noValidate>
         <TextInput
           label="Full Name"
           type="text"
           placeholder="Chidi Eze"
           leadingIcon={<UserIcon />}
+          error={!!errors.fullName} helperText={errors.fullName?.message}
+          {...register("fullName")}
         />
 
         <TextInput
@@ -30,6 +50,8 @@ const CommuterRegister = () => {
           inputMode="email"
           placeholder="hello@commuter.com"
           leadingIcon={<MailIcon />}
+          error={!!errors.email} helperText={errors.email?.message}
+          {...register("email")}
         />
 
         <TextInput
@@ -37,38 +59,41 @@ const CommuterRegister = () => {
           type={showPassword ? "text" : "password"}
           placeholder="••••••••"
           leadingIcon={<LockIcon />}
+          error={!!errors.password} helperText={errors.password?.message}
           trailingIcon={
-            <button
-              type="button"
+            <button type="button"
               aria-label={showPassword ? "Hide password" : "Show password"}
               onClick={() => setShowPassword(v => !v)}
-              className="text-gray-400 hover:text-gray-600 transition-colors"
-            >
+              className="text-gray-400 hover:text-gray-600 transition-colors">
               <EyeIcon open={showPassword} />
             </button>
           }
+          {...register("password")}
         />
-      </div>
 
-      <div className="flex flex-col items-center gap-3 w-full">
-        <PrimaryButton width="full" onClick={() => {}}>
-          Create Account
-        </PrimaryButton>
+        {error && (
+          <p role="alert" className="text-xs text-red-600 bg-red-50 border border-red-200 rounded-lg px-3 py-2">
+            {error instanceof Error ? error.message : "Registration failed. Try again."}
+          </p>
+        )}
 
-        <OrDivider />
+        <div className="flex flex-col items-center gap-3 w-full">
+          <PrimaryButton width="full" type="submit" disabled={isPending}>
+            {isPending ? "Creating account…" : "Create Account"}
+          </PrimaryButton>
 
-        <SecondaryButton width="full" onClick={() => {}}>
-          <GoogleIcon /> Sign up with Google
-        </SecondaryButton>
-      </div>
+          <OrDivider />
+
+          <SecondaryButton width="full" type="button" onClick={() => {}}>
+            <GoogleIcon /> Sign up with Google
+          </SecondaryButton>
+        </div>
+      </form>
 
       <p className="text-xs text-gray-500 text-center">
         Already have an account?{" "}
-        <button
-          type="button"
-          onClick={() => navigate("/auth/commuter/login")}
-          className="text-[#00C9A7] font-semibold hover:underline"
-        >
+        <button type="button" onClick={() => navigate("/auth/commuter/login")}
+          className="text-[#00C9A7] font-semibold hover:underline">
           Log in
         </button>
       </p>

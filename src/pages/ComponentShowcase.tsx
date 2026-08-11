@@ -97,7 +97,7 @@ const ComponentShowcase = () => {
             <PrimaryButton withArrow>Next</PrimaryButton>
           </Row>
           <Row label="not full width">
-            <PrimaryButton fullWidth={false} withArrow>
+            <PrimaryButton width="auto" withArrow>
               View Details
             </PrimaryButton>
           </Row>
@@ -117,7 +117,7 @@ const ComponentShowcase = () => {
             </SecondaryButton>
           </Row>
           <Row label="not full width">
-            <SecondaryButton fullWidth={false}>Log in</SecondaryButton>
+            <SecondaryButton width="auto">Log in</SecondaryButton>
           </Row>
         </Section>
 

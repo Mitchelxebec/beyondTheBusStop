@@ -1,27 +1,85 @@
-export type UserRole = "commuter" | "vendor";
+export type UserRole = "commuter" | "business";
 
-/** User object returned inside login response */
-export interface AuthUser {
-  id: string;
-  firstName: string;
-  lastName: string;
+/* ── Login ──────────────────────────────────────────────────────────────── */
+
+export interface LoginPayload {
   email: string;
-  token: string; // JWT — lives inside user object per this API's shape
-  role?: UserRole;
+  password: string;
 }
 
-/** Full login response: { message, user } */
+/** User object returned inside login/register responses */
+export interface AuthUser {
+  id: string;
+  fullName?: string;
+  businessName?: string;
+  email: string;
+  role: UserRole;
+  token: string; // JWT lives inside user object per this API
+}
+
 export interface LoginResponse {
   message: string;
   user: AuthUser;
 }
 
-/** Profile response: { success, data } */
+/* ── Register commuter ───────────────────────────────────────────────────── */
+
+export interface RegisterCommuterPayload {
+  fullName: string;
+  email: string;
+  password: string;
+}
+
+export interface RegisterCommuterResponse {
+  message: string;
+  user: {
+    id: string;
+    fullName: string;
+    email: string;
+    role: "commuter";
+  };
+}
+
+/* ── Register business ───────────────────────────────────────────────────── */
+
+export interface RegisterBusinessPayload {
+  businessName: string;
+  email: string;
+  password: string;
+  category: string;
+}
+
+export interface RegisterBusinessResponse {
+  success: boolean;
+  message: string;
+  user: {
+    id: string;
+    businessName: string;
+    email: string;
+    category: string;
+    role: "business";
+  };
+}
+
+/* ── OTP ─────────────────────────────────────────────────────────────────── */
+
+export interface VerifyOtpPayload {
+  email: string;
+  otp: string;
+}
+
+export interface VerifyOtpResponse {
+  success: boolean;
+  message: string;
+}
+
+/* ── Profile ─────────────────────────────────────────────────────────────── */
+
 export interface ProfileData {
   role: UserRole;
   _id: string;
-  firstName: string;
-  lastName: string;
+  fullName?: string;
+  businessName?: string;
   email: string;
   isVerified: boolean;
   timestamp: string;
@@ -32,26 +90,8 @@ export interface ProfileResponse {
   data: ProfileData;
 }
 
-/** Register payload */
-export interface RegisterPayload {
-  fullName: string;
-  email: string;
-  password: string;
-  role: UserRole;
-}
+/* ── Session (stored in context / localStorage) ───────────────────────────── */
 
-/** Register response */
-export interface RegisterResponse {
-  message: string;
-}
-
-/** Login payload */
-export interface LoginPayload {
-  email: string;
-  password: string;
-}
-
-/** What we store in context / localStorage */
 export interface AuthSession {
   token: string;
   user: AuthUser;

@@ -5,8 +5,8 @@ import { useAuth } from "../contexts/AuthContext";
 import type { LoginPayload, UserRole } from "../types/auth";
 
 /**
- * Login mutation shared by both CommmuterLogin and VendorLogin.
- * Role is passed in so we know which dashboard to redirect to after success.
+ * Login mutation — shared by CommmuterLogin and VendorLogin.
+ * Stores session and redirects based on role.
  */
 export function useLogin(role: UserRole) {
   const { setSession } = useAuth();
@@ -17,10 +17,10 @@ export function useLogin(role: UserRole) {
     onSuccess: (data) => {
       setSession({
         token: data.user.token,
-        user:  data.user,
+        user: data.user,
         role,
       });
-      navigate(role === "vendor" ? "/vendor/dashboard" : "/commuter/dashboard");
+      navigate(role === "business" ? "/vendor/dashboard" : "/commuter/home");
     },
   });
 }

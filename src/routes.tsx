@@ -1,6 +1,8 @@
 import { lazy, Suspense } from "react";
 import { createBrowserRouter, Navigate } from "react-router-dom";
 import PageLoader from "./components/PageLoader";
+import ProtectedRoute from "./components/ProtectedRoute";
+import GuestRoute from "./components/GuestRoute";
 
 // ── Lazy page imports ─────────────────────────────────────────────────────
 const Splash                = lazy(() => import("./pages/auth/Splash"));
@@ -20,41 +22,51 @@ const CommuterHomeDashboard = lazy(() => import("./pages/CommuterHomeDashboard")
 const NotFound              = lazy(() => import("./pages/NotFound"));
 const ComponentShowcase     = lazy(() => import("./pages/ComponentShowcase"));
 
-// Wrap a lazy element in Suspense with the spinner fallback
+// Wrap in Suspense spinner
 const s = (el: React.ReactNode) => (
   <Suspense fallback={<PageLoader />}>{el}</Suspense>
 );
 
-export const router = createBrowserRouter([
-  // ── Launch ──────────────────────────────────────────────────────────────
-  { path: "/",                        element: s(<Splash />) },
+// Guest-only wrapper (kicks logged-in users to their home)
+const guest = (el: React.ReactNode) => (
+  <Suspense fallback={<PageLoader />}>
+    <GuestRoute>{el}</GuestRoute>
+  </Suspense>
+);
 
-  // ── Onboarding ──────────────────────────────────────────────────────────
+// Auth-required wrapper, optional role check
+const auth = (el: React.ReactNode, role?: "commuter" | "business") => (
+  <Suspense fallback={<PageLoader />}>
+    <ProtectedRoute role={role}>{el}</ProtectedRoute>
+  </Suspense>
+);
+
+export const router = createBrowserRouter([
+  // ── Public (no auth needed) ───────────────────────────────────────────────
+  { path: "/",                        element: s(<Splash />) },
   { path: "/onboarding",              element: <Navigate to="/onboarding/1" replace /> },
   { path: "/onboarding/1",            element: s(<Onboarding1 />) },
   { path: "/onboarding/2",            element: s(<Onboarding2 />) },
   { path: "/onboarding/3",            element: s(<Onboarding3 />) },
 
-  // ── Auth ────────────────────────────────────────────────────────────────
-  { path: "/auth/role-select",        element: s(<RoleSelect />) },
-  { path: "/auth/commuter/login",     element: s(<CommmuterLogin />) },
-  { path: "/auth/commuter/register",  element: s(<CommuterRegister />) },
-  { path: "/auth/vendor/login",       element: s(<VendorLogin />) },
-  { path: "/auth/vendor/register",    element: s(<VendorRegister />) },
+  // ── Guest-only (logged-in users bounce to their home) ──────────────────────
+  { path: "/auth/role-select",        element: guest(<RoleSelect />) },
+  { path: "/auth/commuter/login",     element: guest(<CommmuterLogin />) },
+  { path: "/auth/commuter/register",  element: guest(<CommuterRegister />) },
+  { path: "/auth/vendor/login",       element: guest(<VendorLogin />) },
+  { path: "/auth/vendor/register",    element: guest(<VendorRegister />) },
+  { path: "/auth/verify-email",       element: guest(<VerifyEmail />) },
+  { path: "/auth/forgot-password",    element: guest(<ForgotPassword />) },
+  { path: "/auth/reset-password",     element: guest(<ResetPassword />) },
+  { path: "/auth/reset-success",      element: guest(<ResetSuccess />) },
 
-  // ── OTP + password recovery ──────────────────────────────────────────────
-  { path: "/auth/verify-email",       element: s(<VerifyEmail />) },
-  { path: "/auth/forgot-password",    element: s(<ForgotPassword />) },
-  { path: "/auth/reset-password",     element: s(<ResetPassword />) },
-  { path: "/auth/reset-success",      element: s(<ResetSuccess />) },
-
-  // ── Commuter app ─────────────────────────────────────────────────────────
-  { path: "/home",                    element: s(<CommuterHomeDashboard />) },
+  // ── Protected: commuter only ───────────────────────────────────────────────
+  { path: "/home",                    element: auth(<CommuterHomeDashboard />, "commuter") },
   { path: "/commuter/home",           element: <Navigate to="/home" replace /> },
 
-  // ── Dev ──────────────────────────────────────────────────────────────────
+  // ── Dev (unguarded) ───────────────────────────────────────────────────────
   { path: "/components-showcase",     element: s(<ComponentShowcase />) },
 
-  // ── Catch-all ────────────────────────────────────────────────────────────
+  // ── Catch-all ─────────────────────────────────────────────────────────────
   { path: "*",                        element: s(<NotFound />) },
 ]);

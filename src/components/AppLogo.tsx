@@ -1,4 +1,4 @@
-import heroImg from "../assets/logo.jpg";
+import heroImg from "../assets/btbs.png";
 
 interface AppLogoProps {
   /** Size of the logo container square. Defaults to "md". */

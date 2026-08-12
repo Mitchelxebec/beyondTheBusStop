@@ -19,12 +19,13 @@ const VerifyEmail           = lazy(() => import("./pages/auth/VerifyEmail"));
 const ForgotPassword        = lazy(() => import("./pages/auth/ForgotPassword"));
 const ResetPassword         = lazy(() => import("./pages/auth/ResetPassword"));
 const ResetSuccess          = lazy(() => import("./pages/auth/ResetSuccess"));
+const ResetOtp                = lazy(() => import("./pages/auth/ResetOtp"));
+const SearchResults           = lazy(() => import("./pages/commuter/SearchResults"));
 const CommuterHomeDashboard = lazy(() => import("./pages/CommuterHomeDashboard"));
 const VendorDashboard       = lazy(() => import("./pages/VendorDashboard"));
 const NotFound              = lazy(() => import("./pages/NotFound"));
-const ComponentShowcase     = lazy(() => import("./pages/ComponentShowcase"));
 
-// Wrap in Suspense spinner
+const ComponentShowcase     = lazy(() => import("./pages/ComponentShowcase"));
 const s = (el: React.ReactNode) => (
   <Suspense fallback={<PageLoader />}>{el}</Suspense>
 );
@@ -66,12 +67,14 @@ export const router = createBrowserRouter([
   { path: "/auth/vendor/register",    element: guest(<VendorRegister />) },
   { path: "/auth/verify-email",       element: guest(<VerifyEmail />) },
   { path: "/auth/forgot-password",    element: guest(<ForgotPassword />) },
+  { path: "/auth/reset-otp",          element: guest(<ResetOtp />) },
   { path: "/auth/reset-password",     element: guest(<ResetPassword />) },
   { path: "/auth/reset-success",      element: guest(<ResetSuccess />) },
 
   // ── Protected: commuter only ───────────────────────────────────────────────
   { path: "/home",                    element: auth(<CommuterHomeDashboard />, "commuter") },
   { path: "/commuter/home",           element: <Navigate to="/home" replace /> },
+  { path: "/search",                  element: auth(<SearchResults />, "commuter") },
 
   // ── Protected: business / vendor only ──────────────────────────────────────
   { path: "/vendor/home",             element: auth(<VendorDashboard />, "business") },

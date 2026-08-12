@@ -23,7 +23,7 @@ dist-ssr
 *.sln
 *.sw?
 
-# Files
+# Local env files
 *.local
 .env*.local
-.mcp.json
+.mcp.json

@@ -10,6 +10,7 @@ export interface LoginPayload {
 /** User object returned inside login/register responses */
 export interface AuthUser {
   id: string;
+  _id?: string;
   fullName?: string;
   businessName?: string;
   email: string;

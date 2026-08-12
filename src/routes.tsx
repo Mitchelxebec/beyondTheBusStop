@@ -3,6 +3,7 @@ import { createBrowserRouter, Navigate } from "react-router-dom";
 import PageLoader from "./components/PageLoader";
 import ProtectedRoute from "./components/ProtectedRoute";
 import GuestRoute from "./components/GuestRoute";
+import { useAuth } from "./contexts/AuthContext";
 
 // ── Lazy page imports ─────────────────────────────────────────────────────
 const Splash                = lazy(() => import("./pages/auth/Splash"));
@@ -42,6 +43,13 @@ const auth = (el: React.ReactNode, role?: "commuter" | "business") => (
   </Suspense>
 );
 
+// Redirect nav aliases to the user's role-based home dashboard
+const RoleHomeRedirect = () => {
+  const { session } = useAuth();
+  const target = session?.role === "business" ? "/vendor/home" : "/home";
+  return <Navigate to={target} replace />;
+};
+
 export const router = createBrowserRouter([
   // ── Public (no auth needed) ───────────────────────────────────────────────
   { path: "/",                        element: s(<Splash />) },
@@ -68,6 +76,12 @@ export const router = createBrowserRouter([
   // ── Protected: business / vendor only ──────────────────────────────────────
   { path: "/vendor/home",             element: auth(<VendorDashboard />, "business") },
   { path: "/vendor/dashboard",        element: <Navigate to="/vendor/home" replace /> },
+
+  // ── Protected: navbar / action link aliases ────────────────────────────────
+  { path: "/routes",                  element: auth(<RoleHomeRedirect />) },
+  { path: "/routes/:id",              element: auth(<RoleHomeRedirect />) },
+  { path: "/share",                   element: auth(<RoleHomeRedirect />) },
+  { path: "/profile",                 element: auth(<RoleHomeRedirect />) },
 
   // ── Dev (unguarded) ───────────────────────────────────────────────────────
   { path: "/components-showcase",     element: s(<ComponentShowcase />) },

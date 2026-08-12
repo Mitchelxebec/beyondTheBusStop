@@ -128,7 +128,7 @@ const VendorDashboard = () => {
   // Filter routes created by this business user (or all routes as fallback)
   const allRoutes = routesData?.routes ?? [];
   const vendorRoutes = allRoutes.filter(
-    (r) => r.createdBy === session?.user?._id
+    (r) => r.createdBy === session?.user?._id || r.createdBy === session?.user?.id
   );
   const displayedRoutes = vendorRoutes.length > 0 ? vendorRoutes : allRoutes;
 

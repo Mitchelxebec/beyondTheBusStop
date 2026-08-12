@@ -19,6 +19,7 @@ const ForgotPassword        = lazy(() => import("./pages/auth/ForgotPassword"));
 const ResetPassword         = lazy(() => import("./pages/auth/ResetPassword"));
 const ResetSuccess          = lazy(() => import("./pages/auth/ResetSuccess"));
 const CommuterHomeDashboard = lazy(() => import("./pages/CommuterHomeDashboard"));
+const VendorDashboard       = lazy(() => import("./pages/VendorDashboard"));
 const NotFound              = lazy(() => import("./pages/NotFound"));
 const ComponentShowcase     = lazy(() => import("./pages/ComponentShowcase"));
 
@@ -64,8 +65,13 @@ export const router = createBrowserRouter([
   { path: "/home",                    element: auth(<CommuterHomeDashboard />, "commuter") },
   { path: "/commuter/home",           element: <Navigate to="/home" replace /> },
 
+  // ── Protected: business / vendor only ──────────────────────────────────────
+  { path: "/vendor/home",             element: auth(<VendorDashboard />, "business") },
+  { path: "/vendor/dashboard",        element: <Navigate to="/vendor/home" replace /> },
+
   // ── Dev (unguarded) ───────────────────────────────────────────────────────
   { path: "/components-showcase",     element: s(<ComponentShowcase />) },
+  { path: "/dev/vendor",              element: s(<VendorDashboard />) },
 
   // ── Catch-all ─────────────────────────────────────────────────────────────
   { path: "*",                        element: s(<NotFound />) },

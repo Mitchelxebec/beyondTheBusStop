@@ -206,7 +206,7 @@ const RouteCard = ({
         id={`navigate-route-${route._id}`}
         onClick={() => onNavigate(route._id)}
         aria-label={`View route from ${route.origin} to ${route.destination}`}
-        className="flex-shrink-0 w-10 h-10 rounded-full bg-[#FFC72C] flex items-center justify-center transition-transform active:scale-95 hover:brightness-95"
+        className="shrink-0 w-10 h-10 rounded-full bg-[#FFC72C] flex items-center justify-center transition-transform active:scale-95 hover:brightness-95"
       >
         <BusIcon />
       </button>
@@ -223,13 +223,13 @@ const SafetyPointItem = ({ point }: { point: SafetyPoint }) => {
 
   return (
     <div
-      className="flex flex-col items-center gap-2 flex-shrink-0"
+      className="flex flex-col items-center gap-2 shrink-0"
       title={point.address ?? point.name}
     >
       <div className="w-14 h-14 rounded-2xl bg-[#F1EDEC] flex items-center justify-center">
         {icon}
       </div>
-      <span className="text-[#444748] text-[10px] leading-[15px] font-normal text-center w-14 line-clamp-2">
+      <span className="text-[#444748] text-[10px] leading-3.75 font-normal text-center w-14 line-clamp-2">
         {point.name}
       </span>
     </div>

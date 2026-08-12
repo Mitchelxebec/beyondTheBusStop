@@ -172,7 +172,13 @@ const VerifyEmail = () => {
         {/* Error */}
         {error && (
           <p role="alert" className="text-xs text-red-500 text-center w-full -mt-2">
-            {error instanceof Error ? error.message : "Verification failed. Try again."}
+            {(() => {
+              const status = (error as Error & { status?: number }).status;
+              if (status === 400) return "Invalid or expired code. Please check and try again.";
+              if (status === 404) return "We couldn't find your account. Please go back and re-enter your email.";
+              if (status === 429) return "Too many attempts. Please wait a moment before trying again.";
+              return "Something went wrong. Please try again.";
+            })()}
           </p>
         )}
 

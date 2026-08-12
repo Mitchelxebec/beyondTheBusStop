@@ -90,7 +90,7 @@ const ForgotPassword = () => {
             )}
 
             <PrimaryButton width="full" type="submit" disabled={isPending}>
-              {isPending ? "Sending…" : "Send Link"}
+              {isPending ? "Sending…" : "Send Code"}
             </PrimaryButton>
           </form>
 

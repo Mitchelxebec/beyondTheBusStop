@@ -51,17 +51,17 @@ import { BackButton } from "@/components";
 ### 3. **BottomNavBar**
 **Path:** `components/BottomNavBar.tsx`
 
-Fixed bottom navigation with 4 tabs. Active tab is teal; inactive tabs are grey.
+Responsive navigation bar. Defaults to standard Commuter navigation (`Home`, `Routes`, `Share`, `Profile`).
 
 **Props:**
-- `items: NavItem[]` — Array of navigation items.
+- `items?: NavItem[]` — Optional array of navigation items. Defaults to standard commuter links (`DEFAULT_NAV_ITEMS`).
 
 **NavItem interface:**
 ```ts
 {
   label: string;
   path: string;
-  icon: React.ReactNode;
+  icon?: React.ReactNode;
 }
 ```
 
@@ -69,17 +69,15 @@ Fixed bottom navigation with 4 tabs. Active tab is teal; inactive tabs are grey.
 ```tsx
 import { BottomNavBar } from "@/components";
 
-const navItems = [
-  { label: "Home", path: "/", icon: "🏠" },
-  { label: "Routes", path: "/routes", icon: "🗺️" },
-  { label: "Saved", path: "/saved", icon: "📌" },
-  { label: "Profile", path: "/profile", icon: "👤" }
-];
+// 1. Standard Commuter Usage (Default)
+<BottomNavBar />
 
-<BottomNavBar items={navItems} />
+// 2. Custom Navigation (e.g. Vendor Portal)
+<BottomNavBar items={vendorNavItems} />
 ```
 
-**Appears on:** All post-auth screens (Home, Routes, Saved, Profile).
+**Appears on:** Post-auth screens (Home, Routes, Search Results, Profile).
+See [NAVBAR_USAGE.md](file:///c:/Users/fagbe/3D%20Objects/BTBS/beyondTheBusStop/src/components/NAVBAR_USAGE.md) for developer guidelines.
 
 ---
 

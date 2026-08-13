@@ -2,26 +2,32 @@
 <html lang="en">
   <head>
     <meta charset="UTF-8" />
-    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <!--
+      viewport-fit=cover: content extends under the status bar notch/cutout.
+      This is required for the app to fill the full screen when installed as a PWA.
+    -->
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover" />
     <title>Beyond the Bus Stop</title>
 
     <!-- PWA Manifest -->
     <link rel="manifest" href="/manifest.json" />
 
     <!-- Favicon -->
-    <link rel="icon" type="image/jpeg" href="/logo.jpg" />
+    <link rel="icon" type="image/png" href="/btbs.png" />
 
-    <!-- iOS PWA -->
+    <!-- Android / Chrome PWA -->
     <meta name="mobile-web-app-capable" content="yes" />
+
+    <!-- iOS PWA — forces fullscreen when launched from home screen -->
     <meta name="apple-mobile-web-app-capable" content="yes" />
     <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
     <meta name="apple-mobile-web-app-title" content="ByndBus" />
-    <link rel="apple-touch-icon" href="/logo.jpg" />
+    <link rel="apple-touch-icon" href="/btbs.png" />
 
-    <!-- Theme -->
+    <!-- Theme colour for Android Chrome address bar (hidden when installed) -->
     <meta name="theme-color" content="#1A1A1A" />
 
-    <!-- Preconnect to API for faster first request -->
+    <!-- Preconnect to API -->
     <link rel="preconnect" href="https://btbs-backend.onrender.com" />
   </head>
   <body>

@@ -26,7 +26,7 @@ const ResetIcon = () => (
 const ForgotPassword = () => {
   const navigate = useNavigate();
 
-  const { mutate, isPending, isSuccess, error } = useMutation({
+  const { mutate, isPending, error } = useMutation({
     mutationFn: (payload: FormValues) =>
       api.post("/auth/forgot-password", payload).then(r => r.data),
     onSuccess: (_data, variables) => {
@@ -80,12 +80,6 @@ const ForgotPassword = () => {
             {error && (
               <p role="alert" className="text-xs text-red-600 bg-red-50 border border-red-200 rounded-lg px-3 py-2 text-center">
                 {error instanceof Error ? error.message : "Something went wrong."}
-              </p>
-            )}
-
-            {isSuccess && (
-              <p className="text-xs text-[#00C9A7] bg-[#00C9A7]/8 border border-[#00C9A7]/20 rounded-lg px-3 py-2 text-center">
-                Recovery email sent! Check your inbox.
               </p>
             )}
 

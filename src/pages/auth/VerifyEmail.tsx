@@ -172,7 +172,7 @@ const VerifyEmail = () => {
         {/* Error */}
         {error && (
           <p role="alert" className="text-xs text-red-500 text-center w-full -mt-2">
-            {error instanceof Error ? error.message : "Verification failed. Try again."}
+            {error instanceof Error ? error.message : "Something went wrong. Please try again."}
           </p>
         )}
 

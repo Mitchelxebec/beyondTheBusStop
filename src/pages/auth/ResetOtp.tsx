@@ -52,10 +52,10 @@ const ResetOtp = () => {
     }, 1000);
   };
 
-  // Verify OTP for password reset
+  // Verify OTP for password reset — uses the same /auth/verify-otp endpoint
   const { mutate: doVerify, isPending, error } = useMutation({
     mutationFn: () =>
-      api.post("/auth/verify-reset-otp", { email, otp: digits.join("") }).then(r => r.data),
+      api.post("/auth/verify-otp", { email, otp: digits.join("") }).then(r => r.data),
     onSuccess: () =>
       navigate("/auth/reset-password", { state: { email, otp: digits.join("") } }),
   });
@@ -172,7 +172,7 @@ const ResetOtp = () => {
         {/* Error */}
         {error && (
           <p role="alert" className="text-xs text-red-500 text-center w-full -mt-2">
-            {error instanceof Error ? error.message : "Verification failed. Try again."}
+            {error instanceof Error ? error.message : "Something went wrong. Please try again."}
           </p>
         )}
 

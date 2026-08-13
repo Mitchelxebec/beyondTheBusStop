@@ -1,12 +1,13 @@
-import { useState } from "react";
-import { useNavigate } from "react-router-dom";
-import { BackButton, SectionLabel } from "../../components";
+import { useState, useMemo } from "react";
+import { useNavigate, useSearchParams } from "react-router-dom";
+import { BackButton, SectionLabel, BottomNavBar } from "../../components";
+import type { NavItem } from "../../components/BottomNavBar";
 
 // ── Types ─────────────────────────────────────────────────────────────────────
 
-type Confidence = "High" | "Moderate" | "Low";
+export type Confidence = "High" | "Moderate" | "Low";
 
-interface RouteResult {
+export interface RouteResult {
   id: string;
   from: string;
   to: string;
@@ -14,9 +15,46 @@ interface RouteResult {
   fareHigh: number;
   duration: string;
   confidence: Confidence;
+  vehicleType?: string;
 }
 
-// ── Static placeholder data (all 3 confidence states represented) ─────────────
+// ── Nav items for BottomNavBar ────────────────────────────────────────────────
+
+const HomeNavIcon = () => (
+  <svg width="16" height="16" viewBox="0 0 16 18" fill="currentColor" aria-hidden="true">
+    <path d="M8 1L15 7V17H10V12H6V17H1V7L8 1Z" />
+  </svg>
+);
+const RoutesNavIcon = () => (
+  <svg width="16" height="16" viewBox="0 0 18 18" fill="none" aria-hidden="true">
+    <circle cx="3" cy="3" r="2" stroke="currentColor" strokeWidth="1.4" />
+    <circle cx="15" cy="15" r="2" stroke="currentColor" strokeWidth="1.4" />
+    <path d="M3 5V10C3 12.2 4.8 14 7 14H11C13.2 14 15 12.2 15 10V5" stroke="currentColor" strokeWidth="1.4" strokeLinecap="round" />
+  </svg>
+);
+const ShareNavIcon = () => (
+  <svg width="16" height="16" viewBox="0 0 18 20" fill="none" aria-hidden="true">
+    <circle cx="15" cy="3" r="2" stroke="currentColor" strokeWidth="1.4" />
+    <circle cx="3" cy="10" r="2" stroke="currentColor" strokeWidth="1.4" />
+    <circle cx="15" cy="17" r="2" stroke="currentColor" strokeWidth="1.4" />
+    <path d="M5 8.8L13 4.2M5 11.2L13 15.8" stroke="currentColor" strokeWidth="1.4" strokeLinecap="round" />
+  </svg>
+);
+const ProfileNavIcon = () => (
+  <svg width="16" height="16" viewBox="0 0 20 20" fill="none" aria-hidden="true">
+    <circle cx="10" cy="7" r="4" stroke="currentColor" strokeWidth="1.4" />
+    <path d="M2 19C2 15.1 5.6 12 10 12C14.4 12 18 15.1 18 19" stroke="currentColor" strokeWidth="1.4" strokeLinecap="round" />
+  </svg>
+);
+
+const NAV_ITEMS: NavItem[] = [
+  { label: "Home",    path: "/home",    icon: <HomeNavIcon /> },
+  { label: "Routes",  path: "/routes",  icon: <RoutesNavIcon /> },
+  { label: "Share",   path: "/share",   icon: <ShareNavIcon /> },
+  { label: "Profile", path: "/profile", icon: <ProfileNavIcon /> },
+];
+
+// ── Static route dataset ──────────────────────────────────────────────────────
 
 const STATIC_RESULTS: RouteResult[] = [
   {
@@ -27,6 +65,7 @@ const STATIC_RESULTS: RouteResult[] = [
     fareHigh: 500,
     duration: "~45 mins",
     confidence: "High",
+    vehicleType: "Bus",
   },
   {
     id: "2",
@@ -36,6 +75,7 @@ const STATIC_RESULTS: RouteResult[] = [
     fareHigh: 400,
     duration: "~25 mins",
     confidence: "Moderate",
+    vehicleType: "Danfo",
   },
   {
     id: "3",
@@ -45,6 +85,37 @@ const STATIC_RESULTS: RouteResult[] = [
     fareHigh: 800,
     duration: "~70 mins",
     confidence: "Low",
+    vehicleType: "Bus",
+  },
+  {
+    id: "4",
+    from: "Ojota",
+    to: "CMS",
+    fareLow: 300,
+    fareHigh: 500,
+    duration: "~35 mins",
+    confidence: "High",
+    vehicleType: "Bus",
+  },
+  {
+    id: "5",
+    from: "Yaba",
+    to: "Obalende",
+    fareLow: 250,
+    fareHigh: 400,
+    duration: "~30 mins",
+    confidence: "High",
+    vehicleType: "Bus",
+  },
+  {
+    id: "6",
+    from: "Mile 2",
+    to: "Trade Fair",
+    fareLow: 200,
+    fareHigh: 350,
+    duration: "~20 mins",
+    confidence: "Moderate",
+    vehicleType: "Keke",
   },
 ];
 
@@ -80,25 +151,25 @@ const RouteCard = ({
   const isHighConfidence = route.confidence === "High";
 
   return (
-    <article className="bg-white rounded-2xl overflow-hidden shadow-sm hover:shadow-md transition-shadow border border-gray-100">
+    <article className="bg-white rounded-2xl overflow-hidden shadow-xs hover:shadow-md transition-shadow border border-gray-100">
       {/* From / To */}
       <div className="px-5 pt-5 pb-4">
         <div className="flex items-start gap-3">
           {/* Route line */}
           <div className="flex flex-col items-center pt-1 gap-1 shrink-0">
-            <span className="w-3 h-3 rounded-full bg-[#1A1A1A] ring-2 ring-white ring-offset-1 shadow-sm" />
+            <span className="w-3 h-3 rounded-full bg-[#1A1A1A] ring-2 ring-white ring-offset-1 shadow-xs" />
             <span className="w-0.5 h-8 bg-gray-200 rounded-full" />
-            <span className="w-3 h-3 rounded-full bg-[#F5B800] ring-2 ring-white ring-offset-1 shadow-sm" />
+            <span className="w-3 h-3 rounded-full bg-[#F5B800] ring-2 ring-white ring-offset-1 shadow-xs" />
           </div>
 
           <div className="flex flex-col gap-3 flex-1 min-w-0">
             <div>
               <p className="text-[10px] font-medium text-gray-400 uppercase tracking-wide">From</p>
-              <p className="text-sm font-bold text-gray-900 mt-0.5">{route.from}</p>
+              <p className="text-sm font-bold text-gray-900 mt-0.5 truncate">{route.from}</p>
             </div>
             <div>
               <p className="text-[10px] font-medium text-gray-400 uppercase tracking-wide">To</p>
-              <p className="text-sm font-bold text-gray-900 mt-0.5">{route.to}</p>
+              <p className="text-sm font-bold text-gray-900 mt-0.5 truncate">{route.to}</p>
             </div>
           </div>
         </div>
@@ -124,6 +195,11 @@ const RouteCard = ({
               <path strokeLinecap="round" d="M12 6v6l4 2" />
             </svg>
             <span className="text-xs text-gray-500">{route.duration}</span>
+            {route.vehicleType && (
+              <span className="text-xs font-medium text-gray-400 px-1.5 py-0.5 rounded bg-gray-100">
+                {route.vehicleType}
+              </span>
+            )}
           </div>
           <ConfidenceBadge level={route.confidence} />
         </div>
@@ -190,19 +266,28 @@ const LoadingState = () => (
 
 // ── Empty state ───────────────────────────────────────────────────────────────
 
-const EmptyState = () => (
-  <div className="flex flex-col items-center gap-3 py-16 text-center">
+const EmptyState = ({ onReset }: { onReset?: () => void }) => (
+  <div className="flex flex-col items-center gap-3 py-12 text-center bg-white rounded-2xl p-6 border border-gray-100">
     <div className="w-14 h-14 rounded-2xl bg-gray-100 flex items-center justify-center">
       <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="#C4C7C7" strokeWidth="1.5" aria-hidden="true">
         <path strokeLinecap="round" strokeLinejoin="round" d="M9 20l-5.447-2.724A1 1 0 013 16.382V5.618a1 1 0 011.447-.894L9 7m0 13l6-3m-6 3V7m6 10l4.553 2.276A1 1 0 0021 18.382V7.618a1 1 0 00-.553-.894L15 4m0 13V4m0 0L9 7" />
       </svg>
     </div>
     <div className="flex flex-col gap-1">
-      <p className="text-sm font-semibold text-gray-500">Don't see your starting point?</p>
-      <p className="text-xs text-gray-400 leading-relaxed max-w-55">
-        Try refining your search or exploring the map.
+      <p className="text-sm font-semibold text-gray-900">No matching routes found</p>
+      <p className="text-xs text-gray-400 leading-relaxed max-w-xs">
+        Try refining your search keyword or resetting active filters.
       </p>
     </div>
+    {onReset && (
+      <button
+        type="button"
+        onClick={onReset}
+        className="mt-2 px-4 py-2 rounded-xl bg-[#F5B800] text-[#1A1A1A] text-xs font-semibold hover:bg-[#FFCA28] transition-colors"
+      >
+        Reset Filters & Show All
+      </button>
+    )}
   </div>
 );
 
@@ -222,7 +307,7 @@ const Pill = ({
     onClick={onClick}
     className={`
       inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full text-xs font-medium
-      border transition-all duration-150 active:scale-95
+      border transition-all duration-150 active:scale-95 shrink-0
       ${active
         ? "bg-[#1A1A1A] text-white border-[#1A1A1A]"
         : "bg-white text-gray-700 border-gray-200 hover:border-gray-400"
@@ -233,85 +318,159 @@ const Pill = ({
   </button>
 );
 
-// ── Page ──────────────────────────────────────────────────────────────────────
+// ── Page Component ────────────────────────────────────────────────────────────
 
 const SearchResults = () => {
   const navigate = useNavigate();
+  const [searchParams, setSearchParams] = useSearchParams();
 
-  // These will come from router state / search params once API is wired
-  const query = "Ikeja / Computer Village";
+  // Read search query from URL (supports ?destination=... or ?query=...)
+  const initialQuery = searchParams.get("destination") ?? searchParams.get("query") ?? "";
 
-  const [sortBy, setSortBy] = useState<"fastest" | "cheapest">("fastest");
+  const [searchInput, setSearchInput] = useState(initialQuery);
+  const [activeQuery, setActiveQuery] = useState(initialQuery);
+  const [sortBy, setSortBy] = useState<"fastest" | "cheapest" | "confidence">("fastest");
+  const [selectedVehicle, setSelectedVehicle] = useState<string>("All");
 
-  // Simulate loading state — flip to true to preview skeleton
+  const handleSearchSubmit = (e?: React.FormEvent) => {
+    if (e) e.preventDefault();
+    const trimmed = searchInput.trim();
+    setActiveQuery(trimmed);
+    if (trimmed) {
+      setSearchParams({ destination: trimmed });
+    } else {
+      setSearchParams({});
+    }
+  };
+
+  const clearFilters = () => {
+    setSearchInput("");
+    setActiveQuery("");
+    setSelectedVehicle("All");
+    setSortBy("fastest");
+    setSearchParams({});
+  };
+
+  // Filter & Sort Logic
+  const sortedAndFiltered = useMemo(() => {
+    return STATIC_RESULTS.filter(route => {
+      if (activeQuery) {
+        const q = activeQuery.toLowerCase();
+        const matchFrom = route.from.toLowerCase().includes(q);
+        const matchTo = route.to.toLowerCase().includes(q);
+        if (!matchFrom && !matchTo) return false;
+      }
+      if (selectedVehicle !== "All" && route.vehicleType) {
+        if (route.vehicleType.toLowerCase() !== selectedVehicle.toLowerCase()) return false;
+      }
+      return true;
+    }).sort((a, b) => {
+      if (sortBy === "fastest") return parseInt(a.duration) - parseInt(b.duration);
+      if (sortBy === "cheapest") return a.fareLow - b.fareLow;
+      if (sortBy === "confidence") {
+        const score = { High: 3, Moderate: 2, Low: 1 };
+        return score[b.confidence] - score[a.confidence];
+      }
+      return 0;
+    });
+  }, [activeQuery, selectedVehicle, sortBy]);
+
   const isLoading = false;
-
-  const sorted = [...STATIC_RESULTS].sort((a, b) =>
-    sortBy === "fastest"
-      ? parseInt(a.duration) - parseInt(b.duration)
-      : a.fareLow - b.fareLow
-  );
-
-  const hasResults = sorted.length > 0;
+  const hasResults = sortedAndFiltered.length > 0;
 
   return (
-    <main className="min-h-screen bg-[#F5F5F0]">
+    <div className="flex flex-col min-h-dvh bg-[#F5F5F0]">
+      {/* Top Navbar */}
+      <BottomNavBar items={NAV_ITEMS} />
+
       {/* Sticky header */}
-      <div className="sticky top-0 z-20 bg-[#F5F5F0]/95 backdrop-blur-sm border-b border-gray-100 px-4 pt-12 pb-3">
-        <div className="flex items-center gap-3">
+      <div className="sticky top-14 z-20 bg-[#F5F5F0]/95 backdrop-blur-sm border-b border-gray-200 px-4 pt-4 pb-3">
+        <div className="flex items-center gap-3 max-w-lg mx-auto">
           <BackButton onClick={() => navigate(-1)} />
           <span className="text-base font-semibold text-gray-900">Search Results</span>
         </div>
       </div>
 
-      <div className="px-4 pt-5 pb-12 flex flex-col gap-5 max-w-lg mx-auto">
+      <main className="flex-1 px-4 pt-4 pb-16 flex flex-col gap-4 max-w-lg mx-auto w-full">
+        {/* Search Input Bar */}
+        <form onSubmit={handleSearchSubmit} className="relative flex items-center">
+          <span className="absolute left-3.5 top-1/2 -translate-y-1/2 pointer-events-none" aria-hidden="true">
+            <svg width="18" height="18" viewBox="0 0 18 18" fill="none">
+              <circle cx="8" cy="8" r="5.5" stroke="#747878" strokeWidth="1.5" />
+              <path d="M12.5 12.5L15.5 15.5" stroke="#747878" strokeWidth="1.5" strokeLinecap="round" />
+            </svg>
+          </span>
+          <input
+            type="search"
+            value={searchInput}
+            onChange={(e) => setSearchInput(e.target.value)}
+            placeholder="Search destination (e.g. Computer Village, CMS)..."
+            className="w-full h-11 pl-10 pr-24 rounded-xl bg-white border border-gray-200 text-sm text-gray-900 placeholder:text-gray-400 outline-none focus:ring-2 focus:ring-[#F5B800]"
+          />
+          <button
+            type="submit"
+            className="absolute right-2 top-1/2 -translate-y-1/2 px-3 py-1.5 rounded-lg bg-[#1A1A1A] text-white text-xs font-medium hover:bg-black transition-colors"
+          >
+            Search
+          </button>
+        </form>
 
         {/* Query label */}
-        <div className="flex flex-col gap-1">
-          <SectionLabel>Search Results</SectionLabel>
-          <p className="text-sm font-semibold text-gray-900 px-1">{query}</p>
+        <div className="flex items-center justify-between">
+          <div className="flex flex-col gap-0.5">
+            <SectionLabel>Search Results</SectionLabel>
+            <p className="text-sm font-semibold text-gray-900">
+              {activeQuery ? `Routes matching "${activeQuery}"` : "All Available Routes"}
+            </p>
+          </div>
+          {(activeQuery || selectedVehicle !== "All" || sortBy !== "fastest") && (
+            <button
+              type="button"
+              onClick={clearFilters}
+              className="text-xs text-[#007A62] font-semibold hover:underline"
+            >
+              Clear All
+            </button>
+          )}
         </div>
 
-        {/* Filter + Sort */}
-        <div className="flex gap-2">
-          <Pill>
-            <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" aria-hidden="true">
-              <path strokeLinecap="round" strokeLinejoin="round" d="M3 4h18M7 12h10M11 20h2" />
-            </svg>
-            Filter
-          </Pill>
+        {/* Filter + Sort Pills */}
+        <div className="flex items-center gap-2 overflow-x-auto no-scrollbar pb-1">
           <Pill
-            active
+            active={sortBy === "fastest"}
             onClick={() => setSortBy(sortBy === "fastest" ? "cheapest" : "fastest")}
           >
-            <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" aria-hidden="true">
-              <path strokeLinecap="round" strokeLinejoin="round" d="M3 6h18M7 12h10M11 18h2" />
-            </svg>
-            Sort: {sortBy === "fastest" ? "Fastest" : "Cheapest"}
+            Sort: {sortBy === "fastest" ? "Fastest" : sortBy === "cheapest" ? "Cheapest" : "Confidence"}
           </Pill>
+          {["All", "Bus", "Danfo", "Keke"].map((v) => (
+            <Pill
+              key={v}
+              active={selectedVehicle === v}
+              onClick={() => setSelectedVehicle(v)}
+            >
+              {v}
+            </Pill>
+          ))}
         </div>
 
-        {/* Content — loading / results / empty */}
+        {/* Content */}
         {isLoading ? (
           <LoadingState />
         ) : hasResults ? (
           <div className="flex flex-col gap-4">
-            {sorted.map(route => (
+            {sortedAndFiltered.map((route) => (
               <RouteCard
                 key={route.id}
                 route={route}
-                onViewDetails={id => navigate(`/route/${id}`)}
+                onViewDetails={(id) => navigate(`/routes/${id}`)}
               />
             ))}
-            {/* Empty state hint below results — matches wireframe */}
-            <EmptyState />
           </div>
         ) : (
-          <EmptyState />
+          <EmptyState onReset={clearFilters} />
         )}
-
-      </div>
-    </main>
+      </main>
+    </div>
   );
 };
 

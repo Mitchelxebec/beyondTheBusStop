@@ -19,11 +19,10 @@ const VerifyEmail           = lazy(() => import("./pages/auth/VerifyEmail"));
 const ForgotPassword        = lazy(() => import("./pages/auth/ForgotPassword"));
 const ResetPassword         = lazy(() => import("./pages/auth/ResetPassword"));
 const ResetSuccess          = lazy(() => import("./pages/auth/ResetSuccess"));
-const ResetOtp                = lazy(() => import("./pages/auth/ResetOtp"));
-const SearchResults           = lazy(() => import("./pages/commuter/SearchResults"));
+const ResetOtp              = lazy(() => import("./pages/auth/ResetOtp"));
 const CommuterHomeDashboard = lazy(() => import("./pages/CommuterHomeDashboard"));
 const VendorDashboard       = lazy(() => import("./pages/VendorDashboard"));
-const SearchResults         = lazy(() => import("./pages/SearchResults"));
+const SearchResults         = lazy(() => import("./pages/commuter/SearchResults"));
 const NotFound              = lazy(() => import("./pages/NotFound"));
 
 const ComponentShowcase     = lazy(() => import("./pages/ComponentShowcase"));
@@ -82,9 +81,8 @@ export const router = createBrowserRouter([
   { path: "/vendor/dashboard",        element: <Navigate to="/vendor/home" replace /> },
 
   // ── Search & Public Route Views ───────────────────────────────────────────
-  { path: "/routes",                  element: s(<SearchResults />) },
-  { path: "/search",                  element: s(<SearchResults />) },
-  { path: "/routes/search",           element: s(<SearchResults />) },
+  { path: "/routes",                  element: auth(<SearchResults />, "commuter") },
+  { path: "/routes/search",           element: auth(<SearchResults />, "commuter") },
   { path: "/routes/:id",              element: auth(<RoleHomeRedirect />) },
   { path: "/share",                   element: auth(<RoleHomeRedirect />) },
   { path: "/profile",                 element: auth(<RoleHomeRedirect />) },

@@ -90,6 +90,15 @@ const mobileLinkClass = (isActive: boolean) =>
 /**
  * Responsive web-app navigation bar.
  *
+ * Desktop (md+)  — Transparent fixed bar: logo + brand name on the left,
+ *                   text nav links on the right. No icons.
+ * Tablet (sm)    — Same as desktop with brand name hidden.
+ * Mobile (<md)   — Logo on the left, hamburger on the right.
+ *                   Tapping hamburger reveals a full dropdown with icons.
+ *
+ * Background is translucent (#FDFAF8 / 90%) with backdrop-blur so it
+ * resonates with the page background instead of sitting as a separate bar.
+ *
  * Defaults to standard Commuter navigation items (Home, Routes, Share, Profile).
  * Pass custom `items` array if building specialized views (e.g. Vendor navigation).
  */

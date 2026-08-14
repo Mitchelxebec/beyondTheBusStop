@@ -205,7 +205,7 @@ const VendorDashboard = () => {
   // ─── Locked State Actions ───────────────────────────────────────────────────
   // TODO: replace with real subscriptionStatus check when the endpoint exists (GET /api/business/subscription)
   // Cross-reference: BTBS-BACKEND/src/models/business.model.js tracks subscriptionStatus ('trial' | 'active' | 'expired')
-  const handleLockedAction = (_featureName: string) => {
+  const handleLockedAction = (_featureName?: string) => {
     navigate("/vendor/upgrade");
   };
 

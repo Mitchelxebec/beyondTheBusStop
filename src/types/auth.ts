@@ -13,6 +13,7 @@ export interface AuthUser {
   _id?: string;
   fullName?: string;
   businessName?: string;
+  category?: string;
   email: string;
   role: UserRole;
   token: string; // JWT lives inside user object per this API
@@ -81,6 +82,7 @@ export interface ProfileData {
   _id: string;
   fullName?: string;
   businessName?: string;
+  category?: string;
   email: string;
   isVerified: boolean;
   timestamp: string;

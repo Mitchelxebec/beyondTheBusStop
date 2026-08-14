@@ -6,15 +6,16 @@ import { useAuth } from "../../contexts/AuthContext";
 
 // ─── Icons ──────────────────────────────────────────────────────────────────────
 
-const ArrowLeftIcon = () => (
-  <svg width="18" height="18" viewBox="0 0 18 18" fill="none" aria-hidden="true">
-    <path d="M11.25 14.25L6 9L11.25 3.75" stroke="#1C1B1B" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" />
+const CheckIcon = () => (
+  <svg width="18" height="18" viewBox="0 0 20 20" fill="none" aria-hidden="true">
+    <circle cx="10" cy="10" r="8" stroke="#005047" strokeWidth="1.6" fill="#79F7E3" fillOpacity="0.2" />
+    <path d="M6.5 10L9 12.5L13.5 7.5" stroke="#005047" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" />
   </svg>
 );
 
-const CheckIcon = () => (
-  <svg width="16" height="16" viewBox="0 0 18 18" fill="none" aria-hidden="true">
-    <path d="M3.75 9.75L6.75 12.75L14.25 5.25" stroke="#005047" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" />
+const ArrowLeftIcon = () => (
+  <svg width="18" height="18" viewBox="0 0 20 20" fill="none" aria-hidden="true">
+    <path d="M12.5 15L7.5 10L12.5 5" stroke="#1C1B1B" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" />
   </svg>
 );
 
@@ -46,6 +47,11 @@ const VendorUpgrade = () => {
   const [billingCycle, setBillingCycle] = useState<"monthly" | "yearly">("yearly");
   const [isProcessing, setIsProcessing] = useState(false);
   const [successMsg, setSuccessMsg] = useState<string | null>(null);
+
+  const businessName =
+    session?.user?.businessName ||
+    session?.user?.fullName ||
+    (session?.user?.email ? session.user.email.split("@")[0] : "Business Owner");
 
   const handleSubscribe = () => {
     setIsProcessing(true);
@@ -85,6 +91,20 @@ const VendorUpgrade = () => {
               </span>
               <h1 className="text-xl font-bold text-[#1C1B1B] m-0">Upgrade Business Portal</h1>
             </div>
+          </div>
+
+          {/* Account Status Card with active Auth Session */}
+          <div className="bg-white rounded-2xl p-4 sm:p-5 border border-neutral-100 shadow-xs flex items-center justify-between">
+            <div className="flex flex-col">
+              <span className="text-xs text-[#747878] font-medium">Upgrading Plan For</span>
+              <span className="text-sm sm:text-base font-bold text-[#1C1B1B]">{businessName}</span>
+              {session?.user?.email && (
+                <span className="text-xs text-[#747878]">{session.user.email}</span>
+              )}
+            </div>
+            <span className="px-3 py-1 rounded-full text-xs font-bold bg-[#FFF4D6] text-[#6F5400] border border-[#FFC72C]/40">
+              Free Tier (Active)
+            </span>
           </div>
 
           {/* Intro Card */}

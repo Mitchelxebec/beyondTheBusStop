@@ -1,4 +1,4 @@
-import { useState, useEffect } from "react";
+import { useState } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { useNavigate } from "react-router-dom";
 import { BottomNavBar, SectionLabel } from "../components";
@@ -259,10 +259,13 @@ const CommuterHomeDashboard = () => {
     loadRecentSearches
   );
 
-  // When the input is cleared, also clear active search so we revert to all routes
-  useEffect(() => {
-    if (!searchInput.trim()) setActiveSearch("");
-  }, [searchInput]);
+  const handleSearchInputChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const val = e.target.value;
+    setSearchInput(val);
+    if (!val.trim()) {
+      setActiveSearch("");
+    }
+  };
 
   const handleSearch = () => {
     const q = searchInput.trim();
@@ -368,7 +371,7 @@ const CommuterHomeDashboard = () => {
                 id="destination-search"
                 type="search"
                 value={searchInput}
-                onChange={(e) => setSearchInput(e.target.value)}
+                onChange={handleSearchInputChange}
                 onKeyDown={(e) => { if (e.key === "Enter") handleSearch(); }}
                 placeholder="Where are you going?"
                 aria-label="Search for your destination"

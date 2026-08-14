@@ -22,6 +22,8 @@ const ResetSuccess          = lazy(() => import("./pages/auth/ResetSuccess"));
 const ResetOtp              = lazy(() => import("./pages/auth/ResetOtp"));
 const CommuterHomeDashboard = lazy(() => import("./pages/CommuterHomeDashboard"));
 const VendorDashboard       = lazy(() => import("./pages/VendorDashboard"));
+const VendorRoutes          = lazy(() => import("./pages/vendor/VendorRoutes"));
+const VendorUpgrade         = lazy(() => import("./pages/vendor/VendorUpgrade"));
 const SearchResults         = lazy(() => import("./pages/commuter/SearchResults"));
 const CommuterProfile       = lazy(() => import("./pages/commuter/CommuterProfile"));
 const SavedRoutes           = lazy(() => import("./pages/commuter/SavedRoutes"));
@@ -81,6 +83,8 @@ export const router = createBrowserRouter([
   // ── Protected: business / vendor only ──────────────────────────────────────
   { path: "/vendor/home",             element: auth(<VendorDashboard />, "business") },
   { path: "/vendor/dashboard",        element: <Navigate to="/vendor/home" replace /> },
+  { path: "/vendor/routes",           element: auth(<VendorRoutes />, "business") },
+  { path: "/vendor/upgrade",          element: auth(<VendorUpgrade />, "business") },
 
   // ── Search & Public Route Views ───────────────────────────────────────────
   { path: "/routes",                  element: auth(<SearchResults />, "commuter") },
@@ -94,6 +98,8 @@ export const router = createBrowserRouter([
   // ── Dev (unguarded) ───────────────────────────────────────────────────────
   { path: "/components-showcase",     element: s(<ComponentShowcase />) },
   { path: "/dev/vendor",              element: s(<VendorDashboard />) },
+  { path: "/dev/vendor-routes",       element: s(<VendorRoutes />) },
+  { path: "/dev/vendor-upgrade",      element: s(<VendorUpgrade />) },
   { path: "/dev/profile",             element: s(<CommuterProfile />) },
   { path: "/dev/saved-routes",        element: s(<SavedRoutes />) },
 

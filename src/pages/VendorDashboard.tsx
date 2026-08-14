@@ -1,52 +1,132 @@
 import { useState } from "react";
-import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
+import { useQuery } from "@tanstack/react-query";
 import { useNavigate } from "react-router-dom";
 import {
   BottomNavBar,
-  SectionLabel,
   PrimaryButton,
   SecondaryButton,
   TextInput,
 } from "../components";
 import type { NavItem } from "../components/BottomNavBar";
 import { useAuth } from "../contexts/AuthContext";
-import { getAllRoutes, createRoute } from "../services/routes";
-import type { Route, VehicleType, CreateRoutePayload } from "../types/routes";
+import { getProfile } from "../services/auth";
 
-// ─── Icons ──────────────────────────────────────────────────────────────────────
+// ─── Nav Items & Icons ─────────────────────────────────────────────────────────
 
-const PlusIcon = () => (
-  <svg width="18" height="18" viewBox="0 0 18 18" fill="none" aria-hidden="true">
-    <path d="M9 3.75V14.25M3.75 9H14.25" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" />
+const HomeNavIcon = () => (
+  <svg width="16" height="16" viewBox="0 0 16 18" fill="currentColor" aria-hidden="true">
+    <path d="M8 1L15 7V17H10V12H6V17H1V7L8 1Z" />
   </svg>
 );
 
-const ArrowRightIcon = () => (
-  <svg width="11" height="11" viewBox="0 0 11 11" fill="none" aria-hidden="true">
-    <path d="M2 5.5H9M9 5.5L6 2.5M9 5.5L6 8.5" stroke="#C4C7C7" strokeWidth="1.2" strokeLinecap="round" strokeLinejoin="round" />
+const RoutesNavIcon = () => (
+  <svg width="16" height="16" viewBox="0 0 18 18" fill="none" aria-hidden="true">
+    <circle cx="3" cy="3" r="2" stroke="currentColor" strokeWidth="1.4" />
+    <circle cx="15" cy="15" r="2" stroke="currentColor" strokeWidth="1.4" />
+    <path d="M3 5V10C3 12.2 4.8 14 7 14H11C13.2 14 15 12.2 15 10V5" stroke="currentColor" strokeWidth="1.4" strokeLinecap="round" />
   </svg>
 );
 
-const BusIcon = () => (
-  <svg width="16" height="19" viewBox="0 0 16 19" fill="none" aria-hidden="true">
-    <rect x="1" y="2" width="14" height="13" rx="2" fill="#6F5400" />
-    <rect x="3" y="4" width="4" height="3" rx="0.5" fill="#FFC72C" />
-    <rect x="9" y="4" width="4" height="3" rx="0.5" fill="#FFC72C" />
-    <rect x="1" y="11" width="14" height="2" fill="#6F5400" />
-    <circle cx="4" cy="16" r="2" fill="#6F5400" />
-    <circle cx="12" cy="16" r="2" fill="#6F5400" />
+const ShareNavIcon = () => (
+  <svg width="16" height="16" viewBox="0 0 18 20" fill="none" aria-hidden="true">
+    <circle cx="15" cy="3" r="2" stroke="currentColor" strokeWidth="1.4" />
+    <circle cx="3" cy="10" r="2" stroke="currentColor" strokeWidth="1.4" />
+    <circle cx="15" cy="17" r="2" stroke="currentColor" strokeWidth="1.4" />
+    <path d="M5 8.8L13 4.2M5 11.2L13 15.8" stroke="currentColor" strokeWidth="1.4" strokeLinecap="round" />
   </svg>
 );
 
-const ChartBarIcon = () => (
-  <svg width="20" height="20" viewBox="0 0 20 20" fill="none" aria-hidden="true">
-    <path d="M3 17V10M8 17V4M13 17V13M18 17V7" stroke="#005047" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" />
+const ProfileNavIcon = () => (
+  <svg width="16" height="20" viewBox="0 0 20 20" fill="none" aria-hidden="true">
+    <circle cx="10" cy="7" r="4" stroke="currentColor" strokeWidth="1.4" />
+    <path d="M2 19C2 15.1 5.6 12 10 12C14.4 12 18 15.1 18 19" stroke="currentColor" strokeWidth="1.4" strokeLinecap="round" />
   </svg>
 );
 
-const StarIcon = () => (
-  <svg width="18" height="18" viewBox="0 0 18 18" fill="currentColor" className="text-[#FFC72C]" aria-hidden="true">
-    <path d="M9 1L11.472 5.958L17 6.764L13 10.606L13.944 16.111L9 13.5L4.056 16.111L5 10.606L1 6.764L6.528 5.958L9 1Z" />
+export const VENDOR_NAV_ITEMS: NavItem[] = [
+  { label: "Home", path: "/vendor/home", icon: <HomeNavIcon /> },
+  { label: "Routes", path: "/vendor/routes", icon: <RoutesNavIcon /> },
+  { label: "Share", path: "/share", icon: <ShareNavIcon /> },
+  { label: "Profile", path: "/profile", icon: <ProfileNavIcon /> },
+];
+
+// ─── Exact Figma Icons ─────────────────────────────────────────────────────────
+
+const ArrowLeftIcon = () => (
+  <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#1C1B1B" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
+    <path d="M19 12H5M12 19l-7-7 7-7" />
+  </svg>
+);
+
+const EyeTealIcon = () => (
+  <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#00C9A7" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
+    <path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z" />
+    <circle cx="12" cy="12" r="3" />
+  </svg>
+);
+
+const TrendingUpGreenIcon = () => (
+  <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="#00C9A7" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
+    <polyline points="23 6 13.5 15.5 8.5 10.5 1 18" />
+    <polyline points="17 6 23 6 23 12" />
+  </svg>
+);
+
+const StarGoldIcon = () => (
+  <svg width="16" height="16" viewBox="0 0 24 24" fill="#F8BA2A" stroke="#F8BA2A" strokeWidth="1" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
+    <polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2" />
+  </svg>
+);
+
+const MessageSquareIcon = () => (
+  <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="#747878" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
+    <path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z" />
+  </svg>
+);
+
+const StorefrontFilledIcon = () => (
+  <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#1C1B1B" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
+    <path d="M3 9l9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z" />
+    <polyline points="9 22 9 12 15 12 15 22" />
+  </svg>
+);
+
+const RocketTealIcon = () => (
+  <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#00C9A7" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
+    <path d="M4.5 16.5c-1.5 1.26-2 5-2 5s3.74-.5 5-2c.71-.84.7-2.13-.09-2.91a2.18 2.18 0 0 0-2.91-.09z" />
+    <path d="M12 15l-3-3a22 22 0 0 1 2-3.95A12.88 12.88 0 0 1 22 2c0 2.72-.78 7.5-6 11a22.35 22.35 0 0 1-4 2z" />
+    <path d="M9 12H4s.55-3.03 2-4c1.62-1.08 5 0 5 0" />
+    <path d="M12 15v5s3.03-.55 4-2c1.08-1.62 0-5 0-5" />
+  </svg>
+);
+
+const BanknoteIcon = () => (
+  <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="#444748" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
+    <rect x="2" y="6" width="20" height="12" rx="2" />
+    <circle cx="12" cy="12" r="2" />
+    <path d="M6 12h.01M18 12h.01" />
+  </svg>
+);
+
+const AnalyticsLineChartIcon = () => (
+  <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="#444748" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
+    <polyline points="22 12 18 12 15 21 9 3 6 12 2 12" />
+  </svg>
+);
+
+const RefreshCycleIcon = () => (
+  <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="#444748" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
+    <path d="M23 4v6h-6" />
+    <path d="M1 20v-6h6" />
+    <path d="M3.51 9a9 9 0 0 1 14.85-3.36L23 10M1 14l4.64 4.36A9 9 0 0 0 20.49 15" />
+  </svg>
+);
+
+const CookingPotIcon = () => (
+  <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="#504538" strokeWidth="1.6" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
+    <path d="M2 12h20" />
+    <path d="M20 12v6a4 4 0 0 1-4 4H8a4 4 0 0 1-4-4v-6" />
+    <path d="M4 8l1.5-3.5A2 2 0 0 1 7.34 3h9.32a2 2 0 0 1 1.84 1.5L20 8" />
   </svg>
 );
 
@@ -56,409 +136,395 @@ const CloseIcon = () => (
   </svg>
 );
 
-// Nav icons
-const HomeNavIcon = () => (
-  <svg width="16" height="16" viewBox="0 0 16 18" fill="currentColor" aria-hidden="true">
-    <path d="M8 1L15 7V17H10V12H6V17H1V7L8 1Z" />
+const CheckCircleIcon = () => (
+  <svg width="18" height="18" viewBox="0 0 20 20" fill="none" aria-hidden="true">
+    <circle cx="10" cy="10" r="8" stroke="#005047" strokeWidth="1.6" fill="#79F7E3" fillOpacity="0.2" />
+    <path d="M6.5 10L9 12.5L13.5 7.5" stroke="#005047" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" />
   </svg>
 );
-const RoutesNavIcon = () => (
-  <svg width="16" height="16" viewBox="0 0 18 18" fill="none" aria-hidden="true">
-    <circle cx="3" cy="3" r="2" stroke="currentColor" strokeWidth="1.4" />
-    <circle cx="15" cy="15" r="2" stroke="currentColor" strokeWidth="1.4" />
-    <path d="M3 5V10C3 12.2 4.8 14 7 14H11C13.2 14 15 12.2 15 10V5" stroke="currentColor" strokeWidth="1.4" strokeLinecap="round" />
-  </svg>
-);
-const ShareNavIcon = () => (
-  <svg width="16" height="16" viewBox="0 0 18 20" fill="none" aria-hidden="true">
-    <circle cx="15" cy="3" r="2" stroke="currentColor" strokeWidth="1.4" />
-    <circle cx="3" cy="10" r="2" stroke="currentColor" strokeWidth="1.4" />
-    <circle cx="15" cy="17" r="2" stroke="currentColor" strokeWidth="1.4" />
-    <path d="M5 8.8L13 4.2M5 11.2L13 15.8" stroke="currentColor" strokeWidth="1.4" strokeLinecap="round" />
-  </svg>
-);
-const ProfileNavIcon = () => (
-  <svg width="16" height="16" viewBox="0 0 20 20" fill="none" aria-hidden="true">
-    <circle cx="10" cy="7" r="4" stroke="currentColor" strokeWidth="1.4" />
-    <path d="M2 19C2 15.1 5.6 12 10 12C14.4 12 18 15.1 18 19" stroke="currentColor" strokeWidth="1.4" strokeLinecap="round" />
-  </svg>
-);
-
-const NAV_ITEMS: NavItem[] = [
-  { label: "Home", path: "/vendor/home", icon: <HomeNavIcon /> },
-  { label: "Routes", path: "/routes", icon: <RoutesNavIcon /> },
-  { label: "Share", path: "/share", icon: <ShareNavIcon /> },
-  { label: "Profile", path: "/profile", icon: <ProfileNavIcon /> },
-];
 
 // ─── Component ─────────────────────────────────────────────────────────────────
 
 const VendorDashboard = () => {
   const navigate = useNavigate();
   const { session } = useAuth();
-  const queryClient = useQueryClient();
 
+  // ── Backend Cross-Reference: Wire live authenticated profile data ────────────
+  // Backend file: BTBS-BACKEND/src/controllers/auth.controller.js (lines 227-233)
+  // Backend endpoint: GET /api/auth/profile -> returns { success: true, data: req.user }
+  const { data: profileData } = useQuery({
+    queryKey: ["profile"],
+    queryFn: getProfile,
+    enabled: !!session?.token,
+  });
+
+  // Dynamic businessName & category from backend User model (BTBS-BACKEND/src/models/user.model.js)
   const businessName =
-    session?.user?.businessName ?? session?.user?.fullName ?? "Vendor";
+    profileData?.data?.businessName ||
+    session?.user?.businessName ||
+    session?.user?.fullName ||
+    (session?.user?.email ? session.user.email.split("@")[0] : "Mama Joy's Kitchen");
 
-  const greeting = (() => {
+  const businessCategory =
+    profileData?.data?.category ||
+    session?.user?.category ||
+    "food";
+
+  const greetingTime = (() => {
     const h = new Date().getHours();
-    if (h < 12) return `Good morning, ${businessName}`;
-    if (h < 17) return `Good afternoon, ${businessName}`;
-    return `Good evening, ${businessName}`;
+    if (h < 12) return "Good morning,";
+    if (h < 17) return "Good afternoon,";
+    return "Good evening,";
   })();
 
-  // Modal & Form State
-  const [showCreateModal, setShowCreateModal] = useState(false);
-  const [formData, setFormData] = useState<CreateRoutePayload>({
-    origin: "",
-    destination: "",
-    vehicleType: "bus",
-    fareLow: 200,
-    fareHigh: 500,
+  // ─── Free Feature State (Create Listing is always unlocked & free) ───────────
+  const [showCreateListingModal, setShowCreateListingModal] = useState(false);
+  const [newListing, setNewListing] = useState({
+    title: "",
+    targetStop: "",
+    offer: "",
+    category: "Food & Drinks",
   });
-  const [formError, setFormError] = useState("");
+  const [toastMessage, setToastMessage] = useState<string | null>(null);
 
-  // Live Query
-  const { data: routesData, isLoading, isError } = useQuery({
-    queryKey: ["routes"],
-    queryFn: getAllRoutes,
-  });
+  const showToast = (msg: string) => {
+    setToastMessage(msg);
+    setTimeout(() => setToastMessage(null), 3500);
+  };
 
-  // Filter routes created by this business user (or all routes as fallback)
-  const allRoutes = routesData?.routes ?? [];
-  const vendorRoutes = allRoutes.filter(
-    (r) => r.createdBy === session?.user?._id || r.createdBy === session?.user?.id
-  );
-  const displayedRoutes = vendorRoutes.length > 0 ? vendorRoutes : allRoutes;
-
-  // Mutation to create route
-  const createRouteMutation = useMutation({
-    mutationFn: createRoute,
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ["routes"] });
-      setShowCreateModal(false);
-      setFormData({
-        origin: "",
-        destination: "",
-        vehicleType: "bus",
-        fareLow: 200,
-        fareHigh: 500,
-      });
-      setFormError("");
-    },
-    onError: (err: Error) => {
-      setFormError(err.message || "Failed to create route");
-    },
-  });
-
-  const handleSubmit = (e: React.FormEvent) => {
+  const handleCreateListingSubmit = (e: React.FormEvent) => {
     e.preventDefault();
-    if (!formData.origin.trim() || !formData.destination.trim()) {
-      setFormError("Please enter origin and destination");
-      return;
-    }
-    if (formData.fareLow <= 0 || formData.fareHigh < formData.fareLow) {
-      setFormError("Please enter valid low and high fare values");
-      return;
-    }
-    createRouteMutation.mutate(formData);
+    if (!newListing.title.trim() || !newListing.targetStop.trim()) return;
+
+    // TODO: replace with real API response when create listing endpoint exists (POST /api/business/listings)
+    setShowCreateListingModal(false);
+    setNewListing({ title: "", targetStop: "", offer: "", category: "Food & Drinks" });
+    showToast("Promotional listing published successfully!");
+  };
+
+  // ─── Locked State Actions ───────────────────────────────────────────────────
+  // TODO: replace with real subscriptionStatus check when the endpoint exists (GET /api/business/subscription)
+  // Cross-reference: BTBS-BACKEND/src/models/business.model.js tracks subscriptionStatus ('trial' | 'active' | 'expired')
+  const handleLockedAction = (_featureName: string) => {
+    navigate("/vendor/upgrade");
   };
 
   return (
-    <div className="flex flex-col min-h-dvh bg-[#FDFAF8]">
+    <div className="flex flex-col min-h-dvh bg-[#F5F5F0]">
       {/* ── Navbar ───────────────────────────────────────────────────── */}
-      <BottomNavBar items={NAV_ITEMS} />
+      <BottomNavBar items={VENDOR_NAV_ITEMS} />
 
-      {/* ── Main Container ────────────────────────────────────────────── */}
+      {/* ── Main Container (Fully responsive: mobile 375px, tablet sm/md, desktop lg/xl) ── */}
       <main
-        id="vendor-main"
+        id="vendor-home-main"
         className="flex-1 w-full mx-auto pt-16"
-        style={{ maxWidth: "min(100%, 42rem)" }}
-        aria-label="Vendor Dashboard Content"
+        style={{ maxWidth: "min(100%, 36rem)" }}
+        aria-label="Business Portal Content"
       >
-        <div className="flex flex-col gap-6 px-4 sm:px-6 pt-8 pb-12">
-          {/* Header & Status Tag */}
-          <section className="flex flex-col gap-2">
-            <div className="flex items-center justify-between">
-              <span className="text-xs font-semibold uppercase tracking-wider text-[#59DBC7]">
-                Vendor Dashboard
-              </span>
-              <span className="px-2.5 py-0.5 rounded-full text-[10px] font-bold uppercase tracking-wide bg-[#79F7E3]/30 text-[#005047]">
-                ACTIVE
-              </span>
-            </div>
-            <h1 className="text-[#1C1B1B] text-xl sm:text-2xl font-semibold m-0">
-              {greeting}
-            </h1>
-            <p className="text-[#444748] text-sm font-normal m-0">
-              Manage your transit routes, monitor performance, and update fares.
-            </p>
-          </section>
+        <div className="flex flex-col gap-5 sm:gap-6 px-4 sm:px-6 pt-4 sm:pt-6 pb-16">
 
-          {/* Key Metrics Bento */}
-          <section className="grid grid-cols-2 gap-3 sm:gap-4">
-            <div className="bg-white p-4 rounded-xl shadow-xs border border-neutral-100 flex flex-col justify-between">
-              <div className="flex items-center justify-between">
-                <span className="text-[10px] font-bold uppercase tracking-wider text-[#444748]">
-                  Total Routes
+          {/* ── 1. Header Navigation Bar (Figma Title Bar) ─────────────── */}
+          <div className="flex items-center gap-3 py-1">
+            <button
+              onClick={() => navigate(-1)}
+              className="p-1.5 -ml-1.5 rounded-lg text-[#1C1B1B] hover:bg-black/5 active:scale-95 transition-all"
+              aria-label="Go back"
+            >
+              <ArrowLeftIcon />
+            </button>
+            <h1 className="text-base sm:text-lg font-bold text-[#1C1B1B] m-0">
+              Business Portal
+            </h1>
+          </div>
+
+          {/* ── 2. Greeting & Store Avatar (Figma Hero) ───────────────── */}
+          <div className="flex items-center justify-between pt-1">
+            <div className="flex flex-col min-w-0 pr-2">
+              <span className="text-xs sm:text-sm text-[#747878] font-normal">
+                {greetingTime}
+              </span>
+              <h2 className="text-xl sm:text-2xl md:text-3xl font-bold text-[#1C1B1B] m-0 tracking-tight truncate">
+                {businessName}
+              </h2>
+            </div>
+
+            {/* Circular Store Avatar with Green Online Dot */}
+            <div className="relative shrink-0">
+              <div className="w-12 h-12 sm:w-14 sm:h-14 rounded-full bg-[#EBEAE6] border border-black/5 shadow-xs flex items-center justify-center">
+                <CookingPotIcon />
+              </div>
+              <span
+                className="w-3.5 h-3.5 sm:w-4 sm:h-4 rounded-full bg-[#00C9A7] border-2 border-white absolute bottom-0 right-0"
+                title="Active Storefront"
+              />
+            </div>
+          </div>
+
+          {/* ── 3. Top Metrics Cards Grid (Figma: Total Views & Listing Rating) ── */}
+          {/* TODO: replace with real API response when metrics endpoint exists (GET /api/business/metrics) */}
+          <div className="grid grid-cols-2 gap-3 sm:gap-4">
+            {/* Total Views Card */}
+            <div className="bg-white rounded-2xl p-4 sm:p-5 border border-black/5 shadow-xs flex flex-col justify-between hover:shadow-sm transition-shadow">
+              <div className="flex items-center gap-1.5">
+                <EyeTealIcon />
+                <span className="text-[10px] sm:text-xs font-bold tracking-wider text-[#444748] uppercase">
+                  TOTAL VIEWS
                 </span>
-                <div className="w-7 h-7 rounded-lg bg-[#79F7E3]/20 flex items-center justify-center">
-                  <ChartBarIcon />
-                </div>
               </div>
               <div className="mt-3">
-                <span className="text-2xl font-bold text-[#1C1B1B]">
-                  {displayedRoutes.length}
+                <span className="text-2xl sm:text-3xl font-bold text-[#1C1B1B] tracking-tight">
+                  4,821
                 </span>
-                <span className="block text-[11px] text-[#005047] font-medium mt-0.5">
-                  Active listings
-                </span>
+                <div className="flex items-center gap-1 text-[11px] sm:text-xs font-semibold text-[#00C9A7] mt-0.5">
+                  <TrendingUpGreenIcon />
+                  <span>+12% this week</span>
+                </div>
               </div>
             </div>
 
-            <div className="bg-white p-4 rounded-xl shadow-xs border border-neutral-100 flex flex-col justify-between">
-              <div className="flex items-center justify-between">
-                <span className="text-[10px] font-bold uppercase tracking-wider text-[#444748]">
-                  Rating
+            {/* Listing Rating Card */}
+            <div className="bg-white rounded-2xl p-4 sm:p-5 border border-black/5 shadow-xs flex flex-col justify-between hover:shadow-sm transition-shadow">
+              <div className="flex items-center gap-1.5">
+                <StarGoldIcon />
+                <span className="text-[10px] sm:text-xs font-bold tracking-wider text-[#444748] uppercase">
+                  LISTING RATING
                 </span>
-                <StarIcon />
               </div>
               <div className="mt-3">
                 <div className="flex items-baseline gap-1">
-                  <span className="text-2xl font-bold text-[#1C1B1B]">4.8</span>
-                  <span className="text-xs text-[#444748]">/ 5.0</span>
+                  <span className="text-2xl sm:text-3xl font-bold text-[#1C1B1B] tracking-tight">
+                    4.8
+                  </span>
+                  <span className="text-xs sm:text-sm text-[#747878] font-normal">/ 5.0</span>
                 </div>
-                <span className="block text-[11px] text-[#444748] font-normal mt-0.5">
-                  From 142 reviews
+                <div className="flex items-center gap-1 text-[11px] sm:text-xs text-[#747878] font-normal mt-0.5">
+                  <MessageSquareIcon />
+                  <span>From 142 reviews</span>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          {/* ── 4. Quick Actions Section (Figma: Exact 2-Row Layout & Colors) ── */}
+          <section className="flex flex-col gap-3">
+            <h3 className="text-sm sm:text-base font-bold text-[#1C1B1B] m-0">
+              Quick Actions
+            </h3>
+
+            {/* Row 1: Two Large Prominent Feature Cards */}
+            <div className="grid grid-cols-2 gap-3 sm:gap-4">
+              {/* Create Listing (Brand Gold/Yellow Card — Free & Unlocked) */}
+              {/* TODO: replace with real API response when create listing endpoint exists (POST /api/business/listings) */}
+              <button
+                id="create-listing-btn"
+                type="button"
+                onClick={() => setShowCreateListingModal(true)}
+                className="bg-[#F8BA2A] hover:bg-[#EEB020] active:scale-[0.98] rounded-2xl p-4 sm:p-5 flex flex-col justify-between h-28 sm:h-34 text-left shadow-xs transition-all cursor-pointer group"
+              >
+                <div className="w-9 h-9 sm:w-10 sm:h-10 rounded-xl bg-black/10 flex items-center justify-center group-hover:scale-105 transition-transform">
+                  <StorefrontFilledIcon />
+                </div>
+                <span className="text-sm sm:text-base font-bold text-[#1C1B1B] tracking-tight">
+                  Create Listing
                 </span>
-              </div>
-            </div>
-          </section>
+              </button>
 
-          {/* Quick Actions */}
-          <section className="flex flex-col gap-3">
-            <SectionLabel variant="page">Quick Actions</SectionLabel>
-
-            <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-              <PrimaryButton
-                id="create-route-btn"
-                onClick={() => setShowCreateModal(true)}
-                width="full"
+              {/* Boost Listing (Deep Dark Teal Gradient Card — Rocket Icon) */}
+              {/* TODO: replace with real subscriptionStatus check when endpoint exists (POST /api/business/listings/:id/boost) */}
+              <button
+                id="boost-listing-btn"
+                type="button"
+                onClick={() => handleLockedAction("Boost Listing")}
+                className="relative overflow-hidden bg-gradient-to-br from-[#02241F] via-[#03302A] to-[#043B33] hover:brightness-110 active:scale-[0.98] rounded-2xl p-4 sm:p-5 flex flex-col justify-between h-28 sm:h-34 text-left shadow-xs transition-all cursor-pointer group"
               >
-                <PlusIcon />
-                Create New Route
-              </PrimaryButton>
+                {/* Subtle soft glowing accent */}
+                <div className="absolute -bottom-6 -right-6 w-24 h-24 rounded-full bg-[#00C9A7]/20 blur-xl pointer-events-none" />
 
-              <SecondaryButton
-                id="view-all-vendor-routes-btn"
-                onClick={() => navigate("/routes")}
-                width="full"
+                <div className="w-9 h-9 sm:w-10 sm:h-10 rounded-xl bg-[#00C9A7]/20 border border-[#00C9A7]/30 flex items-center justify-center group-hover:scale-105 transition-transform">
+                  <RocketTealIcon />
+                </div>
+                <span className="text-sm sm:text-base font-bold text-[#00C9A7] tracking-tight">
+                  Boost Listing
+                </span>
+              </button>
+            </div>
+
+            {/* Row 2: Three Equal Action Buttons (Payments, Analytics, Renew) */}
+            <div className="grid grid-cols-3 gap-2.5 sm:gap-3.5">
+              {/* Payments */}
+              {/* TODO: replace with real subscription/payments endpoint when ready (GET /api/business/payments) */}
+              <button
+                id="payments-btn"
+                type="button"
+                onClick={() => handleLockedAction("Payments")}
+                className="bg-[#EBEAE6] hover:bg-[#E2E1DC] active:scale-[0.98] rounded-2xl py-3.5 sm:py-4 px-2 flex flex-col items-center justify-center gap-1.5 sm:gap-2 text-center transition-colors cursor-pointer"
               >
-                View Route Network
-              </SecondaryButton>
+                <BanknoteIcon />
+                <span className="text-xs sm:text-sm font-semibold text-[#1C1B1B]">
+                  Payments
+                </span>
+              </button>
+
+              {/* Analytics */}
+              {/* TODO: replace with real analytics endpoint when ready (GET /api/business/analytics) */}
+              <button
+                id="analytics-btn"
+                type="button"
+                onClick={() => handleLockedAction("Analytics")}
+                className="bg-[#EBEAE6] hover:bg-[#E2E1DC] active:scale-[0.98] rounded-2xl py-3.5 sm:py-4 px-2 flex flex-col items-center justify-center gap-1.5 sm:gap-2 text-center transition-colors cursor-pointer"
+              >
+                <AnalyticsLineChartIcon />
+                <span className="text-xs sm:text-sm font-semibold text-[#1C1B1B]">
+                  Analytics
+                </span>
+              </button>
+
+              {/* Renew */}
+              {/* TODO: replace with real subscription renewal endpoint when ready (POST /api/business/subscription/renew) */}
+              <button
+                id="renew-btn"
+                type="button"
+                onClick={() => handleLockedAction("Renew")}
+                className="bg-[#EBEAE6] hover:bg-[#E2E1DC] active:scale-[0.98] rounded-2xl py-3.5 sm:py-4 px-2 flex flex-col items-center justify-center gap-1.5 sm:gap-2 text-center transition-colors cursor-pointer"
+              >
+                <RefreshCycleIcon />
+                <span className="text-xs sm:text-sm font-semibold text-[#1C1B1B]">
+                  Renew
+                </span>
+              </button>
             </div>
           </section>
 
-          {/* Performance Snapshot / Active Routes */}
-          <section className="flex flex-col gap-3">
-            <SectionLabel variant="page">
-              {vendorRoutes.length > 0
-                ? "Your Created Routes"
-                : "Active Transit Routes"}
-            </SectionLabel>
+          {/* ── 5. Performance Snapshot (Figma: Exactly at the Bottom with Progress Bars) ── */}
+          {/* TODO: replace with real API response when performance snapshot endpoint exists (GET /api/business/performance) */}
+          <section className="bg-[#EBEAE6]/65 rounded-3xl p-4 sm:p-5 border border-black/5 flex flex-col gap-4 shadow-xs mt-1">
+            {/* Header: Title + ACTIVE Pill Badge */}
+            <div className="flex items-center justify-between">
+              <h3 className="text-sm sm:text-base font-bold text-[#1C1B1B] m-0">
+                Performance Snapshot
+              </h3>
+              <span className="px-2.5 py-0.5 rounded-full text-[10px] font-bold uppercase tracking-wider bg-[#D2F4EB] text-[#005047] flex items-center gap-1">
+                <span className="w-1.5 h-1.5 rounded-full bg-[#00C9A7]" />
+                ACTIVE
+              </span>
+            </div>
 
-            {isLoading && (
-              <p className="text-[#444748] text-sm text-center py-8">
-                Loading routes…
-              </p>
-            )}
+            {/* Subtext */}
+            <p className="text-xs sm:text-sm text-[#747878] m-0 -mt-2 leading-relaxed">
+              Compared to other {businessCategory} vendors near Oshodi Terminal.
+            </p>
 
-            {!isLoading && isError && (
-              <p className="text-red-500 text-sm text-center py-8">
-                Failed to load routes. Please try again.
-              </p>
-            )}
-
-            {!isLoading && !isError && displayedRoutes.length === 0 && (
-              <div className="bg-white rounded-xl p-8 text-center border border-neutral-100 flex flex-col items-center gap-3">
-                <p className="text-[#444748] text-sm m-0">
-                  You haven't created any routes yet.
-                </p>
-                <PrimaryButton
-                  onClick={() => setShowCreateModal(true)}
-                  width="auto"
-                >
-                  Add Your First Route
-                </PrimaryButton>
+            {/* Metric 1: Click-through Rate */}
+            <div className="flex flex-col gap-1.5 pt-1">
+              <div className="flex items-center justify-between text-xs sm:text-sm">
+                <span className="font-semibold text-[#1C1B1B]">Click-through Rate</span>
+                <span className="font-bold text-[#00C9A7]">8.4%</span>
               </div>
-            )}
+              <div className="w-full bg-[#DCDAD5] h-2 sm:h-2.5 rounded-full overflow-hidden">
+                <div
+                  className="bg-[#00C9A7] h-full rounded-full transition-all duration-500"
+                  style={{ width: "65%" }}
+                />
+              </div>
+              <span className="text-[10px] sm:text-xs text-[#747878]">Market Avg: 5.2%</span>
+            </div>
 
-            <div className="flex flex-col gap-3">
-              {displayedRoutes.map((route: Route) => (
-                <article
-                  key={route._id}
-                  className="relative flex items-center bg-white rounded-xl overflow-hidden shadow-xs hover:shadow-sm transition-shadow border border-neutral-100"
-                >
-                  <div className="absolute left-0 top-0 bottom-0 w-1 bg-[#79F7E3] rounded-l-xl" />
-                  <div className="flex items-center justify-between w-full pl-5 pr-4 py-3.5 gap-4">
-                    <div className="flex flex-col gap-1 min-w-0">
-                      <div className="flex items-center gap-1.5">
-                        <span className="text-[#1C1B1B] text-base font-semibold truncate">
-                          {route.origin}
-                        </span>
-                        <ArrowRightIcon />
-                        <span className="text-[#1C1B1B] text-base font-semibold truncate">
-                          {route.destination}
-                        </span>
-                      </div>
-                      <div className="flex items-center gap-2 flex-wrap">
-                        <span className="text-[10px] font-bold uppercase px-2 py-0.5 rounded bg-[#FFF4D6] text-[#6F5400]">
-                          {route.confidenceLevel} CONFIDENCE
-                        </span>
-                        <span className="text-[#444748] text-xs capitalize">
-                          {route.vehicleType}
-                        </span>
-                        <span className="text-[#444748] text-xs font-medium">
-                          ₦{route.fareLow.toLocaleString()} – ₦
-                          {route.fareHigh.toLocaleString()}
-                        </span>
-                      </div>
-                    </div>
-
-                    <button
-                      onClick={() => navigate(`/routes/${route._id}`)}
-                      className="shrink-0 w-9 h-9 rounded-full bg-[#FFC72C] flex items-center justify-center hover:brightness-95 transition-all"
-                      aria-label="View Route Details"
-                    >
-                      <BusIcon />
-                    </button>
-                  </div>
-                </article>
-              ))}
+            {/* Metric 2: Conversion to Directions */}
+            <div className="flex flex-col gap-1.5 pt-1">
+              <div className="flex items-center justify-between text-xs sm:text-sm">
+                <span className="font-semibold text-[#1C1B1B]">Conversion to Directions</span>
+                <span className="font-bold text-[#F8BA2A]">12.1%</span>
+              </div>
+              <div className="w-full bg-[#DCDAD5] h-2 sm:h-2.5 rounded-full overflow-hidden">
+                <div
+                  className="bg-[#F8BA2A] h-full rounded-full transition-all duration-500"
+                  style={{ width: "80%" }}
+                />
+              </div>
+              <span className="text-[10px] sm:text-xs text-[#747878]">Market Avg: 9.8%</span>
             </div>
           </section>
+
         </div>
       </main>
 
-      {/* ── Create Route Modal ────────────────────────────────────────── */}
-      {showCreateModal && (
+      {/* ── Create Listing Modal (Free for all vendors) ─────────────── */}
+      {showCreateListingModal && (
         <div className="fixed inset-0 z-50 bg-black/40 backdrop-blur-xs flex items-center justify-center p-4">
           <div className="bg-white rounded-2xl max-w-md w-full p-6 shadow-xl flex flex-col gap-4 animate-in fade-in zoom-in duration-150">
             <div className="flex items-center justify-between border-b border-neutral-100 pb-3">
-              <h2 className="text-lg font-bold text-[#1C1B1B] m-0">
-                Create New Transit Route
-              </h2>
+              <div>
+                <h2 className="text-lg font-bold text-[#1C1B1B] m-0">Create Promotional Listing</h2>
+                <p className="text-xs text-[#747878] m-0">Free promotion for transit commuters</p>
+              </div>
               <button
-                onClick={() => setShowCreateModal(false)}
+                onClick={() => setShowCreateListingModal(false)}
                 className="p-1 rounded-lg hover:bg-neutral-100 text-[#444748] transition-colors"
+                aria-label="Close modal"
               >
                 <CloseIcon />
               </button>
             </div>
 
-            {formError && (
-              <div className="p-3 rounded-lg bg-red-50 text-red-600 text-xs">
-                {formError}
-              </div>
-            )}
-
-            <form onSubmit={handleSubmit} className="flex flex-col gap-4">
+            <form onSubmit={handleCreateListingSubmit} className="flex flex-col gap-4">
               <TextInput
-                label="Origin (Starting Point)"
-                placeholder="e.g. Ojota"
-                value={formData.origin}
-                onChange={(e) =>
-                  setFormData((prev) => ({ ...prev, origin: e.target.value }))
-                }
+                label="Offer Headline / Promotion Title"
+                placeholder="e.g. 20% Off All Cold Drinks & Pastries"
+                value={newListing.title}
+                onChange={(e) => setNewListing((prev) => ({ ...prev, title: e.target.value }))}
                 required
               />
 
               <TextInput
-                label="Destination (Ending Point)"
-                placeholder="e.g. CMS"
-                value={formData.destination}
-                onChange={(e) =>
-                  setFormData((prev) => ({
-                    ...prev,
-                    destination: e.target.value,
-                  }))
-                }
+                label="Target Bus Stop / Terminal"
+                placeholder="e.g. Ojota Bus Terminus, CMS, Ikeja"
+                value={newListing.targetStop}
+                onChange={(e) => setNewListing((prev) => ({ ...prev, targetStop: e.target.value }))}
                 required
               />
 
-              <div className="flex flex-col gap-1.5">
-                <label className="text-sm font-medium text-gray-700 px-1">
-                  Vehicle Type
-                </label>
-                <div className="bg-gray-50 rounded-lg px-4 py-3.5 border border-gray-200">
+              <div className="grid grid-cols-2 gap-3">
+                <TextInput
+                  label="Discount / Offer Tag"
+                  placeholder="e.g. 20% OFF"
+                  value={newListing.offer}
+                  onChange={(e) => setNewListing((prev) => ({ ...prev, offer: e.target.value }))}
+                />
+
+                <div className="flex flex-col gap-1.5">
+                  <label className="text-sm font-medium text-gray-700 px-1">Category</label>
                   <select
-                    value={formData.vehicleType}
-                    onChange={(e) =>
-                      setFormData((prev) => ({
-                        ...prev,
-                        vehicleType: e.target.value as VehicleType,
-                      }))
-                    }
-                    className="w-full bg-transparent text-gray-900 text-sm outline-none capitalize"
+                    value={newListing.category}
+                    onChange={(e) => setNewListing((prev) => ({ ...prev, category: e.target.value }))}
+                    className="w-full h-11 bg-gray-50 rounded-lg px-3 text-sm text-gray-900 border border-gray-200 outline-none"
                   >
-                    <option value="bus">Bus</option>
-                    <option value="keke">Keke</option>
-                    <option value="taxi">Taxi</option>
-                    <option value="train">Train</option>
+                    <option value="Food & Drinks">Food & Drinks</option>
+                    <option value="Electronics & Repairs">Electronics & Repairs</option>
+                    <option value="Fashion & Retail">Fashion & Retail</option>
+                    <option value="Health & Beauty">Health & Beauty</option>
+                    <option value="Services & Logistics">Services & Logistics</option>
                   </select>
                 </div>
               </div>
 
-              <div className="grid grid-cols-2 gap-3">
-                <TextInput
-                  label="Fare Low (₦)"
-                  type="number"
-                  min="1"
-                  value={formData.fareLow}
-                  onChange={(e) =>
-                    setFormData((prev) => ({
-                      ...prev,
-                      fareLow: Number(e.target.value),
-                    }))
-                  }
-                  required
-                />
-
-                <TextInput
-                  label="Fare High (₦)"
-                  type="number"
-                  min="1"
-                  value={formData.fareHigh}
-                  onChange={(e) =>
-                    setFormData((prev) => ({
-                      ...prev,
-                      fareHigh: Number(e.target.value),
-                    }))
-                  }
-                  required
-                />
-              </div>
-
               <div className="flex justify-end gap-2 pt-3 border-t border-neutral-100">
-                <SecondaryButton
-                  onClick={() => setShowCreateModal(false)}
-                  width="auto"
-                >
+                <SecondaryButton onClick={() => setShowCreateListingModal(false)} width="auto">
                   Cancel
                 </SecondaryButton>
-                <PrimaryButton
-                  type="submit"
-                  disabled={createRouteMutation.isPending}
-                  width="auto"
-                >
-                  {createRouteMutation.isPending
-                    ? "Creating…"
-                    : "Create Route"}
+                <PrimaryButton type="submit" width="auto">
+                  Publish Listing
                 </PrimaryButton>
               </div>
             </form>
           </div>
+        </div>
+      )}
+
+      {/* ── Toast Notification ───────────────────────────────────────── */}
+      {toastMessage && (
+        <div className="fixed bottom-6 left-1/2 -translate-x-1/2 z-50 bg-[#1C1B1B] text-white px-5 py-3 rounded-xl shadow-xl text-xs font-medium flex items-center gap-2 animate-in fade-in slide-in-from-bottom-3 duration-200">
+          <CheckCircleIcon />
+          <span>{toastMessage}</span>
         </div>
       )}
     </div>

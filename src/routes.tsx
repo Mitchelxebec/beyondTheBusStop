@@ -23,6 +23,8 @@ const ResetOtp              = lazy(() => import("./pages/auth/ResetOtp"));
 const CommuterHomeDashboard = lazy(() => import("./pages/CommuterHomeDashboard"));
 const VendorDashboard       = lazy(() => import("./pages/VendorDashboard"));
 const SearchResults         = lazy(() => import("./pages/commuter/SearchResults"));
+const CommuterProfile       = lazy(() => import("./pages/commuter/CommuterProfile"));
+const SavedRoutes           = lazy(() => import("./pages/commuter/SavedRoutes"));
 const NotFound              = lazy(() => import("./pages/NotFound"));
 
 const ComponentShowcase     = lazy(() => import("./pages/ComponentShowcase"));
@@ -83,13 +85,17 @@ export const router = createBrowserRouter([
   // ── Search & Public Route Views ───────────────────────────────────────────
   { path: "/routes",                  element: auth(<SearchResults />, "commuter") },
   { path: "/routes/search",           element: auth(<SearchResults />, "commuter") },
+  { path: "/routes/saved",            element: auth(<SavedRoutes />, "commuter") },
+  { path: "/saved-routes",            element: auth(<SavedRoutes />, "commuter") },
   { path: "/routes/:id",              element: auth(<RoleHomeRedirect />) },
   { path: "/share",                   element: auth(<RoleHomeRedirect />) },
-  { path: "/profile",                 element: auth(<RoleHomeRedirect />) },
+  { path: "/profile",                 element: auth(<CommuterProfile />, "commuter") },
 
   // ── Dev (unguarded) ───────────────────────────────────────────────────────
   { path: "/components-showcase",     element: s(<ComponentShowcase />) },
   { path: "/dev/vendor",              element: s(<VendorDashboard />) },
+  { path: "/dev/profile",             element: s(<CommuterProfile />) },
+  { path: "/dev/saved-routes",        element: s(<SavedRoutes />) },
 
   // ── Catch-all ─────────────────────────────────────────────────────────────
   { path: "*",                        element: s(<NotFound />) },

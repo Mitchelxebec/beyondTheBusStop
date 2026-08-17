@@ -1,10 +1,16 @@
 import { useState } from "react";
 import { useNavigate } from "react-router-dom";
-import { BottomNavBar, PageHeader, BackButton, NotificationBell } from "../../components";
+import {
+  BottomNavBar,
+  PageHeader,
+  BackButton,
+  NotificationBell,
+  ConfidenceBadge,
+  Toast,
+} from "../../components";
+import type { ConfidenceLevel } from "../../types/routes";
 
 // ── Types ─────────────────────────────────────────────────────────────────────
-
-export type ConfidenceLevel = "High" | "Moderate" | "Low";
 
 export interface SavedRouteItem {
   id: string;
@@ -67,7 +73,7 @@ const STATIC_SAVED_ROUTES: SavedRouteItem[] = [
     fareHigh: 900,
     duration: "~50 mins",
     distance: "21.0 km",
-    confidence: "Moderate",
+    confidence: "Medium",
     vehicleType: "Bus",
     stopsCount: 8,
     savedAt: "Weekend Route",
@@ -103,21 +109,7 @@ const ArrowRightIcon = () => (
   </svg>
 );
 
-// ── Confidence Badge Component ────────────────────────────────────────────────
 
-const ConfidenceBadge = ({ level }: { level: ConfidenceLevel }) => {
-  const styles = {
-    High: "bg-[#E6F4EA] text-[#137333] border-[#CEEAD6]",
-    Moderate: "bg-[#FEF7E0] text-[#B06000] border-[#FEEFC3]",
-    Low: "bg-[#FCE8E6] text-[#C5221F] border-[#FAD2CF]",
-  }[level];
-
-  return (
-    <span className={`inline-flex items-center px-2 py-0.5 rounded-md text-[11px] font-semibold border ${styles}`}>
-      {level} Confidence
-    </span>
-  );
-};
 
 // ─── Component ─────────────────────────────────────────────────────────────────
 
@@ -391,15 +383,7 @@ const SavedRoutes = () => {
       )}
 
       {/* Floating Toast Notification */}
-      {toastMessage && (
-        <div
-          role="status"
-          aria-live="polite"
-          className="fixed bottom-6 left-1/2 -translate-x-1/2 z-50 bg-[#1C1B1B] text-white text-xs sm:text-sm font-medium px-4 py-2.5 rounded-full shadow-lg animate-in fade-in slide-in-from-bottom-2 duration-150"
-        >
-          {toastMessage}
-        </div>
-      )}
+      <Toast message={toastMessage} />
     </div>
   );
 };

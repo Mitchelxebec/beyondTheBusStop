@@ -1,11 +1,17 @@
 import { useState } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { useNavigate } from "react-router-dom";
-import { BottomNavBar, SectionLabel, RouteDetailModal } from "../components";
+import { Search, Clock, Shield, Hospital, Flame, MapPin } from "lucide-react";
+import {
+  BottomNavBar,
+  SectionLabel,
+  RouteDetailModal,
+  RouteCard,
+} from "../components";
 import { useAuth } from "../contexts/AuthContext";
-import { getAllRoutes, searchRoutes } from "../services/routes";
+import { useRoutes } from "../hooks/useRoutes";
 import { getSafetyPoints } from "../services/safetyPoints";
-import type { Route, ConfidenceLevel } from "../types/routes";
+import type { Route } from "../types/routes";
 import type { SafetyPoint, SafetyPointCategory } from "../types/safetyPoints";
 
 // ─── localStorage helpers (recent searches — no backend endpoint for this) ──────
@@ -31,15 +37,12 @@ function saveRecentSearch(query: string): string[] {
   return updated;
 }
 
-// ─── Icons ──────────────────────────────────────────────────────────────────────
+// ─── Icons & Safety Category Map ───────────────────────────────────────────────
 
-const SearchIcon = () => (
-  <svg width="18" height="18" viewBox="0 0 18 18" fill="none" aria-hidden="true">
-    <circle cx="8" cy="8" r="5.5" stroke="#747878" strokeWidth="1.5" />
-    <path d="M12.5 12.5L15.5 15.5" stroke="#747878" strokeWidth="1.5" strokeLinecap="round" />
-  </svg>
-);
-
+/**
+ * Flagged Custom Icon Exception:
+ * NavigateTurnIcon is preserved as custom SVG for exact visual match with turn arrow UI design.
+ */
 const NavigateTurnIcon = () => (
   <svg width="15" height="15" viewBox="0 0 15 15" fill="none" aria-hidden="true">
     <path d="M8 2L13 7L8 12" stroke="white" strokeWidth="1.6" strokeLinecap="round" strokeLinejoin="round" />
@@ -47,148 +50,20 @@ const NavigateTurnIcon = () => (
   </svg>
 );
 
-const ArrowRightSmallIcon = () => (
-  <svg width="11" height="11" viewBox="0 0 11 11" fill="none" aria-hidden="true">
-    <path d="M2 5.5H9M9 5.5L6 2.5M9 5.5L6 8.5" stroke="#C4C7C7" strokeWidth="1.2" strokeLinecap="round" strokeLinejoin="round" />
-  </svg>
-);
-
-const BusIcon = () => (
-  <svg width="16" height="19" viewBox="0 0 16 19" fill="none" aria-hidden="true">
-    <rect x="1" y="2" width="14" height="13" rx="2" fill="#6F5400" />
-    <rect x="3" y="4" width="4" height="3" rx="0.5" fill="#FFC72C" />
-    <rect x="9" y="4" width="4" height="3" rx="0.5" fill="#FFC72C" />
-    <rect x="1" y="11" width="14" height="2" fill="#6F5400" />
-    <circle cx="4" cy="16" r="2" fill="#6F5400" />
-    <circle cx="12" cy="16" r="2" fill="#6F5400" />
-  </svg>
-);
-
-const ClockIcon = () => (
-  <svg width="12" height="12" viewBox="0 0 12 12" fill="none" aria-hidden="true">
-    <circle cx="6" cy="6" r="5" stroke="#444748" strokeWidth="1.2" />
-    <path d="M6 3.5V6L7.5 7.5" stroke="#444748" strokeWidth="1.2" strokeLinecap="round" strokeLinejoin="round" />
-  </svg>
-);
-
-// Safety Point category icons — one per backend enum value
-const PoliceIcon = () => (
-  <svg width="20" height="20" viewBox="0 0 20 20" fill="none" aria-hidden="true">
-    <path d="M10 2L4 5V10C4 13.5 6.5 16.7 10 18C13.5 16.7 16 13.5 16 10V5L10 2Z" stroke="#444748" strokeWidth="1.3" strokeLinejoin="round" />
-    <path d="M7 10L9 12L13 8" stroke="#444748" strokeWidth="1.3" strokeLinecap="round" strokeLinejoin="round" />
-  </svg>
-);
-
-const HospitalIcon = () => (
-  <svg width="18" height="18" viewBox="0 0 18 18" fill="none" aria-hidden="true">
-    <rect x="1" y="1" width="16" height="16" rx="2" stroke="#444748" strokeWidth="1.3" />
-    <path d="M9 5V13M5 9H13" stroke="#444748" strokeWidth="1.5" strokeLinecap="round" />
-  </svg>
-);
-
-const FireIcon = () => (
-  <svg width="16" height="20" viewBox="0 0 16 20" fill="none" aria-hidden="true">
-    <path d="M8 1C8 1 13 6 13 11C13 14.3 10.8 17 8 17C5.2 17 3 14.3 3 11C3 9 4 7.5 5 6.5C5 8 6 9 7 9C5.5 7 6 4 8 1Z" stroke="#444748" strokeWidth="1.3" strokeLinecap="round" strokeLinejoin="round" />
-    <path d="M8 13C8 13 10 11.5 10 10C10 10 9 11 8 11C7 11 6 10 6 10C6 11.5 8 13 8 13Z" stroke="#444748" strokeWidth="1.1" strokeLinejoin="round" />
-  </svg>
-);
-
-const OtherLocationIcon = () => (
-  <svg width="16" height="20" viewBox="0 0 16 20" fill="none" aria-hidden="true">
-    <path d="M8 1C4.7 1 2 3.7 2 7C2 11.5 8 19 8 19C8 19 14 11.5 14 7C14 3.7 11.3 1 8 1Z" stroke="#444748" strokeWidth="1.3" />
-    <circle cx="8" cy="7" r="2.5" stroke="#444748" strokeWidth="1.2" />
-  </svg>
-);
-
-// ─── Confidence Badge ──────────────────────────────────────────────────────────
-// Maps backend confidenceLevel ('High' | 'Medium' | 'Low') to colour classes
-
-const CONFIDENCE_CLASSES: Record<ConfidenceLevel, string> = {
-  High:   "bg-[#79F7E3] text-[#005047]",
-  Medium: "bg-[#FFF4D6] text-[#6F5400]",
-  Low:    "bg-[#FCE8E6] text-[#BA1A1A]",
-};
-
-const ConfidenceBadge = ({ level }: { level: ConfidenceLevel }) => (
-  <span
-    className={`inline-flex items-center px-2 py-0.5 rounded text-[10px] font-bold uppercase tracking-wide leading-none ${CONFIDENCE_CLASSES[level]}`}
-  >
-    {level} CONFIDENCE
-  </span>
-);
-
-// ─── Safety Point category → icon map (backend enum values only) ──────────────
-
+// Safety Point category icons using lucide-react
 const CATEGORY_ICON: Record<SafetyPointCategory, React.ReactNode> = {
-  "police station": <PoliceIcon />,
-  "hospital":       <HospitalIcon />,
-  "fire station":   <FireIcon />,
-  "other":          <OtherLocationIcon />,
+  "police station": <Shield className="w-5 h-5 text-[#444748]" aria-hidden="true" />,
+  "hospital":       <Hospital className="w-5 h-5 text-[#444748]" aria-hidden="true" />,
+  "fire station":   <Flame className="w-5 h-5 text-[#444748]" aria-hidden="true" />,
+  "other":          <MapPin className="w-5 h-5 text-[#444748]" aria-hidden="true" />,
 };
-
-// ─── Route Card ────────────────────────────────────────────────────────────────
-// Uses the real Route type from types/routes.ts — no local QuickRoute interface
-
-const RouteCard = ({
-  route,
-  onSelect,
-}: {
-  route: Route;
-  onSelect: (route: Route) => void;
-}) => (
-  <article
-    onClick={() => onSelect(route)}
-    className="relative flex items-center bg-white rounded-xl overflow-hidden shadow-xs hover:shadow-sm transition-shadow cursor-pointer"
-  >
-    {/* 4px teal left accent bar */}
-    <div className="absolute left-0 top-0 bottom-0 w-1 bg-[#79F7E3] rounded-l-xl" aria-hidden="true" />
-
-    <div className="flex items-center justify-between w-full pl-5 pr-3 py-3 gap-4">
-      <div className="flex flex-col gap-1 min-w-0">
-        {/* Origin → Destination */}
-        <div className="flex items-center gap-1">
-          <span className="text-[#1C1B1B] text-base leading-6 font-normal truncate">
-            {route.origin}
-          </span>
-          <ArrowRightSmallIcon />
-          <span className="text-[#1C1B1B] text-base leading-6 font-normal truncate">
-            {route.destination}
-          </span>
-        </div>
-        {/* Confidence + vehicle type + fare range */}
-        <div className="flex items-center gap-2 flex-wrap">
-          <ConfidenceBadge level={route.confidenceLevel} />
-          <span className="text-[#444748] text-sm leading-5 capitalize">
-            {route.vehicleType}
-          </span>
-          <span className="text-[#444748] text-sm leading-5">
-            ₦{route.fareLow.toLocaleString()} – ₦{route.fareHigh.toLocaleString()}
-          </span>
-        </div>
-      </div>
-
-      <button
-        id={`navigate-route-${route._id}`}
-        type="button"
-        onClick={(e) => {
-          e.stopPropagation();
-          onSelect(route);
-        }}
-        aria-label={`View route from ${route.origin} to ${route.destination}`}
-        className="shrink-0 w-10 h-10 rounded-full bg-[#FFC72C] flex items-center justify-center transition-transform active:scale-95 hover:brightness-95 cursor-pointer"
-      >
-        <BusIcon />
-      </button>
-    </div>
-  </article>
-);
 
 // ─── Safety Point Item ─────────────────────────────────────────────────────────
 // Uses the real SafetyPoint type from types/safetyPoints.ts
 
 const SafetyPointItem = ({ point }: { point: SafetyPoint }) => {
   const icon =
-    point.category ? CATEGORY_ICON[point.category] : <OtherLocationIcon />;
+    point.category ? CATEGORY_ICON[point.category] : <MapPin className="w-5 h-5 text-[#444748]" aria-hidden="true" />;
 
   return (
     <div
@@ -224,7 +99,7 @@ const RecentSearchItem = ({
     }`}
   >
     <div className="w-8 h-8 rounded-full bg-[#EBE7E6] flex items-center justify-center shrink-0">
-      <ClockIcon />
+      <Clock className="w-3.5 h-3.5 text-[#444748]" aria-hidden="true" />
     </div>
     <span className="text-[#1C1B1B] text-base leading-6 font-normal">{query}</span>
   </button>
@@ -291,23 +166,10 @@ const CommuterHomeDashboard = () => {
   // ── Data queries ────────────────────────────────────────────────────────────
 
   const {
-    data: allRoutesData,
-    isLoading: allRoutesLoading,
-    isError: allRoutesError,
-  } = useQuery({
-    queryKey: ["routes"],
-    queryFn: getAllRoutes,
-  });
-
-  const {
-    data: searchData,
-    isLoading: searchLoading,
-    isError: searchError,
-  } = useQuery({
-    queryKey: ["routes", "search", activeSearch],
-    queryFn: () => searchRoutes(activeSearch),
-    enabled: activeSearch.length > 0,
-  });
+    data: displayedRoutes = [],
+    isLoading: routesLoading,
+    isError: routesError,
+  } = useRoutes(activeSearch);
 
   const {
     data: safetyData,
@@ -320,16 +182,7 @@ const CommuterHomeDashboard = () => {
 
   // ── Derived display values ──────────────────────────────────────────────────
 
-  const isSearching = activeSearch.length > 0;
-
-  // When searching, use search results; otherwise use all routes
-  const displayedRoutes: Route[] = isSearching
-    ? (searchData?.routes ?? [])
-    : (allRoutesData?.routes ?? []);
-
-  const routesLoading = isSearching ? searchLoading : allRoutesLoading;
-  const routesError   = isSearching ? searchError   : allRoutesError;
-
+  const isSearching = activeSearch.trim().length > 0;
   const safetyPoints: SafetyPoint[] = safetyData?.safetyPoints ?? [];
 
   // ── Render ──────────────────────────────────────────────────────────────────
@@ -373,7 +226,7 @@ const CommuterHomeDashboard = () => {
                 className="absolute left-3 top-1/2 -translate-y-1/2 pointer-events-none"
                 aria-hidden="true"
               >
-                <SearchIcon />
+                <Search className="w-4.5 h-4.5 text-[#747878]" />
               </span>
               <input
                 id="destination-search"

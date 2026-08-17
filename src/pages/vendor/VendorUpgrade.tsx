@@ -1,7 +1,6 @@
 import { useState } from "react";
 import { useNavigate } from "react-router-dom";
-import { BottomNavBar, PrimaryButton, SecondaryButton } from "../../components";
-import { VENDOR_NAV_ITEMS } from "./VendorRoutes";
+import { BottomNavBar, PrimaryButton, SecondaryButton, Toast, VENDOR_NAV_ITEMS } from "../../components";
 import { useAuth } from "../../contexts/AuthContext";
 
 // ─── Icons ──────────────────────────────────────────────────────────────────────
@@ -236,12 +235,8 @@ const VendorUpgrade = () => {
             </div>
           </div>
 
-          {/* Success Banner */}
-          {successMsg && (
-            <div className="p-4 rounded-xl bg-[#79F7E3]/30 border border-[#005047]/30 text-[#005047] text-xs font-bold text-center animate-in fade-in">
-              {successMsg}
-            </div>
-          )}
+          {/* Success Toast */}
+          <Toast message={successMsg} />
 
           <div className="flex justify-center">
             <SecondaryButton onClick={() => navigate("/vendor/home")} width="auto">

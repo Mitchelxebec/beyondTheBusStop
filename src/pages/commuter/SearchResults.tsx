@@ -1,99 +1,17 @@
 import { useState, useMemo, useEffect } from "react";
 import { useNavigate, useSearchParams } from "react-router-dom";
-import { useQuery } from "@tanstack/react-query";
-import { BackButton, SectionLabel, BottomNavBar, RouteDetailModal } from "../../components";
-import { searchRoutes, getAllRoutes } from "../../services/routes";
+import { Search } from "lucide-react";
+import {
+  BackButton,
+  SectionLabel,
+  BottomNavBar,
+  RouteDetailModal,
+  RouteCard,
+  VENDOR_NAV_ITEMS,
+} from "../../components";
 import { useAuth } from "../../contexts/AuthContext";
-import { VENDOR_NAV_ITEMS } from "../vendor/VendorRoutes";
-import type { Route, ConfidenceLevel } from "../../types/routes";
-
-// ── Confidence Badge ──────────────────────────────────────────────────────────
-
-const CONFIDENCE_CLASSES: Record<ConfidenceLevel, { bg: string; text: string; dot: string }> = {
-  High:   { bg: "bg-[#E6FAF6]", text: "text-[#007A62]", dot: "bg-[#00C9A7]" },
-  Medium: { bg: "bg-[#FFF8E6]", text: "text-[#8A6200]", dot: "bg-[#F5B800]" },
-  Low:    { bg: "bg-[#FFF0F0]", text: "text-[#9B1B1B]", dot: "bg-red-400" },
-};
-
-const ConfidenceBadge = ({ level }: { level: ConfidenceLevel }) => {
-  const s = CONFIDENCE_CLASSES[level] || CONFIDENCE_CLASSES.Low;
-  return (
-    <span
-      className={`inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-[10px] font-semibold ${s.bg} ${s.text}`}
-    >
-      <span className={`w-1.5 h-1.5 rounded-full ${s.dot}`} aria-hidden="true" />
-      {level} Confidence
-    </span>
-  );
-};
-
-// ── Route Card ────────────────────────────────────────────────────────────────
-
-const RouteCard = ({
-  route,
-  onSelect,
-}: {
-  route: Route;
-  onSelect: (route: Route) => void;
-}) => {
-  return (
-    <article className="bg-white rounded-2xl overflow-hidden shadow-xs hover:shadow-md transition-shadow border border-gray-100">
-      {/* From / To */}
-      <div className="px-5 pt-5 pb-4">
-        <div className="flex items-start gap-3">
-          {/* Route line */}
-          <div className="flex flex-col items-center pt-1 gap-1 shrink-0">
-            <span className="w-3 h-3 rounded-full bg-[#1A1A1A] ring-2 ring-white ring-offset-1 shadow-xs" />
-            <span className="w-0.5 h-8 bg-gray-200 rounded-full" />
-            <span className="w-3 h-3 rounded-full bg-[#F5B800] ring-2 ring-white ring-offset-1 shadow-xs" />
-          </div>
-
-          <div className="flex flex-col gap-3 flex-1 min-w-0">
-            <div>
-              <p className="text-[10px] font-medium text-gray-400 uppercase tracking-wide">From</p>
-              <p className="text-sm font-bold text-gray-900 mt-0.5 truncate">{route.origin}</p>
-            </div>
-            <div>
-              <p className="text-[10px] font-medium text-gray-400 uppercase tracking-wide">To</p>
-              <p className="text-sm font-bold text-gray-900 mt-0.5 truncate">{route.destination}</p>
-            </div>
-          </div>
-        </div>
-      </div>
-
-      <div className="h-px bg-gray-100 mx-5" />
-
-      {/* Fare + Vehicle + Confidence + CTA */}
-      <div className="px-5 py-4 flex items-center justify-between gap-3">
-        <div className="flex flex-col gap-1.5">
-          <div className="flex items-center gap-1.5">
-            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#444748" strokeWidth="1.8" aria-hidden="true">
-              <rect x="2" y="6" width="20" height="12" rx="2" />
-              <path strokeLinecap="round" d="M6 10h2m0 0a2 2 0 014 0m-4 0v4m4-4v4" />
-            </svg>
-            <span className="text-sm font-bold text-gray-900">
-              ₦{route.fareLow.toLocaleString()} – ₦{route.fareHigh.toLocaleString()}
-            </span>
-          </div>
-          <div className="flex items-center gap-2">
-            <span className="text-xs font-medium text-gray-700 capitalize px-2 py-0.5 rounded bg-gray-100">
-              {route.vehicleType}
-            </span>
-            <ConfidenceBadge level={route.confidenceLevel} />
-          </div>
-        </div>
-
-        <button
-          type="button"
-          onClick={() => onSelect(route)}
-          className="shrink-0 px-4 py-2.5 rounded-xl text-sm font-bold bg-[#F5B800] text-[#1A1A1A] shadow-[0_2px_10px_rgba(245,184,0,0.3)] hover:bg-[#FFCA28] transition-all duration-150 active:scale-95 cursor-pointer"
-        >
-          View Route
-        </button>
-      </div>
-    </article>
-  );
-};
+import { useRoutes } from "../../hooks/useRoutes";
+import type { Route } from "../../types/routes";
 
 // ── Loading Skeleton ──────────────────────────────────────────────────────────
 
@@ -213,19 +131,7 @@ const SearchResults = () => {
   }, [searchParams]);
 
   // Live query: searches when query is non-empty, otherwise fetches all routes
-  const { data: routes = [], isLoading, isError, error } = useQuery<Route[]>({
-    queryKey: activeQuery.trim()
-      ? ["routes", "search", activeQuery.trim()]
-      : ["routes"],
-    queryFn: async () => {
-      if (activeQuery.trim()) {
-        const res = await searchRoutes(activeQuery.trim());
-        return res.routes ?? [];
-      }
-      const res = await getAllRoutes();
-      return res.routes ?? [];
-    },
-  });
+  const { data: routes = [], isLoading, isError, error } = useRoutes(activeQuery);
 
   const handleSearchSubmit = (e?: React.FormEvent) => {
     if (e) e.preventDefault();
@@ -288,10 +194,7 @@ const SearchResults = () => {
         {/* Search Input Bar */}
         <form onSubmit={handleSearchSubmit} className="relative flex items-center">
           <span className="absolute left-3.5 top-1/2 -translate-y-1/2 pointer-events-none" aria-hidden="true">
-            <svg width="18" height="18" viewBox="0 0 18 18" fill="none">
-              <circle cx="8" cy="8" r="5.5" stroke="#747878" strokeWidth="1.5" />
-              <path d="M12.5 12.5L15.5 15.5" stroke="#747878" strokeWidth="1.5" strokeLinecap="round" />
-            </svg>
+            <Search className="w-4.5 h-4.5 text-[#747878]" />
           </span>
           <input
             id="search-destination-input"

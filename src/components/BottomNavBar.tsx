@@ -16,58 +16,23 @@ interface NavBarProps {
   items?: NavItem[];
 }
 
-// ─── Default Commuter Nav Icons ───────────────────────────────────────────────
+import { Home, Waypoints, Share2, User, Menu, X } from "lucide-react";
 
-const HomeNavIcon = () => (
-  <svg width="16" height="16" viewBox="0 0 16 18" fill="currentColor" aria-hidden="true">
-    <path d="M8 1L15 7V17H10V12H6V17H1V7L8 1Z" />
-  </svg>
-);
-
-const RoutesNavIcon = () => (
-  <svg width="16" height="16" viewBox="0 0 18 18" fill="none" aria-hidden="true">
-    <circle cx="3" cy="3" r="2" stroke="currentColor" strokeWidth="1.4" />
-    <circle cx="15" cy="15" r="2" stroke="currentColor" strokeWidth="1.4" />
-    <path d="M3 5V10C3 12.2 4.8 14 7 14H11C13.2 14 15 12.2 15 10V5" stroke="currentColor" strokeWidth="1.4" strokeLinecap="round" />
-  </svg>
-);
-
-const ShareNavIcon = () => (
-  <svg width="16" height="16" viewBox="0 0 18 20" fill="none" aria-hidden="true">
-    <circle cx="15" cy="3" r="2" stroke="currentColor" strokeWidth="1.4" />
-    <circle cx="3" cy="10" r="2" stroke="currentColor" strokeWidth="1.4" />
-    <circle cx="15" cy="17" r="2" stroke="currentColor" strokeWidth="1.4" />
-    <path d="M5 8.8L13 4.2M5 11.2L13 15.8" stroke="currentColor" strokeWidth="1.4" strokeLinecap="round" />
-  </svg>
-);
-
-const ProfileNavIcon = () => (
-  <svg width="16" height="16" viewBox="0 0 20 20" fill="none" aria-hidden="true">
-    <circle cx="10" cy="7" r="4" stroke="currentColor" strokeWidth="1.4" />
-    <path d="M2 19C2 15.1 5.6 12 10 12C14.4 12 18 15.1 18 19" stroke="currentColor" strokeWidth="1.4" strokeLinecap="round" />
-  </svg>
-);
+// ─── Default Commuter Nav Items ───────────────────────────────────────────────
 
 export const DEFAULT_NAV_ITEMS: NavItem[] = [
-  { label: "Home",    path: "/home",    icon: <HomeNavIcon /> },
-  { label: "Routes",  path: "/routes",  icon: <RoutesNavIcon /> },
-  { label: "Share",   path: "/share",   icon: <ShareNavIcon /> },
-  { label: "Profile", path: "/profile", icon: <ProfileNavIcon /> },
+  { label: "Home",    path: "/home",    icon: <Home className="w-4 h-4" /> },
+  { label: "Routes",  path: "/routes",  icon: <Waypoints className="w-4 h-4" /> },
+  { label: "Share",   path: "/share",   icon: <Share2 className="w-4 h-4" /> },
+  { label: "Profile", path: "/profile", icon: <User className="w-4 h-4" /> },
 ];
 
-// ─── Hamburger / Close icon ────────────────────────────────────────────────────
-
-const MenuIcon = () => (
-  <svg width="22" height="22" viewBox="0 0 22 22" fill="none" aria-hidden="true">
-    <path d="M3 7H19M3 11H19M3 15H19" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" />
-  </svg>
-);
-
-const CloseIcon = () => (
-  <svg width="22" height="22" viewBox="0 0 22 22" fill="none" aria-hidden="true">
-    <path d="M5 5L17 17M5 17L17 5" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" />
-  </svg>
-);
+export const VENDOR_NAV_ITEMS: NavItem[] = [
+  { label: "Home",    path: "/vendor/home", icon: <Home className="w-4 h-4" /> },
+  { label: "Routes",  path: "/routes",      icon: <Waypoints className="w-4 h-4" /> },
+  { label: "Share",   path: "/share",       icon: <Share2 className="w-4 h-4" /> },
+  { label: "Profile", path: "/profile",     icon: <User className="w-4 h-4" /> },
+];
 
 // ─── Shared NavLink class helper ───────────────────────────────────────────────
 
@@ -147,7 +112,7 @@ const BottomNavBar = ({ items = DEFAULT_NAV_ITEMS }: NavBarProps) => {
           aria-expanded={open}
           aria-controls="mobile-menu"
         >
-          {open ? <CloseIcon /> : <MenuIcon />}
+          {open ? <X className="w-5.5 h-5.5 text-[#444748]" /> : <Menu className="w-5.5 h-5.5 text-[#444748]" />}
         </button>
       </div>
 

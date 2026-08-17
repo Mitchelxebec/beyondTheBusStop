@@ -1,6 +1,6 @@
 import { Bus, ArrowRight } from "lucide-react";
 import ConfidenceBadge from "./ConfidenceBadge";
-import type { Route } from "../types/routes";
+import { getRoutePlaceName, type Route } from "../types/routes";
 
 interface RouteCardProps {
   route: Route;
@@ -24,6 +24,9 @@ export const RouteCard = ({
   showAccentBar = true,
   className = "",
 }: RouteCardProps) => {
+  const originName = getRoutePlaceName(route.origin);
+  const destName = getRoutePlaceName(route.destination);
+
   return (
     <article
       onClick={() => onSelect(route)}
@@ -42,11 +45,11 @@ export const RouteCard = ({
           {/* Origin → Destination */}
           <div className="flex items-center gap-1.5">
             <span className="text-[#1C1B1B] text-base leading-6 font-normal truncate">
-              {route.origin}
+              {originName}
             </span>
             <ArrowRight className="w-3.5 h-3.5 text-[#C4C7C7] shrink-0" aria-hidden="true" />
             <span className="text-[#1C1B1B] text-base leading-6 font-normal truncate">
-              {route.destination}
+              {destName}
             </span>
           </div>
 
@@ -74,7 +77,7 @@ export const RouteCard = ({
             e.stopPropagation();
             onSelect(route);
           }}
-          aria-label={`View route from ${route.origin} to ${route.destination}`}
+          aria-label={`View route from ${originName} to ${destName}`}
           className="shrink-0 w-10 h-10 rounded-full bg-[#FFC72C] flex items-center justify-center transition-transform active:scale-95 hover:brightness-95 cursor-pointer text-[#6F5400]"
         >
           <Bus className="w-4 h-4 text-[#4A3B00]" aria-hidden="true" />

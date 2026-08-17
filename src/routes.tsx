@@ -27,6 +27,7 @@ const VendorUpgrade         = lazy(() => import("./pages/vendor/VendorUpgrade"))
 const SearchResults         = lazy(() => import("./pages/commuter/SearchResults"));
 const CommuterProfile       = lazy(() => import("./pages/commuter/CommuterProfile"));
 const SavedRoutes           = lazy(() => import("./pages/commuter/SavedRoutes"));
+const RouteDetails          = lazy(() => import("./pages/commuter/RouteDetails"));
 const NotFound              = lazy(() => import("./pages/NotFound"));
 
 const ComponentShowcase     = lazy(() => import("./pages/ComponentShowcase"));
@@ -91,7 +92,7 @@ export const router = createBrowserRouter([
   { path: "/routes/search",           element: auth(<SearchResults />) },
   { path: "/routes/saved",            element: auth(<SavedRoutes />, "commuter") },
   { path: "/saved-routes",            element: auth(<SavedRoutes />, "commuter") },
-  { path: "/routes/:id",              element: auth(<RoleHomeRedirect />) },
+  { path: "/routes/:id",              element: auth(<RouteDetails />) },
   { path: "/share",                   element: auth(<RoleHomeRedirect />) },
   { path: "/profile",                 element: auth(<CommuterProfile />, "commuter") },
 
@@ -102,6 +103,7 @@ export const router = createBrowserRouter([
   { path: "/dev/vendor-upgrade",      element: s(<VendorUpgrade />) },
   { path: "/dev/profile",             element: s(<CommuterProfile />) },
   { path: "/dev/saved-routes",        element: s(<SavedRoutes />) },
+  { path: "/dev/routes/:id",          element: s(<RouteDetails />) },
 
   // ── Catch-all ─────────────────────────────────────────────────────────────
   { path: "*",                        element: s(<NotFound />) },

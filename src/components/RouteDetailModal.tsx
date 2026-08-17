@@ -1,13 +1,14 @@
-import type { Route, ConfidenceLevel } from "../types/routes";
+import { getRoutePlaceName, type Route, type ConfidenceLevel } from "../types/routes";
 
 const CONFIDENCE_CLASSES: Record<ConfidenceLevel, { bg: string; text: string; dot: string }> = {
-  High:   { bg: "bg-[#E6FAF6]", text: "text-[#007A62]", dot: "bg-[#00C9A7]" },
-  Medium: { bg: "bg-[#FFF8E6]", text: "text-[#8A6200]", dot: "bg-[#F5B800]" },
-  Low:    { bg: "bg-[#FFF0F0]", text: "text-[#9B1B1B]", dot: "bg-red-400" },
+  High:        { bg: "bg-[#E6FAF6]", text: "text-[#007A62]", dot: "bg-[#00C9A7]" },
+  Medium:      { bg: "bg-[#FFF8E6]", text: "text-[#8A6200]", dot: "bg-[#F5B800]" },
+  Low:         { bg: "bg-[#FFF0F0]", text: "text-[#9B1B1B]", dot: "bg-red-400" },
+  Unconfirmed: { bg: "bg-[#F4F1EE]", text: "text-[#747878]", dot: "bg-[#C4C7C7]" },
 };
 
 const ConfidenceBadge = ({ level }: { level: ConfidenceLevel }) => {
-  const s = CONFIDENCE_CLASSES[level] || CONFIDENCE_CLASSES.Low;
+  const s = CONFIDENCE_CLASSES[level] || CONFIDENCE_CLASSES.Unconfirmed;
   return (
     <span
       className={`inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-[10px] font-semibold ${s.bg} ${s.text}`}
@@ -25,17 +26,20 @@ interface RouteDetailModalProps {
 
 /**
  * Shared Route Detail Preview Modal.
- * Used on both Commuter Home Dashboard and Search Results for unified route inspection.
+ * Legacy modal component maintained for backwards compatibility.
  */
 export const RouteDetailModal = ({ route, onClose }: RouteDetailModalProps) => {
   if (!route) return null;
+
+  const originName = getRoutePlaceName(route.origin);
+  const destName = getRoutePlaceName(route.destination);
 
   return (
     <div
       role="dialog"
       aria-modal="true"
       aria-labelledby="route-detail-title"
-      className="fixed inset-0 z-50 bg-black/40 backdrop-blur-sm flex items-end sm:items-center justify-center p-0 sm:p-4"
+      className="fixed inset-0 z-50 bg-black/40 backdrop-blur-xs flex items-end sm:items-center justify-center p-0 sm:p-4"
       onClick={onClose}
     >
       <div
@@ -49,7 +53,7 @@ export const RouteDetailModal = ({ route, onClose }: RouteDetailModalProps) => {
               Route Corridor Details
             </span>
             <h3 id="route-detail-title" className="text-lg font-bold text-[#1C1B1B] m-0">
-              {route.origin} → {route.destination}
+              {originName} → {destName}
             </h3>
           </div>
           <button

@@ -12,15 +12,17 @@ interface ConfidenceBadgeProps {
 }
 
 const DEFAULT_STYLES: Record<ConfidenceLevel, string> = {
-  High:   "bg-[#79F7E3] text-[#005047]",
-  Medium: "bg-[#FFF4D6] text-[#6F5400]",
-  Low:    "bg-[#FCE8E6] text-[#BA1A1A]",
+  High:        "bg-[#79F7E3] text-[#005047]",
+  Medium:      "bg-[#FFF4D6] text-[#6F5400]",
+  Low:         "bg-[#FCE8E6] text-[#BA1A1A]",
+  Unconfirmed: "bg-[#F4F1EE] text-[#747878]",
 };
 
 const PILL_STYLES: Record<ConfidenceLevel, { bg: string; text: string; dot: string }> = {
-  High:   { bg: "bg-[#E6FAF6]", text: "text-[#007A62]", dot: "bg-[#00C9A7]" },
-  Medium: { bg: "bg-[#FFF8E6]", text: "text-[#8A6200]", dot: "bg-[#F5B800]" },
-  Low:    { bg: "bg-[#FFF0F0]", text: "text-[#9B1B1B]", dot: "bg-red-400" },
+  High:        { bg: "bg-[#E6FAF6]", text: "text-[#007A62]", dot: "bg-[#00C9A7]" },
+  Medium:      { bg: "bg-[#FFF8E6]", text: "text-[#8A6200]", dot: "bg-[#F5B800]" },
+  Low:         { bg: "bg-[#FFF0F0]", text: "text-[#9B1B1B]", dot: "bg-red-400" },
+  Unconfirmed: { bg: "bg-[#F4F1EE]", text: "text-[#747878]", dot: "bg-[#C4C7C7]" },
 };
 
 /**
@@ -34,10 +36,10 @@ export const ConfidenceBadge = ({
 }: ConfidenceBadgeProps) => {
   // Normalize string levels defensively (e.g. Moderate -> Medium)
   const normalizedLevel: ConfidenceLevel =
-    level === ("Moderate" as any) ? "Medium" : level || "Low";
+    level === ("Moderate" as any) ? "Medium" : level || "Unconfirmed";
 
   if (variant === "pill") {
-    const s = PILL_STYLES[normalizedLevel] || PILL_STYLES.Low;
+    const s = PILL_STYLES[normalizedLevel] || PILL_STYLES.Unconfirmed;
     return (
       <span
         className={`inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-[10px] font-semibold ${s.bg} ${s.text} ${className}`}
@@ -49,7 +51,7 @@ export const ConfidenceBadge = ({
   }
 
   // Default Figma Uppercase Block Badge
-  const styleClass = DEFAULT_STYLES[normalizedLevel] || DEFAULT_STYLES.Low;
+  const styleClass = DEFAULT_STYLES[normalizedLevel] || DEFAULT_STYLES.Unconfirmed;
   return (
     <span
       className={`inline-flex items-center px-2 py-0.5 rounded text-[10px] font-bold uppercase tracking-wide leading-none ${styleClass} ${className}`}

@@ -5,13 +5,11 @@ import { Search, Clock, Shield, Hospital, Flame, MapPin } from "lucide-react";
 import {
   BottomNavBar,
   SectionLabel,
-  RouteDetailModal,
   RouteCard,
 } from "../components";
 import { useAuth } from "../contexts/AuthContext";
 import { useRoutes } from "../hooks/useRoutes";
 import { getSafetyPoints } from "../services/safetyPoints";
-import type { Route } from "../types/routes";
 import type { SafetyPoint, SafetyPointCategory } from "../types/safetyPoints";
 
 // ─── localStorage helpers (recent searches — no backend endpoint for this) ──────
@@ -140,7 +138,6 @@ const CommuterHomeDashboard = () => {
   const [recentSearches, setRecentSearches] = useState<string[]>(
     loadRecentSearches
   );
-  const [selectedRoute, setSelectedRoute] = useState<Route | null>(null);
 
   const handleSearchInputChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const val = e.target.value;
@@ -303,7 +300,7 @@ const CommuterHomeDashboard = () => {
                 <RouteCard
                   key={route._id}
                   route={route}
-                  onSelect={(r) => setSelectedRoute(r)}
+                  onSelect={(r) => navigate(`/routes/${r._id || r.id}`)}
                 />
               ))}
             </div>
@@ -362,12 +359,6 @@ const CommuterHomeDashboard = () => {
 
         </div>
       </main>
-
-      {/* Route Detail Modal */}
-      <RouteDetailModal
-        route={selectedRoute}
-        onClose={() => setSelectedRoute(null)}
-      />
     </div>
   );
 };

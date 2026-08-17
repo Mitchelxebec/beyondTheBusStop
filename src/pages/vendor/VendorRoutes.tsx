@@ -183,7 +183,7 @@ const VendorRoutes = () => {
                   key={route._id}
                   route={route}
                   badgeText={route.createdBy === currentUserId ? "Created by you" : undefined}
-                  onSelect={(r) => navigate(`/search?destination=${encodeURIComponent(r.destination)}`)}
+                  onSelect={(r) => navigate(`/routes/${r._id || r.id}`)}
                 />
               ))}
             </div>

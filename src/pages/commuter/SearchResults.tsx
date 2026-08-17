@@ -5,13 +5,11 @@ import {
   BackButton,
   SectionLabel,
   BottomNavBar,
-  RouteDetailModal,
   RouteCard,
   VENDOR_NAV_ITEMS,
 } from "../../components";
 import { useAuth } from "../../contexts/AuthContext";
 import { useRoutes } from "../../hooks/useRoutes";
-import type { Route } from "../../types/routes";
 
 // ── Loading Skeleton ──────────────────────────────────────────────────────────
 
@@ -121,7 +119,6 @@ const SearchResults = () => {
   const [activeQuery, setActiveQuery] = useState(initialQuery);
   const [sortBy, setSortBy] = useState<"cheapest" | "confidence" | "all">("cheapest");
   const [selectedVehicle, setSelectedVehicle] = useState<string>("All");
-  const [selectedRoute, setSelectedRoute] = useState<Route | null>(null);
 
   // Synchronize when URL search param changes
   useEffect(() => {
@@ -166,7 +163,7 @@ const SearchResults = () => {
       .sort((a, b) => {
         if (sortBy === "cheapest") return a.fareLow - b.fareLow;
         if (sortBy === "confidence") {
-          const score = { High: 3, Medium: 2, Low: 1 };
+          const score = { High: 3, Medium: 2, Low: 1, Unconfirmed: 0 };
           return (score[b.confidenceLevel] || 0) - (score[a.confidenceLevel] || 0);
         }
         return 0;
@@ -274,7 +271,7 @@ const SearchResults = () => {
               <RouteCard
                 key={route._id}
                 route={route}
-                onSelect={(r) => setSelectedRoute(r)}
+                onSelect={(r) => navigate(`/routes/${r._id || r.id}`)}
               />
             ))}
           </div>
@@ -282,12 +279,6 @@ const SearchResults = () => {
           <EmptyState activeQuery={activeQuery} onReset={clearFilters} />
         )}
       </main>
-
-      {/* Route Detail Modal */}
-      <RouteDetailModal
-        route={selectedRoute}
-        onClose={() => setSelectedRoute(null)}
-      />
     </div>
   );
 };

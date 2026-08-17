@@ -184,7 +184,7 @@ const VendorUpgrade = () => {
             </div>
 
             {/* Pro Merchant (Recommended) */}
-            <div className="relative bg-gradient-to-b from-[#005047]/5 to-[#79F7E3]/15 rounded-2xl p-5 border-2 border-[#005047] flex flex-col justify-between gap-4 shadow-sm">
+            <div className="relative bg-linear-to-b from-[#005047]/5 to-[#79F7E3]/15 rounded-2xl p-5 border-2 border-[#005047] flex flex-col justify-between gap-4 shadow-sm">
               <div className="absolute -top-3 right-4 bg-[#005047] text-white text-[10px] font-bold px-2.5 py-0.5 rounded-full uppercase tracking-wider flex items-center gap-1">
                 <SparklesIcon /> Recommended
               </div>

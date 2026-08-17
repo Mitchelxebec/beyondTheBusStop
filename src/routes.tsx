@@ -78,17 +78,17 @@ export const router = createBrowserRouter([
   // ── Protected: commuter only ───────────────────────────────────────────────
   { path: "/home",                    element: auth(<CommuterHomeDashboard />, "commuter") },
   { path: "/commuter/home",           element: <Navigate to="/home" replace /> },
-  { path: "/search",                  element: auth(<SearchResults />, "commuter") },
 
   // ── Protected: business / vendor only ──────────────────────────────────────
   { path: "/vendor/home",             element: auth(<VendorDashboard />, "business") },
   { path: "/vendor/dashboard",        element: <Navigate to="/vendor/home" replace /> },
-  { path: "/vendor/routes",           element: auth(<VendorRoutes />, "business") },
   { path: "/vendor/upgrade",          element: auth(<VendorUpgrade />, "business") },
 
-  // ── Search & Public Route Views ───────────────────────────────────────────
-  { path: "/routes",                  element: auth(<SearchResults />, "commuter") },
-  { path: "/routes/search",           element: auth(<SearchResults />, "commuter") },
+  // ── Shared: both commuter and business roles ───────────────────────────────
+  { path: "/routes",                  element: auth(<VendorRoutes />) },
+  { path: "/vendor/routes",           element: auth(<VendorRoutes />) },
+  { path: "/search",                  element: auth(<SearchResults />) },
+  { path: "/routes/search",           element: auth(<SearchResults />) },
   { path: "/routes/saved",            element: auth(<SavedRoutes />, "commuter") },
   { path: "/saved-routes",            element: auth(<SavedRoutes />, "commuter") },
   { path: "/routes/:id",              element: auth(<RoleHomeRedirect />) },

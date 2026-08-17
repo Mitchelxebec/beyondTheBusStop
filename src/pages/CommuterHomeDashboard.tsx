@@ -1,7 +1,7 @@
 import { useState } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { useNavigate } from "react-router-dom";
-import { BottomNavBar, SectionLabel } from "../components";
+import { BottomNavBar, SectionLabel, RouteDetailModal } from "../components";
 import { useAuth } from "../contexts/AuthContext";
 import { getAllRoutes, searchRoutes } from "../services/routes";
 import { getSafetyPoints } from "../services/safetyPoints";
@@ -131,12 +131,15 @@ const CATEGORY_ICON: Record<SafetyPointCategory, React.ReactNode> = {
 
 const RouteCard = ({
   route,
-  onNavigate,
+  onSelect,
 }: {
   route: Route;
-  onNavigate: (id: string) => void;
+  onSelect: (route: Route) => void;
 }) => (
-  <article className="relative flex items-center bg-white rounded-xl overflow-hidden shadow-xs hover:shadow-sm transition-shadow">
+  <article
+    onClick={() => onSelect(route)}
+    className="relative flex items-center bg-white rounded-xl overflow-hidden shadow-xs hover:shadow-sm transition-shadow cursor-pointer"
+  >
     {/* 4px teal left accent bar */}
     <div className="absolute left-0 top-0 bottom-0 w-1 bg-[#79F7E3] rounded-l-xl" aria-hidden="true" />
 
@@ -166,9 +169,13 @@ const RouteCard = ({
 
       <button
         id={`navigate-route-${route._id}`}
-        onClick={() => onNavigate(route._id)}
+        type="button"
+        onClick={(e) => {
+          e.stopPropagation();
+          onSelect(route);
+        }}
         aria-label={`View route from ${route.origin} to ${route.destination}`}
-        className="shrink-0 w-10 h-10 rounded-full bg-[#FFC72C] flex items-center justify-center transition-transform active:scale-95 hover:brightness-95"
+        className="shrink-0 w-10 h-10 rounded-full bg-[#FFC72C] flex items-center justify-center transition-transform active:scale-95 hover:brightness-95 cursor-pointer"
       >
         <BusIcon />
       </button>
@@ -258,6 +265,7 @@ const CommuterHomeDashboard = () => {
   const [recentSearches, setRecentSearches] = useState<string[]>(
     loadRecentSearches
   );
+  const [selectedRoute, setSelectedRoute] = useState<Route | null>(null);
 
   const handleSearchInputChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const val = e.target.value;
@@ -442,7 +450,7 @@ const CommuterHomeDashboard = () => {
                 <RouteCard
                   key={route._id}
                   route={route}
-                  onNavigate={(id) => navigate(`/routes/${id}`)}
+                  onSelect={(r) => setSelectedRoute(r)}
                 />
               ))}
             </div>
@@ -502,6 +510,11 @@ const CommuterHomeDashboard = () => {
         </div>
       </main>
 
+      {/* Route Detail Modal */}
+      <RouteDetailModal
+        route={selectedRoute}
+        onClose={() => setSelectedRoute(null)}
+      />
     </div>
   );
 };

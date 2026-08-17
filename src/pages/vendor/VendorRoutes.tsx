@@ -1,17 +1,17 @@
 import { useState } from "react";
-import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
+import { useQuery } from "@tanstack/react-query";
 import { useNavigate } from "react-router-dom";
 import {
   BottomNavBar,
   SectionLabel,
   PrimaryButton,
   SecondaryButton,
-  TextInput,
+  CreateRouteModal,
 } from "../../components";
 import type { NavItem } from "../../components/BottomNavBar";
 import { useAuth } from "../../contexts/AuthContext";
-import { getAllRoutes, createRoute } from "../../services/routes";
-import type { Route, VehicleType, CreateRoutePayload } from "../../types/routes";
+import { getAllRoutes } from "../../services/routes";
+import type { Route } from "../../types/routes";
 
 // ─── Icons ──────────────────────────────────────────────────────────────────────
 
@@ -44,9 +44,10 @@ const ChartBarIcon = () => (
   </svg>
 );
 
-const CloseIcon = () => (
-  <svg width="20" height="20" viewBox="0 0 20 20" fill="none" aria-hidden="true">
-    <path d="M5 5L15 15M5 15L15 5" stroke="#444748" strokeWidth="1.8" strokeLinecap="round" />
+const CheckCircleIcon = () => (
+  <svg width="18" height="18" viewBox="0 0 20 20" fill="none" aria-hidden="true">
+    <circle cx="10" cy="10" r="8" stroke="#005047" strokeWidth="1.6" fill="#79F7E3" fillOpacity="0.2" />
+    <path d="M6.5 10L9 12.5L13.5 7.5" stroke="#005047" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" />
   </svg>
 );
 
@@ -72,7 +73,7 @@ const ShareNavIcon = () => (
   </svg>
 );
 const ProfileNavIcon = () => (
-  <svg width="16" height="16" viewBox="0 0 20 20" fill="none" aria-hidden="true">
+  <svg width="16" height="20" viewBox="0 0 20 20" fill="none" aria-hidden="true">
     <circle cx="10" cy="7" r="4" stroke="currentColor" strokeWidth="1.4" />
     <path d="M2 19C2 15.1 5.6 12 10 12C14.4 12 18 15.1 18 19" stroke="currentColor" strokeWidth="1.4" strokeLinecap="round" />
   </svg>
@@ -80,106 +81,75 @@ const ProfileNavIcon = () => (
 
 export const VENDOR_NAV_ITEMS: NavItem[] = [
   { label: "Home", path: "/vendor/home", icon: <HomeNavIcon /> },
-  { label: "Routes", path: "/vendor/routes", icon: <RoutesNavIcon /> },
+  { label: "Routes", path: "/routes", icon: <RoutesNavIcon /> },
   { label: "Share", path: "/share", icon: <ShareNavIcon /> },
   { label: "Profile", path: "/profile", icon: <ProfileNavIcon /> },
 ];
 
 // ─── Component ─────────────────────────────────────────────────────────────────
 
+/**
+ * Shared Route Management & Route Network screen.
+ * Accessible to both Commuter and Business/Vendor users.
+ */
 const VendorRoutes = () => {
   const navigate = useNavigate();
   const { session } = useAuth();
-  const queryClient = useQueryClient();
+  const isBusiness = session?.role === "business";
 
-  const businessName =
-    session?.user?.businessName || session?.user?.fullName || "Transit Operator";
+  const displayName = isBusiness
+    ? session?.user?.businessName || session?.user?.fullName || "Transit Operator"
+    : session?.user?.fullName || "Commuter";
 
-  // Modal & Form State
   const [showCreateModal, setShowCreateModal] = useState(false);
-  const [formData, setFormData] = useState<CreateRoutePayload>({
-    origin: "",
-    destination: "",
-    vehicleType: "bus",
-    fareLow: 200,
-    fareHigh: 500,
-  });
-  const [formError, setFormError] = useState("");
+  const [toastMessage, setToastMessage] = useState<string | null>(null);
 
-  // Live Query
+  const showToast = (msg: string) => {
+    setToastMessage(msg);
+    setTimeout(() => setToastMessage(null), 3500);
+  };
+
+  // Live Query for all routes
   const { data: routesData, isLoading, isError } = useQuery({
     queryKey: ["routes"],
     queryFn: getAllRoutes,
   });
 
-  // Filter routes created by this business user (or all routes as fallback)
   const allRoutes = routesData?.routes ?? [];
-  const vendorRoutes = allRoutes.filter(
-    (r) => r.createdBy === session?.user?._id || r.createdBy === session?.user?.id
-  );
-  const displayedRoutes = vendorRoutes.length > 0 ? vendorRoutes : allRoutes;
-
-  // Mutation to create route (Real backend API endpoint: POST /api/routes/create)
-  const createRouteMutation = useMutation({
-    mutationFn: createRoute,
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ["routes"] });
-      setShowCreateModal(false);
-      setFormData({
-        origin: "",
-        destination: "",
-        vehicleType: "bus",
-        fareLow: 200,
-        fareHigh: 500,
-      });
-      setFormError("");
-    },
-    onError: (err: Error) => {
-      setFormError(err.message || "Failed to create route");
-    },
-  });
-
-  const handleSubmit = (e: React.FormEvent) => {
-    e.preventDefault();
-    if (!formData.origin.trim() || !formData.destination.trim()) {
-      setFormError("Please enter origin and destination");
-      return;
-    }
-    if (formData.fareLow <= 0 || formData.fareHigh < formData.fareLow) {
-      setFormError("Please enter valid low and high fare values");
-      return;
-    }
-    createRouteMutation.mutate(formData);
-  };
+  const currentUserId = session?.user?._id || session?.user?.id;
+  const userRoutes = allRoutes.filter((r) => r.createdBy === currentUserId);
+  const displayedRoutes = allRoutes;
 
   return (
     <div className="flex flex-col min-h-dvh bg-[#FDFAF8]">
       {/* ── Navbar ───────────────────────────────────────────────────── */}
-      <BottomNavBar items={VENDOR_NAV_ITEMS} />
+      <BottomNavBar items={isBusiness ? VENDOR_NAV_ITEMS : undefined} />
 
       {/* ── Main Container ────────────────────────────────────────────── */}
       <main
-        id="vendor-routes-main"
+        id="routes-network-main"
         className="flex-1 w-full mx-auto pt-16"
         style={{ maxWidth: "min(100%, 42rem)" }}
-        aria-label="Vendor Route Management Content"
+        aria-label="Route Management & Network Content"
       >
         <div className="flex flex-col gap-6 px-4 sm:px-6 pt-8 pb-12">
           {/* Header & Status Tag */}
           <section className="flex flex-col gap-2">
             <div className="flex items-center justify-between">
               <span className="text-xs font-semibold uppercase tracking-wider text-[#59DBC7]">
-                Route Management
+                Route Network
               </span>
               <span className="px-2.5 py-0.5 rounded-full text-[10px] font-bold uppercase tracking-wide bg-[#79F7E3]/30 text-[#005047]">
-                CORRIDOR OPERATOR
+                {isBusiness ? "CORRIDOR OPERATOR" : "COMMUTER NETWORK"}
               </span>
             </div>
             <h1 className="text-[#1C1B1B] text-xl sm:text-2xl font-semibold m-0">
-              Transit Routes for {businessName}
+              Transit Routes for {displayName}
             </h1>
             <p className="text-[#444748] text-sm font-normal m-0">
-              Create, update, and manage official transit corridors and fare estimates.
+              {isBusiness
+                ? "Create, update, and manage official transit corridors and fare estimates."
+                : "Explore verified community routes or create new transit corridors for fellow commuters."}
             </p>
           </section>
 
@@ -199,7 +169,7 @@ const VendorRoutes = () => {
                   {displayedRoutes.length}
                 </span>
                 <span className="block text-[11px] text-[#005047] font-medium mt-0.5">
-                  Active listings
+                  Active in network
                 </span>
               </div>
             </div>
@@ -207,7 +177,7 @@ const VendorRoutes = () => {
             <div className="bg-white p-4 rounded-xl shadow-xs border border-neutral-100 flex flex-col justify-between">
               <div className="flex items-center justify-between">
                 <span className="text-[10px] font-bold uppercase tracking-wider text-[#444748]">
-                  Your Routes
+                  Your Contributions
                 </span>
                 <div className="w-7 h-7 rounded-lg bg-[#FFC72C]/20 flex items-center justify-center">
                   <BusIcon />
@@ -216,7 +186,7 @@ const VendorRoutes = () => {
               <div className="mt-3">
                 <div className="flex items-baseline gap-1">
                   <span className="text-2xl font-bold text-[#1C1B1B]">
-                    {vendorRoutes.length}
+                    {userRoutes.length}
                   </span>
                   <span className="text-xs text-[#444748]">created by you</span>
                 </div>
@@ -242,21 +212,19 @@ const VendorRoutes = () => {
               </PrimaryButton>
 
               <SecondaryButton
-                id="view-all-vendor-routes-btn"
-                onClick={() => navigate("/routes/search")}
+                id="view-search-routes-btn"
+                onClick={() => navigate("/search")}
                 width="full"
               >
-                View Route Network
+                Search Destination Corridors
               </SecondaryButton>
             </div>
           </section>
 
-          {/* Performance Snapshot / Active Routes */}
+          {/* Active Routes */}
           <section className="flex flex-col gap-3">
             <SectionLabel variant="page">
-              {vendorRoutes.length > 0
-                ? "Your Created Routes"
-                : "Active Transit Routes"}
+              Active Transit Corridors ({displayedRoutes.length})
             </SectionLabel>
 
             {isLoading && (
@@ -274,13 +242,13 @@ const VendorRoutes = () => {
             {!isLoading && !isError && displayedRoutes.length === 0 && (
               <div className="bg-white rounded-xl p-8 text-center border border-neutral-100 flex flex-col items-center gap-3">
                 <p className="text-[#444748] text-sm m-0">
-                  You haven't created any routes yet.
+                  No transit routes created yet in the network.
                 </p>
                 <PrimaryButton
                   onClick={() => setShowCreateModal(true)}
                   width="auto"
                 >
-                  Add Your First Route
+                  Add The First Route
                 </PrimaryButton>
               </div>
             )}
@@ -314,13 +282,18 @@ const VendorRoutes = () => {
                           ₦{route.fareLow.toLocaleString()} – ₦
                           {route.fareHigh.toLocaleString()}
                         </span>
+                        {route.createdBy === currentUserId && (
+                          <span className="text-[10px] font-semibold text-[#005047] bg-[#79F7E3]/30 px-1.5 py-0.5 rounded">
+                            Created by you
+                          </span>
+                        )}
                       </div>
                     </div>
 
                     <button
-                      onClick={() => navigate(`/routes/${route._id}`)}
+                      onClick={() => navigate(`/search?destination=${encodeURIComponent(route.destination)}`)}
                       className="shrink-0 w-9 h-9 rounded-full bg-[#FFC72C] flex items-center justify-center hover:brightness-95 transition-all"
-                      aria-label="View Route Details"
+                      aria-label={`Search routes to ${route.destination}`}
                     >
                       <BusIcon />
                     </button>
@@ -332,125 +305,20 @@ const VendorRoutes = () => {
         </div>
       </main>
 
-      {/* ── Create Route Modal ────────────────────────────────────────── */}
-      {showCreateModal && (
-        <div className="fixed inset-0 z-50 bg-black/40 backdrop-blur-xs flex items-center justify-center p-4">
-          <div className="bg-white rounded-2xl max-w-md w-full p-6 shadow-xl flex flex-col gap-4 animate-in fade-in zoom-in duration-150">
-            <div className="flex items-center justify-between border-b border-neutral-100 pb-3">
-              <h2 className="text-lg font-bold text-[#1C1B1B] m-0">
-                Create New Transit Route
-              </h2>
-              <button
-                onClick={() => setShowCreateModal(false)}
-                className="p-1 rounded-lg hover:bg-neutral-100 text-[#444748] transition-colors"
-                aria-label="Close modal"
-              >
-                <CloseIcon />
-              </button>
-            </div>
+      {/* ── Reusable Create Route Modal ─────────────────────────────── */}
+      <CreateRouteModal
+        isOpen={showCreateModal}
+        onClose={() => setShowCreateModal(false)}
+        onSuccess={() => {
+          showToast("Route created and published successfully!");
+        }}
+      />
 
-            {formError && (
-              <div className="p-3 rounded-lg bg-red-50 text-red-600 text-xs">
-                {formError}
-              </div>
-            )}
-
-            <form onSubmit={handleSubmit} className="flex flex-col gap-4">
-              <TextInput
-                label="Origin (Starting Point)"
-                placeholder="e.g. Ojota"
-                value={formData.origin}
-                onChange={(e) =>
-                  setFormData((prev) => ({ ...prev, origin: e.target.value }))
-                }
-                required
-              />
-
-              <TextInput
-                label="Destination (Ending Point)"
-                placeholder="e.g. CMS"
-                value={formData.destination}
-                onChange={(e) =>
-                  setFormData((prev) => ({
-                    ...prev,
-                    destination: e.target.value,
-                  }))
-                }
-                required
-              />
-
-              <div className="flex flex-col gap-1.5">
-                <label className="text-sm font-medium text-gray-700 px-1">
-                  Vehicle Type
-                </label>
-                <div className="bg-gray-50 rounded-lg px-4 py-3.5 border border-gray-200">
-                  <select
-                    value={formData.vehicleType}
-                    onChange={(e) =>
-                      setFormData((prev) => ({
-                        ...prev,
-                        vehicleType: e.target.value as VehicleType,
-                      }))
-                    }
-                    className="w-full bg-transparent text-gray-900 text-sm outline-none capitalize"
-                  >
-                    <option value="bus">Bus</option>
-                    <option value="keke">Keke</option>
-                    <option value="taxi">Taxi</option>
-                    <option value="train">Train</option>
-                  </select>
-                </div>
-              </div>
-
-              <div className="grid grid-cols-2 gap-3">
-                <TextInput
-                  label="Fare Low (₦)"
-                  type="number"
-                  min="1"
-                  value={formData.fareLow}
-                  onChange={(e) =>
-                    setFormData((prev) => ({
-                      ...prev,
-                      fareLow: Number(e.target.value),
-                    }))
-                  }
-                  required
-                />
-
-                <TextInput
-                  label="Fare High (₦)"
-                  type="number"
-                  min="1"
-                  value={formData.fareHigh}
-                  onChange={(e) =>
-                    setFormData((prev) => ({
-                      ...prev,
-                      fareHigh: Number(e.target.value),
-                    }))
-                  }
-                  required
-                />
-              </div>
-
-              <div className="flex justify-end gap-2 pt-3 border-t border-neutral-100">
-                <SecondaryButton
-                  onClick={() => setShowCreateModal(false)}
-                  width="auto"
-                >
-                  Cancel
-                </SecondaryButton>
-                <PrimaryButton
-                  type="submit"
-                  disabled={createRouteMutation.isPending}
-                  width="auto"
-                >
-                  {createRouteMutation.isPending
-                    ? "Creating…"
-                    : "Create Route"}
-                </PrimaryButton>
-              </div>
-            </form>
-          </div>
+      {/* ── Toast Notification ───────────────────────────────────────── */}
+      {toastMessage && (
+        <div className="fixed bottom-6 left-1/2 -translate-x-1/2 z-50 bg-[#1C1B1B] text-white px-5 py-3 rounded-xl shadow-xl text-xs font-medium flex items-center gap-2 animate-in fade-in slide-in-from-bottom-3 duration-200">
+          <CheckCircleIcon />
+          <span>{toastMessage}</span>
         </div>
       )}
     </div>

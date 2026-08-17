@@ -335,7 +335,7 @@ const VendorDashboard = () => {
                 id="boost-listing-btn"
                 type="button"
                 onClick={() => handleLockedAction("Boost Listing")}
-                className="relative overflow-hidden bg-gradient-to-br from-[#02241F] via-[#03302A] to-[#043B33] hover:brightness-110 active:scale-[0.98] rounded-2xl p-4 sm:p-5 flex flex-col justify-between h-28 sm:h-34 text-left shadow-xs transition-all cursor-pointer group"
+                className="relative overflow-hidden bg-linear-to-br from-[#02241F] via-[#03302A] to-[#043B33] hover:brightness-110 active:scale-[0.98] rounded-2xl p-4 sm:p-5 flex flex-col justify-between h-28 sm:h-34 text-left shadow-xs transition-all cursor-pointer group"
               >
                 {/* Subtle soft glowing accent */}
                 <div className="absolute -bottom-6 -right-6 w-24 h-24 rounded-full bg-[#00C9A7]/20 blur-xl pointer-events-none" />

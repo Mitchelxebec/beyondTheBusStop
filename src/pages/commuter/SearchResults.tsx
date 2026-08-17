@@ -1,97 +1,22 @@
-import { useState, useMemo } from "react";
+import { useState, useMemo, useEffect } from "react";
 import { useNavigate, useSearchParams } from "react-router-dom";
-import { BackButton, SectionLabel, BottomNavBar } from "../../components";
+import { useQuery } from "@tanstack/react-query";
+import { BackButton, SectionLabel, BottomNavBar, RouteDetailModal } from "../../components";
+import { searchRoutes, getAllRoutes } from "../../services/routes";
+import { useAuth } from "../../contexts/AuthContext";
+import { VENDOR_NAV_ITEMS } from "../vendor/VendorRoutes";
+import type { Route, ConfidenceLevel } from "../../types/routes";
 
-// ── Types ─────────────────────────────────────────────────────────────────────
+// ── Confidence Badge ──────────────────────────────────────────────────────────
 
-export type Confidence = "High" | "Moderate" | "Low";
-
-export interface RouteResult {
-  id: string;
-  from: string;
-  to: string;
-  fareLow: number;
-  fareHigh: number;
-  duration: string;
-  confidence: Confidence;
-  vehicleType?: string;
-}
-
-// ── Static route dataset ──────────────────────────────────────────────────────
-
-const STATIC_RESULTS: RouteResult[] = [
-  {
-    id: "1",
-    from: "Egbeda",
-    to: "Ikeja / Computer Village",
-    fareLow: 300,
-    fareHigh: 500,
-    duration: "~45 mins",
-    confidence: "High",
-    vehicleType: "Bus",
-  },
-  {
-    id: "2",
-    from: "Oshodi",
-    to: "Ikeja / Computer Village",
-    fareLow: 200,
-    fareHigh: 400,
-    duration: "~25 mins",
-    confidence: "Moderate",
-    vehicleType: "Danfo",
-  },
-  {
-    id: "3",
-    from: "Ikorodu",
-    to: "Ikeja / Computer Village",
-    fareLow: 500,
-    fareHigh: 800,
-    duration: "~70 mins",
-    confidence: "Low",
-    vehicleType: "Bus",
-  },
-  {
-    id: "4",
-    from: "Ojota",
-    to: "CMS",
-    fareLow: 300,
-    fareHigh: 500,
-    duration: "~35 mins",
-    confidence: "High",
-    vehicleType: "Bus",
-  },
-  {
-    id: "5",
-    from: "Yaba",
-    to: "Obalende",
-    fareLow: 250,
-    fareHigh: 400,
-    duration: "~30 mins",
-    confidence: "High",
-    vehicleType: "Bus",
-  },
-  {
-    id: "6",
-    from: "Mile 2",
-    to: "Trade Fair",
-    fareLow: 200,
-    fareHigh: 350,
-    duration: "~20 mins",
-    confidence: "Moderate",
-    vehicleType: "Keke",
-  },
-];
-
-// ── Confidence badge ──────────────────────────────────────────────────────────
-
-const CONFIDENCE_STYLES: Record<Confidence, { bg: string; text: string; dot: string }> = {
-  High:     { bg: "bg-[#E6FAF6]", text: "text-[#007A62]", dot: "bg-[#00C9A7]" },
-  Moderate: { bg: "bg-[#FFF8E6]", text: "text-[#8A6200]", dot: "bg-[#F5B800]" },
-  Low:      { bg: "bg-[#FFF0F0]", text: "text-[#9B1B1B]", dot: "bg-red-400" },
+const CONFIDENCE_CLASSES: Record<ConfidenceLevel, { bg: string; text: string; dot: string }> = {
+  High:   { bg: "bg-[#E6FAF6]", text: "text-[#007A62]", dot: "bg-[#00C9A7]" },
+  Medium: { bg: "bg-[#FFF8E6]", text: "text-[#8A6200]", dot: "bg-[#F5B800]" },
+  Low:    { bg: "bg-[#FFF0F0]", text: "text-[#9B1B1B]", dot: "bg-red-400" },
 };
 
-const ConfidenceBadge = ({ level }: { level: Confidence }) => {
-  const s = CONFIDENCE_STYLES[level];
+const ConfidenceBadge = ({ level }: { level: ConfidenceLevel }) => {
+  const s = CONFIDENCE_CLASSES[level] || CONFIDENCE_CLASSES.Low;
   return (
     <span
       className={`inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-[10px] font-semibold ${s.bg} ${s.text}`}
@@ -102,17 +27,15 @@ const ConfidenceBadge = ({ level }: { level: Confidence }) => {
   );
 };
 
-// ── Route card ────────────────────────────────────────────────────────────────
+// ── Route Card ────────────────────────────────────────────────────────────────
 
 const RouteCard = ({
   route,
-  onViewDetails,
+  onSelect,
 }: {
-  route: RouteResult;
-  onViewDetails: (id: string) => void;
+  route: Route;
+  onSelect: (route: Route) => void;
 }) => {
-  const isHighConfidence = route.confidence === "High";
-
   return (
     <article className="bg-white rounded-2xl overflow-hidden shadow-xs hover:shadow-md transition-shadow border border-gray-100">
       {/* From / To */}
@@ -128,11 +51,11 @@ const RouteCard = ({
           <div className="flex flex-col gap-3 flex-1 min-w-0">
             <div>
               <p className="text-[10px] font-medium text-gray-400 uppercase tracking-wide">From</p>
-              <p className="text-sm font-bold text-gray-900 mt-0.5 truncate">{route.from}</p>
+              <p className="text-sm font-bold text-gray-900 mt-0.5 truncate">{route.origin}</p>
             </div>
             <div>
               <p className="text-[10px] font-medium text-gray-400 uppercase tracking-wide">To</p>
-              <p className="text-sm font-bold text-gray-900 mt-0.5 truncate">{route.to}</p>
+              <p className="text-sm font-bold text-gray-900 mt-0.5 truncate">{route.destination}</p>
             </div>
           </div>
         </div>
@@ -140,7 +63,7 @@ const RouteCard = ({
 
       <div className="h-px bg-gray-100 mx-5" />
 
-      {/* Fare + duration + confidence + CTA */}
+      {/* Fare + Vehicle + Confidence + CTA */}
       <div className="px-5 py-4 flex items-center justify-between gap-3">
         <div className="flex flex-col gap-1.5">
           <div className="flex items-center gap-1.5">
@@ -152,41 +75,27 @@ const RouteCard = ({
               ₦{route.fareLow.toLocaleString()} – ₦{route.fareHigh.toLocaleString()}
             </span>
           </div>
-          <div className="flex items-center gap-1.5">
-            <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="#888" strokeWidth="2" aria-hidden="true">
-              <circle cx="12" cy="12" r="10" />
-              <path strokeLinecap="round" d="M12 6v6l4 2" />
-            </svg>
-            <span className="text-xs text-gray-500">{route.duration}</span>
-            {route.vehicleType && (
-              <span className="text-xs font-medium text-gray-400 px-1.5 py-0.5 rounded bg-gray-100">
-                {route.vehicleType}
-              </span>
-            )}
+          <div className="flex items-center gap-2">
+            <span className="text-xs font-medium text-gray-700 capitalize px-2 py-0.5 rounded bg-gray-100">
+              {route.vehicleType}
+            </span>
+            <ConfidenceBadge level={route.confidenceLevel} />
           </div>
-          <ConfidenceBadge level={route.confidence} />
         </div>
 
         <button
           type="button"
-          onClick={() => onViewDetails(route.id)}
-          className={`
-            shrink-0 px-4 py-2.5 rounded-xl text-sm font-bold
-            transition-all duration-150 active:scale-95
-            ${isHighConfidence
-              ? "bg-[#F5B800] text-[#1A1A1A] shadow-[0_2px_10px_rgba(245,184,0,0.3)] hover:bg-[#FFCA28]"
-              : "bg-gray-100 text-gray-700 hover:bg-gray-200"
-            }
-          `}
+          onClick={() => onSelect(route)}
+          className="shrink-0 px-4 py-2.5 rounded-xl text-sm font-bold bg-[#F5B800] text-[#1A1A1A] shadow-[0_2px_10px_rgba(245,184,0,0.3)] hover:bg-[#FFCA28] transition-all duration-150 active:scale-95 cursor-pointer"
         >
-          View Details
+          View Route
         </button>
       </div>
     </article>
   );
 };
 
-// ── Loading skeleton ──────────────────────────────────────────────────────────
+// ── Loading Skeleton ──────────────────────────────────────────────────────────
 
 const SkeletonCard = () => (
   <div className="bg-white rounded-2xl border border-gray-100 overflow-hidden animate-pulse">
@@ -211,7 +120,6 @@ const SkeletonCard = () => (
     <div className="px-5 py-4 flex items-center justify-between">
       <div className="flex flex-col gap-2">
         <div className="h-4 w-32 bg-gray-200 rounded" />
-        <div className="h-3 w-16 bg-gray-200 rounded" />
         <div className="h-5 w-24 bg-gray-100 rounded-full" />
       </div>
       <div className="h-9 w-24 bg-gray-200 rounded-xl" />
@@ -219,17 +127,15 @@ const SkeletonCard = () => (
   </div>
 );
 
-const LoadingState = () => (
-  <div className="flex flex-col gap-4" aria-busy="true" aria-label="Loading search results">
-    <SkeletonCard />
-    <SkeletonCard />
-    <SkeletonCard />
-  </div>
-);
+// ── Empty State ───────────────────────────────────────────────────────────────
 
-// ── Empty state ───────────────────────────────────────────────────────────────
-
-const EmptyState = ({ onReset }: { onReset?: () => void }) => (
+const EmptyState = ({
+  activeQuery,
+  onReset,
+}: {
+  activeQuery: string;
+  onReset: () => void;
+}) => (
   <div className="flex flex-col items-center gap-3 py-12 text-center bg-white rounded-2xl p-6 border border-gray-100">
     <div className="w-14 h-14 rounded-2xl bg-gray-100 flex items-center justify-center">
       <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="#C4C7C7" strokeWidth="1.5" aria-hidden="true">
@@ -237,24 +143,24 @@ const EmptyState = ({ onReset }: { onReset?: () => void }) => (
       </svg>
     </div>
     <div className="flex flex-col gap-1">
-      <p className="text-sm font-semibold text-gray-900">No matching routes found</p>
+      <p className="text-sm font-semibold text-gray-900">
+        {activeQuery ? `No routes found matching "${activeQuery}"` : "No routes available"}
+      </p>
       <p className="text-xs text-gray-400 leading-relaxed max-w-xs">
-        Try refining your search keyword or resetting active filters.
+        Try searching with a different destination name or clear filters.
       </p>
     </div>
-    {onReset && (
-      <button
-        type="button"
-        onClick={onReset}
-        className="mt-2 px-4 py-2 rounded-xl bg-[#F5B800] text-[#1A1A1A] text-xs font-semibold hover:bg-[#FFCA28] transition-colors"
-      >
-        Reset Filters & Show All
-      </button>
-    )}
+    <button
+      type="button"
+      onClick={onReset}
+      className="mt-2 px-4 py-2 rounded-xl bg-[#F5B800] text-[#1A1A1A] text-xs font-semibold hover:bg-[#FFCA28] transition-colors"
+    >
+      Reset & Show All Routes
+    </button>
   </div>
 );
 
-// ── Filter / Sort pill ────────────────────────────────────────────────────────
+// ── Filter Pill ───────────────────────────────────────────────────────────────
 
 const Pill = ({
   children,
@@ -270,7 +176,7 @@ const Pill = ({
     onClick={onClick}
     className={`
       inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full text-xs font-medium
-      border transition-all duration-150 active:scale-95 shrink-0
+      border transition-all duration-150 active:scale-95 shrink-0 cursor-pointer
       ${active
         ? "bg-[#1A1A1A] text-white border-[#1A1A1A]"
         : "bg-white text-gray-700 border-gray-200 hover:border-gray-400"
@@ -285,15 +191,41 @@ const Pill = ({
 
 const SearchResults = () => {
   const navigate = useNavigate();
+  const { session } = useAuth();
+  const isBusiness = session?.role === "business";
   const [searchParams, setSearchParams] = useSearchParams();
 
-  // Read search query from URL (supports ?destination=... or ?query=...)
-  const initialQuery = searchParams.get("destination") ?? searchParams.get("query") ?? "";
+  // Read search query from URL
+  const initialQuery =
+    searchParams.get("destination") ?? searchParams.get("query") ?? "";
 
   const [searchInput, setSearchInput] = useState(initialQuery);
   const [activeQuery, setActiveQuery] = useState(initialQuery);
-  const [sortBy, setSortBy] = useState<"fastest" | "cheapest" | "confidence">("fastest");
+  const [sortBy, setSortBy] = useState<"cheapest" | "confidence" | "all">("cheapest");
   const [selectedVehicle, setSelectedVehicle] = useState<string>("All");
+  const [selectedRoute, setSelectedRoute] = useState<Route | null>(null);
+
+  // Synchronize when URL search param changes
+  useEffect(() => {
+    const q = searchParams.get("destination") ?? searchParams.get("query") ?? "";
+    setSearchInput(q);
+    setActiveQuery(q);
+  }, [searchParams]);
+
+  // Live query: searches when query is non-empty, otherwise fetches all routes
+  const { data: routes = [], isLoading, isError, error } = useQuery<Route[]>({
+    queryKey: activeQuery.trim()
+      ? ["routes", "search", activeQuery.trim()]
+      : ["routes"],
+    queryFn: async () => {
+      if (activeQuery.trim()) {
+        const res = await searchRoutes(activeQuery.trim());
+        return res.routes ?? [];
+      }
+      const res = await getAllRoutes();
+      return res.routes ?? [];
+    },
+  });
 
   const handleSearchSubmit = (e?: React.FormEvent) => {
     if (e) e.preventDefault();
@@ -310,47 +242,45 @@ const SearchResults = () => {
     setSearchInput("");
     setActiveQuery("");
     setSelectedVehicle("All");
-    setSortBy("fastest");
+    setSortBy("cheapest");
     setSearchParams({});
   };
 
-  // Filter & Sort Logic
+  // Filter and Sort live backend data
   const sortedAndFiltered = useMemo(() => {
-    return STATIC_RESULTS.filter(route => {
-      if (activeQuery) {
-        const q = activeQuery.toLowerCase();
-        const matchFrom = route.from.toLowerCase().includes(q);
-        const matchTo = route.to.toLowerCase().includes(q);
-        if (!matchFrom && !matchTo) return false;
-      }
-      if (selectedVehicle !== "All" && route.vehicleType) {
-        if (route.vehicleType.toLowerCase() !== selectedVehicle.toLowerCase()) return false;
-      }
-      return true;
-    }).sort((a, b) => {
-      if (sortBy === "fastest") return parseInt(a.duration) - parseInt(b.duration);
-      if (sortBy === "cheapest") return a.fareLow - b.fareLow;
-      if (sortBy === "confidence") {
-        const score = { High: 3, Moderate: 2, Low: 1 };
-        return score[b.confidence] - score[a.confidence];
-      }
-      return 0;
-    });
-  }, [activeQuery, selectedVehicle, sortBy]);
+    return routes
+      .filter((route) => {
+        if (selectedVehicle !== "All") {
+          if (route.vehicleType.toLowerCase() !== selectedVehicle.toLowerCase()) {
+            return false;
+          }
+        }
+        return true;
+      })
+      .sort((a, b) => {
+        if (sortBy === "cheapest") return a.fareLow - b.fareLow;
+        if (sortBy === "confidence") {
+          const score = { High: 3, Medium: 2, Low: 1 };
+          return (score[b.confidenceLevel] || 0) - (score[a.confidenceLevel] || 0);
+        }
+        return 0;
+      });
+  }, [routes, selectedVehicle, sortBy]);
 
-  const isLoading = false;
   const hasResults = sortedAndFiltered.length > 0;
 
   return (
     <div className="flex flex-col min-h-dvh bg-[#F5F5F0]">
       {/* Top Navbar */}
-      <BottomNavBar />
+      <BottomNavBar items={isBusiness ? VENDOR_NAV_ITEMS : undefined} />
 
       {/* Sticky header */}
       <div className="sticky top-14 z-20 bg-[#F5F5F0]/95 backdrop-blur-sm border-b border-gray-200 px-4 pt-4 pb-3">
         <div className="flex items-center gap-3 max-w-lg mx-auto">
           <BackButton onClick={() => navigate(-1)} />
-          <span className="text-base font-semibold text-gray-900">Search Results</span>
+          <span className="text-base font-semibold text-gray-900">
+            Destination Search
+          </span>
         </div>
       </div>
 
@@ -364,13 +294,15 @@ const SearchResults = () => {
             </svg>
           </span>
           <input
+            id="search-destination-input"
             type="search"
             value={searchInput}
             onChange={(e) => setSearchInput(e.target.value)}
-            placeholder="Search destination (e.g. Computer Village, CMS)..."
+            placeholder="Search destination (e.g. Computer Village, CMS, Ikeja)..."
             className="w-full h-11 pl-10 pr-24 rounded-xl bg-white border border-gray-200 text-sm text-gray-900 placeholder:text-gray-400 outline-none focus:ring-2 focus:ring-[#F5B800]"
           />
           <button
+            id="search-submit-btn"
             type="submit"
             className="absolute right-2 top-1/2 -translate-y-1/2 px-3 py-1.5 rounded-lg bg-[#1A1A1A] text-white text-xs font-medium hover:bg-black transition-colors"
           >
@@ -381,12 +313,12 @@ const SearchResults = () => {
         {/* Query label */}
         <div className="flex items-center justify-between">
           <div className="flex flex-col gap-0.5">
-            <SectionLabel>Search Results</SectionLabel>
+            <SectionLabel>Live Transit Corridors</SectionLabel>
             <p className="text-sm font-semibold text-gray-900">
-              {activeQuery ? `Routes matching "${activeQuery}"` : "All Available Routes"}
+              {activeQuery ? `Routes matching "${activeQuery}"` : "All Verified Routes"}
             </p>
           </div>
-          {(activeQuery || selectedVehicle !== "All" || sortBy !== "fastest") && (
+          {(activeQuery || selectedVehicle !== "All" || sortBy !== "cheapest") && (
             <button
               type="button"
               onClick={clearFilters}
@@ -397,42 +329,62 @@ const SearchResults = () => {
           )}
         </div>
 
-        {/* Filter + Sort Pills */}
+        {/* Filter + Sort Pills (Supported backend enums: Bus, Keke, Taxi, Train) */}
         <div className="flex items-center gap-2 overflow-x-auto no-scrollbar pb-1">
           <Pill
-            active={sortBy === "fastest"}
-            onClick={() => setSortBy(sortBy === "fastest" ? "cheapest" : "fastest")}
+            active={sortBy === "cheapest"}
+            onClick={() => setSortBy(sortBy === "cheapest" ? "confidence" : "cheapest")}
           >
-            Sort: {sortBy === "fastest" ? "Fastest" : sortBy === "cheapest" ? "Cheapest" : "Confidence"}
+            Sort: {sortBy === "cheapest" ? "Cheapest Fare" : "Highest Confidence"}
           </Pill>
-          {["All", "Bus", "Danfo", "Keke"].map((v) => (
+          {["All", "bus", "keke", "taxi", "train"].map((v) => (
             <Pill
               key={v}
-              active={selectedVehicle === v}
+              active={selectedVehicle.toLowerCase() === v.toLowerCase()}
               onClick={() => setSelectedVehicle(v)}
             >
-              {v}
+              <span className="capitalize">{v}</span>
             </Pill>
           ))}
         </div>
 
-        {/* Content */}
+        {/* Content Section */}
         {isLoading ? (
-          <LoadingState />
+          <div className="flex flex-col gap-4" aria-busy="true" aria-label="Loading search results">
+            <SkeletonCard />
+            <SkeletonCard />
+            <SkeletonCard />
+          </div>
+        ) : isError ? (
+          <div className="p-6 bg-red-50 text-red-600 rounded-2xl text-center text-sm">
+            Failed to fetch routes from server: {(error as any)?.message || "Network error"}.
+            <button
+              onClick={() => clearFilters()}
+              className="block mx-auto mt-2 text-xs underline font-semibold"
+            >
+              Try resetting search
+            </button>
+          </div>
         ) : hasResults ? (
           <div className="flex flex-col gap-4">
             {sortedAndFiltered.map((route) => (
               <RouteCard
-                key={route.id}
+                key={route._id}
                 route={route}
-                onViewDetails={(id) => navigate(`/routes/${id}`)}
+                onSelect={(r) => setSelectedRoute(r)}
               />
             ))}
           </div>
         ) : (
-          <EmptyState onReset={clearFilters} />
+          <EmptyState activeQuery={activeQuery} onReset={clearFilters} />
         )}
       </main>
+
+      {/* Route Detail Modal */}
+      <RouteDetailModal
+        route={selectedRoute}
+        onClose={() => setSelectedRoute(null)}
+      />
     </div>
   );
 };

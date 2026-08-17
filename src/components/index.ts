@@ -8,3 +8,5 @@ export { default as SecondaryButton } from "./SecondaryButton";
 export { default as SectionLabel } from "./SectionLabel";
 export { default as StepDots } from "./StepDots";
 export { default as TextInput } from "./TextInput";
+export { default as CreateRouteModal } from "./CreateRouteModal";
+export { default as RouteDetailModal } from "./RouteDetailModal";

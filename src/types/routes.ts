@@ -1,7 +1,7 @@
 /* ── Route types ─────────────────────────────────────────────────────────── */
 
 // Matches backend route.model.js enum exactly: ['bus', 'keke', 'taxi', 'train']
-export type VehicleType = "bus" | "keke" | "Danfo" | "taxi" | "train";
+export type VehicleType = "bus" | "keke" | "taxi" | "train";
 export type ConfidenceLevel = "Low" | "Medium" | "High";
 
 export interface Route {

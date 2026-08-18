@@ -106,6 +106,7 @@ export const router = createBrowserRouter([
   { path: "/dev/saved-routes",        element: s(<SavedRoutes />) },
   { path: "/dev/routes/:id",          element: s(<RouteDetails />) },
   { path: "/dev/create-listing",      element: s(<CreateListing />) },
+  { path: "/dev/share",               element: s(<ShareTrip />) },
 
   // ── Catch-all ─────────────────────────────────────────────────────────────
   { path: "*",                        element: s(<NotFound />) },

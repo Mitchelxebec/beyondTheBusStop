@@ -1,8 +1,13 @@
 import { useState, useRef } from "react";
 import { useNavigate, useLocation } from "react-router-dom";
 import { useAuth } from "../../contexts/AuthContext";
-import { AppLogo, PrimaryButton, SectionLabel } from "../../components";
-import { Toast } from "../../components";
+import {
+  BottomNavBar,
+  DEFAULT_NAV_ITEMS,
+  PrimaryButton,
+  SectionLabel,
+  Toast,
+} from "../../components";
 
 // ─── Types ─────────────────────────────────────────────────────────────────────
 
@@ -15,7 +20,10 @@ interface TrustedContact {
   selected: boolean;
 }
 
-// ─── Static trusted contacts — swap for GET /api/user/trusted-contacts ────────
+// ─── Static data ──────────────────────────────────────────────────────────────
+// TODO: replace with GET /api/user/trusted-contacts
+// Response shape: { contacts: { id, name, relation, initials, color }[] }
+
 const DEFAULT_CONTACTS: TrustedContact[] = [
   {
     id: "1",
@@ -27,7 +35,7 @@ const DEFAULT_CONTACTS: TrustedContact[] = [
   },
 ];
 
-// ─── Icons ────────────────────────────────────────────────────────────────────
+// ─── Icons ─────────────────────────────────────────────────────────────────────
 
 const BackIcon = () => (
   <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
@@ -99,17 +107,20 @@ const ShareTrip = () => {
   const location = useLocation();
   const { session } = useAuth();
 
-  // Accept route details passed via location.state from RouteDetails page
-  // TODO: connect to real route when wiring from RouteDetails CTA
+  // Route data passed via location.state from RouteDetails CTA
+  // TODO: when wiring RouteDetails → ShareTrip, pass:
+  //   navigate("/share", { state: { origin, destination, fare, routeId } })
   const stateRoute = (location.state as {
     origin?: string;
     destination?: string;
     fare?: string;
+    routeId?: string;
   } | null);
 
   const origin      = stateRoute?.origin      ?? "Egbeda";
   const destination = stateRoute?.destination ?? "Ikeja";
   const fare        = stateRoute?.fare        ?? "₦400";
+  // const routeId  = stateRoute?.routeId;  // used in POST payload when wiring
 
   const now = new Date().toLocaleTimeString("en-US", {
     hour: "numeric",
@@ -136,184 +147,184 @@ const ShareTrip = () => {
       setTimeout(() => setToastMsg(null), 3000);
       return;
     }
-    // TODO: POST /api/trips/share { origin, destination, fare, vehicleDetail, contactIds }
+    // TODO: POST /api/trips/share
+    // Body: { origin, destination, fare, vehicleDetail, routeId, contactIds: string[] }
+    // On success: navigate to confirmation or show persistent tracking UI
     setToastMsg("Trip shared! Your contacts have been notified.");
     setTimeout(() => setToastMsg(null), 3500);
   };
 
   return (
-    <main className="min-h-screen bg-[#F5F5F0] flex flex-col">
+    <div className="flex flex-col min-h-dvh bg-[#F5F5F0]">
 
-      {/* ── Header ─────────────────────────────────────────────────────────── */}
-      <header className="flex items-center justify-between px-4 pt-12 pb-3">
-        <div className="flex items-center gap-3">
-          <button
-            type="button"
-            onClick={() => navigate(-1)}
-            className="p-1.5 -ml-1.5 rounded-lg text-[#1C1B1B] hover:bg-black/5 active:scale-95 transition-all"
-            aria-label="Go back"
-          >
-            <BackIcon />
-          </button>
-          <AppLogo size="xs" showWordmark={false} />
-          <span className="text-base font-semibold text-[#1C1B1B]">Share Trip</span>
-        </div>
-        <button
-          type="button"
-          onClick={() => navigate("/profile")}
-          className="w-9 h-9 rounded-full bg-[#1C1B1B] flex items-center justify-center text-white hover:bg-black transition-colors"
-          aria-label={`Profile — ${session?.user?.fullName ?? "User"}`}
-        >
-          <ProfileIcon />
-        </button>
-      </header>
+      {/* ── Navbar ─────────────────────────────────────────────────────────── */}
+      <BottomNavBar items={DEFAULT_NAV_ITEMS} />
 
-      {/* ── Scrollable content ─────────────────────────────────────────────── */}
-      <div className="flex flex-col flex-1 px-4 pb-10 gap-5 w-full max-w-lg mx-auto">
-
-        {/* Intro copy */}
-        <div className="flex flex-col gap-1 pt-1">
-          <p className="text-base font-semibold text-[#1C1B1B]">Share Trip Details</p>
-          <p className="text-sm text-[#747878]">
-            Keep your loved ones informed about your journey.
-          </p>
-        </div>
-
-        {/* Current route card */}
-        <div className="bg-[#00C9A7] rounded-2xl p-4 flex flex-col gap-3">
-          <div className="flex items-start justify-between gap-3">
-            <div className="flex flex-col gap-1">
-              <span className="text-[10px] font-bold tracking-widest uppercase text-[#005047]">
-                Current Route
-              </span>
-              <div className="flex items-center gap-2 text-white font-bold text-base">
-                <span>{origin}</span>
-                <span className="text-white/70 text-sm">→</span>
-                <span>{destination}</span>
-              </div>
-            </div>
-            {/* Time badge */}
-            <div className="flex items-center gap-1.5 bg-[#1C1B1B] text-white text-xs font-semibold px-3 py-1.5 rounded-full shrink-0">
-              <ClockIcon />
-              <span>{now}</span>
-            </div>
-          </div>
-
-          <div className="flex items-center gap-1.5 text-white/90 text-sm font-medium">
-            <FareIcon />
-            <span>Est. Fare: <span className="font-bold">{fare}</span></span>
-          </div>
-        </div>
-
-        {/* Share with */}
-        <div className="flex flex-col gap-3">
-          <SectionLabel>Share With</SectionLabel>
-
-          <div className="flex flex-col gap-2">
-            {contacts.map(contact => (
-              <button
-                key={contact.id}
-                type="button"
-                onClick={() => toggleContact(contact.id)}
-                className={`
-                  w-full flex items-center gap-3 p-3.5 rounded-xl border transition-all duration-150
-                  ${contact.selected
-                    ? "bg-[#F8BA2A]/15 border-[#F8BA2A]/40"
-                    : "bg-white border-gray-100 hover:border-gray-200"
-                  }
-                `}
-                aria-pressed={contact.selected}
-              >
-                {/* Avatar */}
-                <div
-                  className="w-10 h-10 rounded-full flex items-center justify-center text-sm font-bold text-[#1C1B1B] shrink-0"
-                  style={{ backgroundColor: contact.color }}
-                >
-                  {contact.initials}
-                </div>
-
-                {/* Name + relation */}
-                <div className="flex flex-col items-start flex-1 min-w-0">
-                  <span className="text-sm font-bold text-[#1C1B1B]">{contact.name}</span>
-                  <span className="text-xs text-[#747878]">{contact.relation}</span>
-                </div>
-
-                {/* Selection indicator */}
-                <div
-                  className={`
-                    w-6 h-6 rounded-full flex items-center justify-center shrink-0 transition-all
-                    ${contact.selected ? "bg-[#1C1B1B]" : "bg-gray-100"}
-                  `}
-                >
-                  {contact.selected && <CheckIcon />}
-                </div>
-              </button>
-            ))}
-
-            {/* Add contact */}
+      {/* ── Page sub-header ────────────────────────────────────────────────── */}
+      <div className="w-full pt-16">
+        <div className="flex items-center justify-between px-4 sm:px-6 py-4 w-full mx-auto" style={{ maxWidth: "min(100%, 72rem)" }}>
+          <div className="flex items-center gap-3">
             <button
               type="button"
-              className="w-full flex items-center gap-3 p-3.5 rounded-xl border border-dashed border-gray-300 bg-white text-[#747878] hover:border-gray-400 hover:text-[#1C1B1B] transition-colors"
-              aria-label="Add another contact"
+              onClick={() => navigate(-1)}
+              className="p-1.5 -ml-1.5 rounded-lg text-[#1C1B1B] hover:bg-black/5 active:scale-95 transition-all"
+              aria-label="Go back"
             >
-              <div className="w-10 h-10 rounded-full bg-gray-100 flex items-center justify-center shrink-0">
-                <AddContactIcon />
-              </div>
-              <span className="text-sm font-medium">Add another contact...</span>
+              <BackIcon />
             </button>
+            <div>
+              <h1 className="text-base font-semibold text-[#1C1B1B] m-0">Share Trip</h1>
+              <p className="text-xs text-[#747878] m-0">Keep your loved ones informed about your journey.</p>
+            </div>
           </div>
-        </div>
-
-        {/* Vehicle details */}
-        <div className="flex flex-col gap-3">
-          <SectionLabel>Vehicle Details (Optional)</SectionLabel>
-          <div
-            className="flex items-center gap-3 bg-white rounded-xl border border-gray-100 px-4 py-3 focus-within:border-[#00C9A7]/60 transition-colors cursor-text"
-            onClick={() => vehicleRef.current?.focus()}
+          <button
+            type="button"
+            onClick={() => navigate("/profile")}
+            className="w-9 h-9 rounded-full bg-[#1C1B1B] flex items-center justify-center text-white hover:bg-black transition-colors shrink-0"
+            aria-label={`Profile — ${session?.user?.fullName ?? "User"}`}
           >
-            <span className="text-[#747878] shrink-0">
-              <BusIcon />
-            </span>
-            <input
-              ref={vehicleRef}
-              type="text"
-              value={vehicleDetail}
-              onChange={e => setVehicleDetail(e.target.value)}
-              placeholder="e.g., White Danfo, Plate: KJA-123"
-              className="flex-1 bg-transparent text-sm text-[#1C1B1B] placeholder-gray-400 outline-none"
-              aria-label="Vehicle description (optional)"
-            />
-          </div>
+            <ProfileIcon />
+          </button>
         </div>
-
-        {/* Safety notice */}
-        <div className="flex items-start gap-3 bg-[#005047] text-white rounded-xl p-4">
-          <span className="shrink-0 mt-0.5 text-[#79F7E3]">
-            <ShieldIcon />
-          </span>
-          <p className="text-xs leading-relaxed text-white/90">
-            Sharing your trip sends a live tracking link. They can see your
-            location until you reach your destination.
-          </p>
-        </div>
-
-        {/* Spacer */}
-        <div className="flex-1" />
-
-        {/* CTA */}
-        <PrimaryButton
-          width="full"
-          onClick={handleShare}
-          disabled={selectedCount === 0}
-        >
-          <SendIcon />
-          Share Now
-        </PrimaryButton>
-
       </div>
 
+      {/* ── Main content ───────────────────────────────────────────────────── */}
+      <main
+        className="flex-1 w-full mx-auto px-4 sm:px-6 pb-12 flex flex-col gap-6"
+        style={{ maxWidth: "min(100%, 72rem)" }}
+        aria-label="Share trip content"
+      >
+
+        {/* On wide screens: two-column layout — route card + form */}
+        <div className="flex flex-col lg:flex-row gap-6 items-start">
+
+          {/* ── Left / top: current route card ──────────────────────────── */}
+          <div className="w-full lg:w-80 shrink-0">
+            {/* TODO: replace static values with data from location.state or active trip API */}
+            <div className="bg-[#00C9A7] rounded-2xl p-5 flex flex-col gap-4">
+              <div className="flex items-start justify-between gap-3">
+                <div className="flex flex-col gap-1.5">
+                  <span className="text-[10px] font-bold tracking-widest uppercase text-[#005047]">
+                    Current Route
+                  </span>
+                  <div className="flex items-center gap-2 text-white font-bold text-lg">
+                    <span>{origin}</span>
+                    <span className="text-white/60">→</span>
+                    <span>{destination}</span>
+                  </div>
+                </div>
+                <div className="flex items-center gap-1.5 bg-[#1C1B1B] text-white text-xs font-semibold px-3 py-1.5 rounded-full shrink-0">
+                  <ClockIcon />
+                  <span>{now}</span>
+                </div>
+              </div>
+              <div className="flex items-center gap-2 text-white/90 text-sm font-medium">
+                <FareIcon />
+                <span>Est. Fare: <span className="font-bold">{fare}</span></span>
+              </div>
+            </div>
+
+            {/* Safety notice — stays near the route card */}
+            <div className="flex items-start gap-3 bg-[#005047] text-white rounded-xl p-4 mt-4">
+              <span className="shrink-0 mt-0.5 text-[#79F7E3]">
+                <ShieldIcon />
+              </span>
+              <p className="text-xs leading-relaxed text-white/90">
+                Sharing your trip sends a live tracking link. They can see your
+                location until you reach your destination.
+              </p>
+            </div>
+          </div>
+
+          {/* ── Right / bottom: share form ───────────────────────────────── */}
+          <div className="flex-1 flex flex-col gap-5 w-full">
+
+            {/* Share with */}
+            <section className="flex flex-col gap-3">
+              <SectionLabel>Share With</SectionLabel>
+              <div className="flex flex-col gap-2">
+                {contacts.map(contact => (
+                  <button
+                    key={contact.id}
+                    type="button"
+                    onClick={() => toggleContact(contact.id)}
+                    className={`
+                      w-full flex items-center gap-3 p-3.5 rounded-xl border transition-all duration-150
+                      ${contact.selected
+                        ? "bg-[#F8BA2A]/15 border-[#F8BA2A]/40"
+                        : "bg-white border-gray-100 hover:border-gray-200"
+                      }
+                    `}
+                    aria-pressed={contact.selected}
+                  >
+                    <div
+                      className="w-10 h-10 rounded-full flex items-center justify-center text-sm font-bold text-[#1C1B1B] shrink-0"
+                      style={{ backgroundColor: contact.color }}
+                    >
+                      {contact.initials}
+                    </div>
+                    <div className="flex flex-col items-start flex-1 min-w-0">
+                      <span className="text-sm font-bold text-[#1C1B1B]">{contact.name}</span>
+                      <span className="text-xs text-[#747878]">{contact.relation}</span>
+                    </div>
+                    <div className={`w-6 h-6 rounded-full flex items-center justify-center shrink-0 transition-all ${contact.selected ? "bg-[#1C1B1B]" : "bg-gray-100"}`}>
+                      {contact.selected && <CheckIcon />}
+                    </div>
+                  </button>
+                ))}
+
+                {/* Add contact — TODO: open contact picker modal */}
+                <button
+                  type="button"
+                  className="w-full flex items-center gap-3 p-3.5 rounded-xl border border-dashed border-gray-300 bg-white text-[#747878] hover:border-gray-400 hover:text-[#1C1B1B] transition-colors"
+                  aria-label="Add another contact"
+                >
+                  <div className="w-10 h-10 rounded-full bg-gray-100 flex items-center justify-center shrink-0">
+                    <AddContactIcon />
+                  </div>
+                  <span className="text-sm font-medium">Add another contact...</span>
+                </button>
+              </div>
+            </section>
+
+            {/* Vehicle details */}
+            <section className="flex flex-col gap-3">
+              <SectionLabel>Vehicle Details (Optional)</SectionLabel>
+              {/* TODO: send vehicleDetail in POST /api/trips/share body */}
+              <div
+                className="flex items-center gap-3 bg-white rounded-xl border border-gray-100 px-4 py-3 focus-within:border-[#00C9A7]/60 transition-colors cursor-text"
+                onClick={() => vehicleRef.current?.focus()}
+              >
+                <span className="text-[#747878] shrink-0"><BusIcon /></span>
+                <input
+                  ref={vehicleRef}
+                  type="text"
+                  value={vehicleDetail}
+                  onChange={e => setVehicleDetail(e.target.value)}
+                  placeholder="e.g., White Danfo, Plate: KJA-123"
+                  className="flex-1 bg-transparent text-sm text-[#1C1B1B] placeholder-gray-400 outline-none"
+                  aria-label="Vehicle description (optional)"
+                />
+              </div>
+            </section>
+
+            {/* CTA */}
+            <PrimaryButton
+              width="full"
+              onClick={handleShare}
+              disabled={selectedCount === 0}
+              className="mt-2"
+            >
+              <SendIcon />
+              Share Now
+            </PrimaryButton>
+
+          </div>
+        </div>
+      </main>
+
       <Toast message={toastMsg} />
-    </main>
+    </div>
   );
 };
 

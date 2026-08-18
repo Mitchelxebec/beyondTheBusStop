@@ -71,7 +71,7 @@ const VendorUpgrade = () => {
       <main
         id="vendor-upgrade-main"
         className="flex-1 w-full mx-auto pt-16"
-        style={{ maxWidth: "min(100%, 42rem)" }}
+        style={{ maxWidth: "min(100%, 68rem)" }}
         aria-label="Vendor Upgrade & Plans"
       >
         <div className="flex flex-col gap-6 px-4 sm:px-6 pt-6 pb-16">

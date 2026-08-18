@@ -1,6 +1,6 @@
 import { useState } from "react";
 import { useNavigate } from "react-router-dom";
-import { BottomNavBar, PageHeader, NotificationBell } from "../../components";
+import { BottomNavBar, PageHeader, NotificationBell, Toast } from "../../components";
 import { useAuth } from "../../contexts/AuthContext";
 
 // ── Types & Placeholder Data ───────────────────────────────────────────────────
@@ -96,6 +96,12 @@ const CommuterProfile = () => {
   const navigate = useNavigate();
   const { session, clearSession } = useAuth();
   const [activeModal, setActiveModal] = useState<string | null>(null);
+  const [toastMessage, setToastMessage] = useState<string | null>(null);
+
+  const showToast = (msg: string) => {
+    setToastMessage(msg);
+    setTimeout(() => setToastMessage(null), 3000);
+  };
 
   // Real user identity from session with fallback placeholder
   const userName = session?.user?.fullName ?? "Tunde Bakare";
@@ -115,7 +121,7 @@ const CommuterProfile = () => {
       <main
         id="profile-main"
         className="flex-1 w-full mx-auto pt-16"
-        style={{ maxWidth: "min(100%, 42rem)" }}
+        style={{ maxWidth: "min(100%, 68rem)" }}
         aria-label="Commuter profile content"
       >
         <div className="flex flex-col gap-6 px-4 sm:px-6 pt-6 pb-16">
@@ -313,28 +319,33 @@ const CommuterProfile = () => {
             </div>
           </section>
 
-          {/* Vendors Dashboard CTA Card (Explicit prompt exception — live link to /vendor/home) */}
+          {/* Vendors Dashboard CTA Card — preserved for future vendor onboarding */}
           <section aria-label="Vendors Dashboard link">
             <button
               type="button"
               id="vendors-dashboard-btn"
-              onClick={() => navigate("/vendor/home")}
-              className="w-full flex items-center justify-between p-4 sm:p-5 rounded-2xl bg-[#FFC72C] text-[#1C1B1B] shadow-sm hover:brightness-95 active:scale-[0.99] transition-all text-left group"
+              onClick={() => showToast("Vendor signup and merchant portal onboarding are coming soon!")}
+              className="w-full flex items-center justify-between p-4 sm:p-5 rounded-2xl bg-[#FFF4D6] border border-[#FFC72C]/40 text-[#1C1B1B] shadow-xs hover:bg-[#FFECC0] active:scale-[0.99] transition-all text-left group cursor-pointer"
             >
               <div className="flex items-center gap-3.5">
                 <div className="w-11 h-11 rounded-xl bg-[#4A3B00] text-[#FFC72C] flex items-center justify-center shrink-0">
                   <StorefrontIcon />
                 </div>
                 <div>
-                  <h2 className="text-base font-bold text-[#1C1B1B] m-0">
-                    Vendors Dashboard
-                  </h2>
-                  <p className="text-xs sm:text-sm text-[#4A3B00] font-medium m-0 mt-0.5">
-                    Manage vendor listings
+                  <div className="flex items-center gap-2">
+                    <h2 className="text-base font-bold text-[#1C1B1B] m-0">
+                      Vendors Dashboard
+                    </h2>
+                    <span className="px-2 py-0.5 rounded-full text-[10px] font-extrabold uppercase tracking-wide bg-[#FFC72C] text-[#4A3B00]">
+                      Coming Soon
+                    </span>
+                  </div>
+                  <p className="text-xs sm:text-sm text-[#747878] font-normal m-0 mt-0.5">
+                    Vendor signup coming soon — manage transit corridor listings
                   </p>
                 </div>
               </div>
-              <div className="w-8 h-8 rounded-full bg-[#1C1B1B] text-white flex items-center justify-center shrink-0 group-hover:translate-x-0.5 transition-transform">
+              <div className="w-8 h-8 rounded-full bg-[#EAE7E4] text-[#444748] flex items-center justify-center shrink-0 group-hover:bg-[#DFDCD8] transition-colors">
                 <ChevronRightIcon />
               </div>
             </button>
@@ -384,6 +395,9 @@ const CommuterProfile = () => {
           </div>
         </div>
       )}
+
+      {/* Floating Toast Notification */}
+      <Toast message={toastMessage} />
     </div>
   );
 };

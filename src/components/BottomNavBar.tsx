@@ -16,22 +16,22 @@ interface NavBarProps {
   items?: NavItem[];
 }
 
-import { Home, Waypoints, Share2, User, Menu, X } from "lucide-react";
+import { Home, Waypoints, Bookmark, Sparkles, User, Menu, X } from "lucide-react";
 
 // ─── Default Commuter Nav Items ───────────────────────────────────────────────
 
 export const DEFAULT_NAV_ITEMS: NavItem[] = [
-  { label: "Home",    path: "/home",    icon: <Home className="w-4 h-4" /> },
-  { label: "Routes",  path: "/routes",  icon: <Waypoints className="w-4 h-4" /> },
-  { label: "Share",   path: "/share",   icon: <Share2 className="w-4 h-4" /> },
-  { label: "Profile", path: "/profile", icon: <User className="w-4 h-4" /> },
+  { label: "Home",    path: "/home",          icon: <Home className="w-4 h-4" /> },
+  { label: "Routes",  path: "/routes",         icon: <Waypoints className="w-4 h-4" /> },
+  { label: "Saved",   path: "/saved-routes",   icon: <Bookmark className="w-4 h-4" /> },
+  { label: "Profile", path: "/profile",         icon: <User className="w-4 h-4" /> },
 ];
 
 export const VENDOR_NAV_ITEMS: NavItem[] = [
-  { label: "Home",    path: "/vendor/home", icon: <Home className="w-4 h-4" /> },
-  { label: "Routes",  path: "/routes",      icon: <Waypoints className="w-4 h-4" /> },
-  { label: "Share",   path: "/share",       icon: <Share2 className="w-4 h-4" /> },
-  { label: "Profile", path: "/profile",     icon: <User className="w-4 h-4" /> },
+  { label: "Home",    path: "/vendor/home",    icon: <Home className="w-4 h-4" /> },
+  { label: "Routes",  path: "/routes",          icon: <Waypoints className="w-4 h-4" /> },
+  { label: "Upgrade", path: "/vendor/upgrade",  icon: <Sparkles className="w-4 h-4" /> },
+  { label: "Profile", path: "/vendor/profile",  icon: <User className="w-4 h-4" /> },
 ];
 
 // ─── Shared NavLink class helper ───────────────────────────────────────────────
@@ -76,7 +76,7 @@ const BottomNavBar = ({ items = DEFAULT_NAV_ITEMS }: NavBarProps) => {
       aria-label="Site header"
     >
       {/* ── Main bar ───────────────────────────────────────────────── */}
-      <div className="max-w-5xl mx-auto px-4 sm:px-6 lg:px-8 h-16 flex items-center justify-between">
+      <div className="max-w-6xl mx-auto px-4 sm:px-6 lg:px-8 h-16 flex items-center justify-between">
 
         {/* Brand: logo + name */}
         <NavLink

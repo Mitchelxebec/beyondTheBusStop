@@ -1,7 +1,7 @@
 /* any future page needing route data should use this hook rather than a fresh useQuery call */
 import { useQuery, type UseQueryResult } from "@tanstack/react-query";
-import { getAllRoutes, searchRoutes, getRouteById } from "../services/routes";
-import type { Route } from "../types/routes";
+import { getAllRoutes, getRouteById } from "../services/routes";
+import { getRoutePlaceName, type Route } from "../types/routes";
 
 export const ROUTE_QUERY_KEYS = {
   all: ["routes", "all"] as const,
@@ -13,7 +13,7 @@ export const ROUTE_QUERY_KEYS = {
  * Shared hook for fetching transit routes.
  * 
  * - When `searchQuery` is omitted or empty: fetches all routes via `getAllRoutes()` using key `["routes", "all"]`.
- * - When `searchQuery` is provided: fetches matching routes via `searchRoutes(query)` using key `["routes", "search", query]`.
+ * - When `searchQuery` is provided: fetches all routes via `getAllRoutes()` and filters client-side across the full corridor (destination, origin, boardingPoint, dropOffPoint, transferPoint) using key `["routes", "search", query]`.
  * 
  * Guarantees: Always returns a consistently-unwrapped `Route[]` array across all callers.
  */
@@ -24,12 +24,27 @@ export function useRoutes(searchQuery?: string): UseQueryResult<Route[], Error> 
   return useQuery<Route[], Error>({
     queryKey: isSearch ? ROUTE_QUERY_KEYS.search(trimmed) : ROUTE_QUERY_KEYS.all,
     queryFn: async () => {
-      if (isSearch) {
-        const res = await searchRoutes(trimmed);
-        return res.routes ?? [];
-      }
       const res = await getAllRoutes();
-      return res.routes ?? [];
+      const all = res.routes ?? [];
+      if (isSearch) {
+        const lower = trimmed.toLowerCase();
+        return all.filter((r) => {
+          const dest = getRoutePlaceName(r.destination).toLowerCase();
+          const orig = getRoutePlaceName(r.origin).toLowerCase();
+          const board = getRoutePlaceName(r.boardingPoint).toLowerCase();
+          const drop = getRoutePlaceName(r.dropOffPoint).toLowerCase();
+          const transfer = getRoutePlaceName(r.transferPoint).toLowerCase();
+
+          return (
+            dest.includes(lower) ||
+            orig.includes(lower) ||
+            board.includes(lower) ||
+            drop.includes(lower) ||
+            transfer.includes(lower)
+          );
+        });
+      }
+      return all;
     },
   });
 }

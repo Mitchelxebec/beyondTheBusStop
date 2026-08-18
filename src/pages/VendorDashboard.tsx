@@ -125,7 +125,7 @@ const VendorDashboard = () => {
   const businessCategory =
     profileData?.data?.category ||
     session?.user?.category ||
-    "food";
+    "business";
 
   const greetingTime = (() => {
     const h = new Date().getHours();
@@ -175,7 +175,7 @@ const VendorDashboard = () => {
       <main
         id="vendor-home-main"
         className="flex-1 w-full mx-auto pt-16"
-        style={{ maxWidth: "min(100%, 36rem)" }}
+        style={{ maxWidth: "min(100%, 68rem)" }}
         aria-label="Business Portal Content"
       >
         <div className="flex flex-col gap-5 sm:gap-6 px-4 sm:px-6 pt-4 sm:pt-6 pb-16">

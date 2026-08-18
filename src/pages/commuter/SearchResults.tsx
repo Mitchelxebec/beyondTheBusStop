@@ -1,6 +1,6 @@
 import { useState, useMemo, useEffect } from "react";
 import { useNavigate, useSearchParams } from "react-router-dom";
-import { Search } from "lucide-react";
+import { Search, Map } from "lucide-react";
 import {
   BackButton,
   SectionLabel,
@@ -179,7 +179,7 @@ const SearchResults = () => {
 
       {/* Sticky header */}
       <div className="sticky top-14 z-20 bg-[#F5F5F0]/95 backdrop-blur-sm border-b border-gray-200 px-4 pt-4 pb-3">
-        <div className="flex items-center gap-3 max-w-lg mx-auto">
+        <div className="flex items-center gap-3 w-full mx-auto" style={{ maxWidth: "min(100%, 68rem)" }}>
           <BackButton onClick={() => navigate(-1)} />
           <span className="text-base font-semibold text-gray-900">
             Destination Search
@@ -187,7 +187,7 @@ const SearchResults = () => {
         </div>
       </div>
 
-      <main className="flex-1 px-4 pt-4 pb-16 flex flex-col gap-4 max-w-lg mx-auto w-full">
+      <main className="flex-1 px-4 pt-4 pb-16 flex flex-col gap-4 w-full mx-auto" style={{ maxWidth: "min(100%, 68rem)" }}>
         {/* Search Input Bar */}
         <form onSubmit={handleSearchSubmit} className="relative flex items-center">
           <span className="absolute left-3.5 top-1/2 -translate-y-1/2 pointer-events-none" aria-hidden="true">
@@ -267,13 +267,31 @@ const SearchResults = () => {
           </div>
         ) : hasResults ? (
           <div className="flex flex-col gap-4">
-            {sortedAndFiltered.map((route) => (
-              <RouteCard
-                key={route._id}
-                route={route}
-                onSelect={(r) => navigate(`/routes/${r._id || r.id}`)}
-              />
-            ))}
+            <div className="flex flex-col gap-4">
+              {sortedAndFiltered.map((route) => (
+                <RouteCard
+                  key={route._id}
+                  route={route}
+                  variant="search"
+                  onSelect={(r) => navigate(`/routes/${r._id || r.id}`)}
+                />
+              ))}
+            </div>
+
+            {/* Bottom helper card below results list (matches wireframe) */}
+            <div className="flex flex-col items-center gap-2.5 pt-6 pb-8 text-center">
+              <div className="w-12 h-12 rounded-full bg-[#F4F1EE] flex items-center justify-center text-[#747878] shadow-2xs">
+                <Map className="w-5 h-5 text-[#747878]" />
+              </div>
+              <div className="flex flex-col gap-0.5">
+                <p className="text-sm font-semibold text-[#747878] m-0">
+                  Don't see your starting point?
+                </p>
+                <p className="text-xs text-[#A4A7A7] leading-relaxed max-w-xs m-0">
+                  Try refining your search or exploring the map.
+                </p>
+              </div>
+            </div>
           </div>
         ) : (
           <EmptyState activeQuery={activeQuery} onReset={clearFilters} />

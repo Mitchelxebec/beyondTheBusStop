@@ -53,7 +53,7 @@ const VendorRoutes = () => {
       <main
         id="routes-network-main"
         className="flex-1 w-full mx-auto pt-16"
-        style={{ maxWidth: "min(100%, 42rem)" }}
+        style={{ maxWidth: "min(100%, 68rem)" }}
         aria-label="Route Management & Network Content"
       >
         <div className="flex flex-col gap-6 px-4 sm:px-6 pt-8 pb-12">

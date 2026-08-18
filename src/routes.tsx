@@ -24,6 +24,7 @@ const CommuterHomeDashboard = lazy(() => import("./pages/CommuterHomeDashboard")
 const VendorDashboard       = lazy(() => import("./pages/VendorDashboard"));
 const VendorRoutes          = lazy(() => import("./pages/vendor/VendorRoutes"));
 const VendorUpgrade         = lazy(() => import("./pages/vendor/VendorUpgrade"));
+const VendorProfile         = lazy(() => import("./pages/vendor/VendorProfile"));
 const SearchResults         = lazy(() => import("./pages/commuter/SearchResults"));
 const CommuterProfile       = lazy(() => import("./pages/commuter/CommuterProfile"));
 const SavedRoutes           = lazy(() => import("./pages/commuter/SavedRoutes"));
@@ -84,6 +85,7 @@ export const router = createBrowserRouter([
   { path: "/vendor/home",             element: auth(<VendorDashboard />, "business") },
   { path: "/vendor/dashboard",        element: <Navigate to="/vendor/home" replace /> },
   { path: "/vendor/upgrade",          element: auth(<VendorUpgrade />, "business") },
+  { path: "/vendor/profile",          element: auth(<VendorProfile />, "business") },
 
   // ── Shared: both commuter and business roles ───────────────────────────────
   { path: "/routes",                  element: auth(<VendorRoutes />) },

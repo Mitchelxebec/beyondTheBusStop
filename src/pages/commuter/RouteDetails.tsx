@@ -175,7 +175,7 @@ const RouteDetails = () => {
     }
   };
 
-  const handleSendShareEmail = (e: React.FormEvent) => {
+  const handleSendShareEmail = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!shareEmail.trim()) {
       showToast("Please enter a valid email address");
@@ -183,6 +183,14 @@ const RouteDetails = () => {
     }
 
     setIsSendingEmail(true);
+
+    try {
+      if (navigator.clipboard && navigator.clipboard.writeText) {
+        await navigator.clipboard.writeText(shareableUrl);
+      }
+    } catch {
+      // ignore clipboard error
+    }
 
     // =========================================================================
     // TODO: replace with real backend trip-share endpoint (POST /api/routes/:id/share)
@@ -195,8 +203,8 @@ const RouteDetails = () => {
       setIsShareModalOpen(false);
       setShareEmail("");
       setShareNote("");
-      showToast(`Trip details sent to ${shareEmail}!`);
-    }, 900);
+      showToast("Link copied — share it directly for now, email delivery is coming soon");
+    }, 600);
   };
 
   // ── 5. Loading & Error States ───────────────────────────────────────────────
@@ -244,7 +252,7 @@ const RouteDetails = () => {
       <main
         id="route-details-main"
         className="flex-1 w-full mx-auto pt-16"
-        style={{ maxWidth: "min(100%, 44rem)" }}
+        style={{ maxWidth: "min(100%, 68rem)" }}
         aria-label="Route Details & Corridor Information"
       >
         <div className="flex flex-col gap-5 px-4 sm:px-6 pt-5 pb-16">
@@ -700,7 +708,7 @@ const RouteDetails = () => {
                 disabled={isSendingEmail}
                 width="full"
               >
-                {isSendingEmail ? "Sending Email…" : "Send Trip Email"}
+                {isSendingEmail ? "Preparing Link…" : "Copy Link & Share"}
               </PrimaryButton>
             </form>
           </div>

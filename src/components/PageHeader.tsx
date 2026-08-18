@@ -1,30 +1,37 @@
 import type { ReactNode } from "react";
 
 interface PageHeaderProps {
-  /** Main title text shown on the left. */
   title: string;
-  /** Optional node rendered on the right side (icon button, badge, etc.). */
   trailing?: ReactNode;
-  /** Optional node rendered on the left before the title (e.g. a back button). */
   leading?: ReactNode;
-  /** Additional custom class names for outer header. */
   className?: string;
 }
 
 /**
- * Top page header with title + optional leading/trailing slots.
- * Appears on: Home, Nearby Essentials, Share Trip, Route Details,
- *             Profile, Vendor Dashboard, Search Results.
+ * Page sub-header with three slots:
+ *   leading (left) | title (centred) | trailing (right)
+ *
+ * Title is absolutely centred between the two side slots so it always
+ * reads as the page name regardless of icon widths.
  */
 const PageHeader = ({ title, trailing, leading, className = "" }: PageHeaderProps) => {
   return (
-    <header className={`w-full px-5 pt-4 pb-3 ${className}`}>
-      <div className="max-w-md sm:max-w-lg lg:max-w-xl mx-auto flex items-center justify-between">
-        <div className="flex items-center gap-3">
-          {leading}
-          <h1 className="text-base font-semibold text-gray-900">{title}</h1>
+    <header className={`w-full px-4 sm:px-6 py-3 ${className}`}>
+      <div className="relative flex items-center justify-between">
+        {/* Left slot — back button or any leading element */}
+        <div className="flex items-center z-10">
+          {leading ?? <div className="w-9" />}
         </div>
-        {trailing && <div>{trailing}</div>}
+
+        {/* Title — absolutely centred regardless of side slot widths */}
+        <h1 className="absolute inset-x-0 text-center text-base font-semibold text-[#1C1B1B] pointer-events-none select-none">
+          {title}
+        </h1>
+
+        {/* Right slot — bell, share button, etc. */}
+        <div className="flex items-center z-10">
+          {trailing ?? <div className="w-9" />}
+        </div>
       </div>
     </header>
   );

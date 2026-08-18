@@ -23,6 +23,7 @@ const ResetOtp              = lazy(() => import("./pages/auth/ResetOtp"));
 const CommuterHomeDashboard = lazy(() => import("./pages/CommuterHomeDashboard"));
 const VendorDashboard       = lazy(() => import("./pages/VendorDashboard"));
 const VendorRoutes          = lazy(() => import("./pages/vendor/VendorRoutes"));
+const VendorAnalytics        = lazy(() => import("./pages/vendor/VendorAnalytics"));
 const VendorUpgrade         = lazy(() => import("./pages/vendor/VendorUpgrade"));
 const VendorProfile         = lazy(() => import("./pages/vendor/VendorProfile"));
 const CreateListing         = lazy(() => import("./pages/vendor/CreateListing"));
@@ -31,7 +32,6 @@ const CommuterProfile       = lazy(() => import("./pages/commuter/CommuterProfil
 const SavedRoutes           = lazy(() => import("./pages/commuter/SavedRoutes"));
 const RouteDetails          = lazy(() => import("./pages/commuter/RouteDetails"));
 const NotFound              = lazy(() => import("./pages/NotFound"));
-
 const ComponentShowcase     = lazy(() => import("./pages/ComponentShowcase"));
 const s = (el: React.ReactNode) => (
   <Suspense fallback={<PageLoader />}>{el}</Suspense>
@@ -86,6 +86,7 @@ export const router = createBrowserRouter([
   { path: "/vendor/home",             element: auth(<VendorDashboard />, "business") },
   { path: "/vendor/dashboard",        element: <Navigate to="/vendor/home" replace /> },
   { path: "/vendor/upgrade",          element: auth(<VendorUpgrade />, "business") },
+  { path: "/vendor/analytics",        element: auth(<VendorAnalytics />, "business") },
   { path: "/vendor/profile",          element: auth(<VendorProfile />, "business") },
   { path: "/vendor/create-listing",   element: auth(<CreateListing />, "business") },
 
@@ -104,7 +105,8 @@ export const router = createBrowserRouter([
   { path: "/components-showcase",     element: s(<ComponentShowcase />) },
   { path: "/dev/vendor",              element: s(<VendorDashboard />) },
   { path: "/dev/vendor-routes",       element: s(<VendorRoutes />) },
-  { path: "/dev/vendor-upgrade",      element: s(<VendorUpgrade />) },
+  { path: "/dev/vendor-upgrade",       element: s(<VendorUpgrade />) },
+  { path: "/dev/vendor-analytics",     element: s(<VendorAnalytics />) },
   { path: "/dev/profile",             element: s(<CommuterProfile />) },
   { path: "/dev/saved-routes",        element: s(<SavedRoutes />) },
   { path: "/dev/routes/:id",          element: s(<RouteDetails />) },

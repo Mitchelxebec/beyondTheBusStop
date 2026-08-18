@@ -327,7 +327,7 @@ const VendorDashboard = () => {
               <button
                 id="analytics-btn"
                 type="button"
-                onClick={() => handleLockedAction("Analytics")}
+                onClick={() => navigate("/vendor/analytics")}
                 className="bg-[#EBEAE6] hover:bg-[#E2E1DC] active:scale-[0.98] rounded-2xl py-3.5 sm:py-4 px-2 flex flex-col items-center justify-center gap-1.5 sm:gap-2 text-center transition-colors cursor-pointer"
               >
                 <AnalyticsLineChartIcon />

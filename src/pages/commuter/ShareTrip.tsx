@@ -162,29 +162,9 @@ const ShareTrip = () => {
 
       {/* ── Page sub-header ────────────────────────────────────────────────── */}
       <div className="w-full pt-16">
-        <div className="flex items-center justify-between px-4 sm:px-6 py-4 w-full mx-auto" style={{ maxWidth: "min(100%, 72rem)" }}>
-          <div className="flex items-center gap-3">
-            <button
-              type="button"
-              onClick={() => navigate(-1)}
-              className="p-1.5 -ml-1.5 rounded-lg text-[#1C1B1B] hover:bg-black/5 active:scale-95 transition-all"
-              aria-label="Go back"
-            >
-              <BackIcon />
-            </button>
-            <div>
-              <h1 className="text-base font-semibold text-[#1C1B1B] m-0">Share Trip</h1>
-              <p className="text-xs text-[#747878] m-0">Keep your loved ones informed about your journey.</p>
-            </div>
-          </div>
-          <button
-            type="button"
-            onClick={() => navigate("/profile")}
-            className="w-9 h-9 rounded-full bg-[#1C1B1B] flex items-center justify-center text-white hover:bg-black transition-colors shrink-0"
-            aria-label={`Profile — ${session?.user?.fullName ?? "User"}`}
-          >
-            <ProfileIcon />
-          </button>
+        <div className="px-4 sm:px-6 py-4 w-full mx-auto" style={{ maxWidth: "min(100%, 72rem)" }}>
+          <h1 className="text-base font-semibold text-[#1C1B1B] m-0">Share Trip</h1>
+          <p className="text-xs text-[#747878] m-0">Keep your loved ones informed about your journey.</p>
         </div>
       </div>
 

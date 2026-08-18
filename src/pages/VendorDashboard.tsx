@@ -275,7 +275,7 @@ const VendorDashboard = () => {
               <button
                 id="create-listing-btn"
                 type="button"
-                onClick={() => setShowCreateListingModal(true)}
+                onClick={() => navigate("/vendor/create-listing")}
                 className="bg-[#F8BA2A] hover:bg-[#EEB020] active:scale-[0.98] rounded-2xl p-4 sm:p-5 flex flex-col justify-between h-28 sm:h-34 text-left shadow-xs transition-all cursor-pointer group"
               >
                 <div className="w-9 h-9 sm:w-10 sm:h-10 rounded-xl bg-black/10 flex items-center justify-center group-hover:scale-105 transition-transform">

@@ -177,8 +177,8 @@ const SearchResults = () => {
       {/* Top Navbar */}
       <BottomNavBar items={isBusiness ? VENDOR_NAV_ITEMS : undefined} />
 
-      {/* Sticky header */}
-      <div className="sticky top-14 z-20 bg-[#F5F5F0]/95 backdrop-blur-sm border-b border-gray-200 px-4 pt-4 pb-3">
+      {/* Sticky header — top-16 matches the h-16 navbar */}
+      <div className="sticky top-16 z-20 bg-[#F5F5F0]/95 backdrop-blur-sm border-b border-gray-200 px-4 pt-4 pb-3">
         <div className="flex items-center gap-3 w-full mx-auto" style={{ maxWidth: "min(100%, 68rem)" }}>
           <BackButton onClick={() => navigate(-1)} />
           <span className="text-base font-semibold text-gray-900">
@@ -187,7 +187,7 @@ const SearchResults = () => {
         </div>
       </div>
 
-      <main className="flex-1 px-4 pt-4 pb-16 flex flex-col gap-4 w-full mx-auto" style={{ maxWidth: "min(100%, 68rem)" }}>
+      <main className="flex-1 px-4 pt-16 pb-16 flex flex-col gap-4 w-full mx-auto" style={{ maxWidth: "min(100%, 68rem)" }}>
         {/* Search Input Bar */}
         <form onSubmit={handleSearchSubmit} className="relative flex items-center">
           <span className="absolute left-3.5 top-1/2 -translate-y-1/2 pointer-events-none" aria-hidden="true">

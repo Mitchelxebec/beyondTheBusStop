@@ -300,7 +300,7 @@ const VendorAnalytics = () => {
 
       <main
         className="flex-1 w-full mx-auto pt-16"
-        style={{ maxWidth: "min(100%, 36rem)" }}
+        style={{ maxWidth: "min(100%, 72rem)" }}
         aria-label="Analytics dashboard"
       >
         <div className="flex flex-col gap-5 px-4 sm:px-6 pt-4 pb-16">
@@ -398,66 +398,71 @@ const VendorAnalytics = () => {
             <LineChart points={snap.chartPoints} />
           </div>
 
-          {/* Commuter Reach */}
-          <div className="bg-white rounded-2xl p-4 flex flex-col gap-4 border border-black/5 shadow-xs">
-            <div className="flex items-center justify-between">
-              <span className="text-sm font-bold text-[#1C1B1B]">Commuter Reach</span>
-              <button
-                type="button"
-                onClick={() => setReachFilter(reachFilter === "location" ? "vehicle" : "location")}
-                className="text-xs font-semibold text-[#F8BA2A] hover:underline transition-colors"
-              >
-                By {reachFilter === "location" ? "Location" : "Vehicle"} ▾
-              </button>
-            </div>
-            <div className="flex flex-col gap-3">
-              {snap.reachByLocation.map(r => (
-                <BarRow
-                  key={r.name}
-                  label={r.name}
-                  value={r.count}
-                  maxValue={maxReach}
-                  color="#F8BA2A"
-                />
-              ))}
-            </div>
-          </div>
+          {/* Commuter Reach + Rating Breakdown — side by side on md+, stacked on mobile */}
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-5 items-start">
 
-          {/* Rating Breakdown — dark card to balance the chart */}
-          <div className="bg-[#005047] rounded-2xl p-4 flex flex-col gap-4">
-            <span className="text-sm font-bold text-white">Rating Breakdown</span>
-            <div className="flex items-start gap-5">
-              {/* Score */}
-              <div className="flex flex-col items-center gap-1 shrink-0">
-                <span className="text-4xl font-black text-white leading-none">
-                  {snap.avgRating.toFixed(1)}
-                </span>
-                <div className="flex gap-0.5">
-                  {[1,2,3,4,5].map(s => (
-                    <StarIcon key={s} filled={s <= Math.round(snap.avgRating)} />
-                  ))}
+            {/* Commuter Reach */}
+            <div className="bg-white rounded-2xl p-4 flex flex-col gap-4 border border-black/5 shadow-xs h-full">
+              <div className="flex items-center justify-between">
+                <span className="text-sm font-bold text-[#1C1B1B]">Commuter Reach</span>
+                <button
+                  type="button"
+                  onClick={() => setReachFilter(reachFilter === "location" ? "vehicle" : "location")}
+                  className="text-xs font-semibold text-[#F8BA2A] hover:underline transition-colors"
+                >
+                  By {reachFilter === "location" ? "Location" : "Vehicle"} ▾
+                </button>
+              </div>
+              <div className="flex flex-col gap-3">
+                {snap.reachByLocation.map(r => (
+                  <BarRow
+                    key={r.name}
+                    label={r.name}
+                    value={r.count}
+                    maxValue={maxReach}
+                    color="#F8BA2A"
+                  />
+                ))}
+              </div>
+            </div>
+
+            {/* Rating Breakdown */}
+            <div className="bg-[#005047] rounded-2xl p-4 flex flex-col gap-4 h-full">
+              <span className="text-sm font-bold text-white">Rating Breakdown</span>
+              <div className="flex items-start gap-5">
+                {/* Score */}
+                <div className="flex flex-col items-center gap-1 shrink-0">
+                  <span className="text-4xl font-black text-white leading-none">
+                    {snap.avgRating.toFixed(1)}
+                  </span>
+                  <div className="flex gap-0.5">
+                    {[1,2,3,4,5].map(s => (
+                      <StarIcon key={s} filled={s <= Math.round(snap.avgRating)} />
+                    ))}
+                  </div>
+                  <span className="text-[10px] text-[#79F7E3]/70 mt-0.5">
+                    {snap.reviewCount} Total
+                  </span>
                 </div>
-                <span className="text-[10px] text-[#79F7E3]/70 mt-0.5">
-                  {snap.reviewCount} Total
-                </span>
-              </div>
 
-              {/* Bars */}
-              <div className="flex-1 flex flex-col gap-2">
-                {[5,4,3,2,1].map(star => {
-                  const row = snap.ratingBreakdown.find(r => r.stars === star);
-                  return (
-                    <BarRow
-                      key={star}
-                      label={`${star}`}
-                      value={row?.count ?? 0}
-                      maxValue={maxRating}
-                      color="#F8BA2A"
-                    />
-                  );
-                })}
+                {/* Bars */}
+                <div className="flex-1 flex flex-col gap-2">
+                  {[5,4,3,2,1].map(star => {
+                    const row = snap.ratingBreakdown.find(r => r.stars === star);
+                    return (
+                      <BarRow
+                        key={star}
+                        label={`${star}`}
+                        value={row?.count ?? 0}
+                        maxValue={maxRating}
+                        color="#F8BA2A"
+                      />
+                    );
+                  })}
+                </div>
               </div>
             </div>
+
           </div>
 
         </div>

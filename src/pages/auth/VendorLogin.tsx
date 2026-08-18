@@ -2,7 +2,7 @@ import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { z } from "zod";
 import { useNavigate } from "react-router-dom";
-import { PrimaryButton, SecondaryButton, TextInput } from "../../components";
+import { PrimaryButton, SecondaryButton, TextInput, Toast } from "../../components";
 import { GoogleIcon, EyeIcon, LockIcon, MailIcon, OrDivider, AuthShell } from "./_shared";
 import { useLogin } from "../../hooks/useLogin";
 import { useState } from "react";
@@ -24,8 +24,18 @@ const StoreIcon = () => (
 
 const VendorLogin = () => {
   const [showPassword, setShowPassword] = useState(false);
+  const [toastMessage, setToastMessage] = useState<string | null>(null);
   const navigate = useNavigate();
   const { mutate: doLogin, isPending, error } = useLogin("business");
+
+  const showToast = (msg: string) => {
+    setToastMessage(msg);
+    setTimeout(() => setToastMessage(null), 3000);
+  };
+
+  const handleGoogleClick = () => {
+    showToast("Google sign-in is coming soon.");
+  };
 
   const { register, handleSubmit, formState: { errors } } = useForm<FormValues>({
     resolver: zodResolver(schema),
@@ -93,7 +103,7 @@ const VendorLogin = () => {
 
           <OrDivider />
 
-          <SecondaryButton width="full" onClick={() => {}}>
+          <SecondaryButton width="full" type="button" onClick={handleGoogleClick}>
             <GoogleIcon /> Continue with Google
           </SecondaryButton>
         </div>
@@ -106,6 +116,8 @@ const VendorLogin = () => {
           Register your business
         </button>
       </p>
+
+      <Toast message={toastMessage} />
     </AuthShell>
   );
 };

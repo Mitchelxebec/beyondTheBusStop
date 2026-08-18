@@ -3,7 +3,7 @@ import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { z } from "zod";
 import { useNavigate } from "react-router-dom";
-import { AppLogo, PrimaryButton, SecondaryButton, TextInput } from "../../components";
+import { AppLogo, PrimaryButton, SecondaryButton, TextInput, Toast } from "../../components";
 import { GoogleIcon, EyeIcon, LockIcon, UserIcon, MailIcon, OrDivider, AuthShell } from "./_shared";
 import { useRegisterCommuter } from "../../hooks/useRegister";
 
@@ -16,8 +16,18 @@ type FormValues = z.infer<typeof schema>;
 
 const CommuterRegister = () => {
   const [showPassword, setShowPassword] = useState(false);
+  const [toastMessage, setToastMessage] = useState<string | null>(null);
   const navigate = useNavigate();
   const { mutate: doRegister, isPending, error } = useRegisterCommuter();
+
+  const showToast = (msg: string) => {
+    setToastMessage(msg);
+    setTimeout(() => setToastMessage(null), 3000);
+  };
+
+  const handleGoogleClick = () => {
+    showToast("Google sign-in is coming soon.");
+  };
 
   const { register, handleSubmit, formState: { errors } } = useForm<FormValues>({
     resolver: zodResolver(schema),
@@ -84,7 +94,7 @@ const CommuterRegister = () => {
 
           <OrDivider />
 
-          <SecondaryButton width="full" type="button" onClick={() => {}}>
+          <SecondaryButton width="full" type="button" onClick={handleGoogleClick}>
             <GoogleIcon /> Sign up with Google
           </SecondaryButton>
         </div>
@@ -97,6 +107,8 @@ const CommuterRegister = () => {
           Log in
         </button>
       </p>
+
+      <Toast message={toastMessage} />
     </AuthShell>
   );
 };

@@ -81,6 +81,43 @@ const STATIC_SAVED_ROUTES: SavedRouteItem[] = [
   },
 ];
 
+const SAVED_ROUTES_STORAGE_KEY = "btbs_saved_routes";
+
+/**
+ * Reads saved routes from localStorage safely.
+ * Returns default static routes if storage is uninitialized or corrupted.
+ */
+function getStoredSavedRoutes(): SavedRouteItem[] {
+  try {
+    const raw = localStorage.getItem(SAVED_ROUTES_STORAGE_KEY);
+    if (!raw) {
+      localStorage.setItem(SAVED_ROUTES_STORAGE_KEY, JSON.stringify(STATIC_SAVED_ROUTES));
+      return STATIC_SAVED_ROUTES;
+    }
+    const parsed = JSON.parse(raw);
+    if (Array.isArray(parsed)) {
+      return parsed;
+    }
+    console.warn("[SavedRoutes] Invalid stored data format, resetting storage.");
+    localStorage.setItem(SAVED_ROUTES_STORAGE_KEY, JSON.stringify(STATIC_SAVED_ROUTES));
+    return STATIC_SAVED_ROUTES;
+  } catch (err) {
+    console.warn("[SavedRoutes] Error reading from localStorage:", err);
+    return STATIC_SAVED_ROUTES;
+  }
+}
+
+/**
+ * Writes updated saved routes to localStorage safely.
+ */
+function saveStoredRoutes(routesList: SavedRouteItem[]): void {
+  try {
+    localStorage.setItem(SAVED_ROUTES_STORAGE_KEY, JSON.stringify(routesList));
+  } catch (err) {
+    console.warn("[SavedRoutes] Error writing to localStorage:", err);
+  }
+}
+
 // ── Icons ──────────────────────────────────────────────────────────────────────
 
 const SearchIcon = () => (
@@ -109,18 +146,17 @@ const ArrowRightIcon = () => (
   </svg>
 );
 
-
-
 // ─── Component ─────────────────────────────────────────────────────────────────
 
 /**
  * Saved Routes Screen — Dedicated commuter page.
  * Displays commuter's saved / bookmarked daily routes with confidence indicators,
  * transit fares, estimated time, and route detail preview modal.
+ * Persists additions and removals to browser localStorage.
  */
 const SavedRoutes = () => {
   const navigate = useNavigate();
-  const [routes, setRoutes] = useState<SavedRouteItem[]>(STATIC_SAVED_ROUTES);
+  const [routes, setRoutes] = useState<SavedRouteItem[]>(() => getStoredSavedRoutes());
   const [filterQuery, setFilterQuery] = useState("");
   const [selectedRoute, setSelectedRoute] = useState<SavedRouteItem | null>(null);
   const [toastMessage, setToastMessage] = useState<string | null>(null);
@@ -132,7 +168,11 @@ const SavedRoutes = () => {
 
   const handleRemoveSaved = (id: string, e: React.MouseEvent) => {
     e.stopPropagation();
-    setRoutes((prev) => prev.filter((r) => r.id !== id));
+    setRoutes((prev) => {
+      const updated = prev.filter((r) => r.id !== id);
+      saveStoredRoutes(updated);
+      return updated;
+    });
     showToast("Route removed from saved list");
   };
 

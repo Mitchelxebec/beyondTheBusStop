@@ -3,7 +3,6 @@ import { createBrowserRouter, Navigate } from "react-router-dom";
 import PageLoader from "./components/PageLoader";
 import ProtectedRoute from "./components/ProtectedRoute";
 import GuestRoute from "./components/GuestRoute";
-import { useAuth } from "./contexts/AuthContext";
 
 // ── Lazy page imports ─────────────────────────────────────────────────────
 const Splash                = lazy(() => import("./pages/auth/Splash"));
@@ -30,9 +29,11 @@ const CreateListing         = lazy(() => import("./pages/vendor/CreateListing"))
 const SearchResults         = lazy(() => import("./pages/commuter/SearchResults"));
 const CommuterProfile       = lazy(() => import("./pages/commuter/CommuterProfile"));
 const SavedRoutes           = lazy(() => import("./pages/commuter/SavedRoutes"));
+const ShareTrip             = lazy(() => import("./pages/commuter/ShareTrip"));
 const RouteDetails          = lazy(() => import("./pages/commuter/RouteDetails"));
 const NotFound              = lazy(() => import("./pages/NotFound"));
 const ComponentShowcase     = lazy(() => import("./pages/ComponentShowcase"));
+
 const s = (el: React.ReactNode) => (
   <Suspense fallback={<PageLoader />}>{el}</Suspense>
 );
@@ -51,12 +52,6 @@ const auth = (el: React.ReactNode, role?: "commuter" | "business") => (
   </Suspense>
 );
 
-// Redirect nav aliases to the user's role-based home dashboard
-const RoleHomeRedirect = () => {
-  const { session } = useAuth();
-  const target = session?.role === "business" ? "/vendor/home" : "/home";
-  return <Navigate to={target} replace />;
-};
 
 export const router = createBrowserRouter([
   // ── Public (no auth needed) ───────────────────────────────────────────────
@@ -98,7 +93,7 @@ export const router = createBrowserRouter([
   { path: "/routes/saved",            element: auth(<SavedRoutes />, "commuter") },
   { path: "/saved-routes",            element: auth(<SavedRoutes />, "commuter") },
   { path: "/routes/:id",              element: auth(<RouteDetails />) },
-  { path: "/share",                   element: auth(<RoleHomeRedirect />) },
+  { path: "/share",                   element: auth(<ShareTrip />, "commuter") },
   { path: "/profile",                 element: auth(<CommuterProfile />, "commuter") },
 
   // ── Dev (unguarded) ───────────────────────────────────────────────────────

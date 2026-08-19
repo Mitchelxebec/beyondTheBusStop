@@ -1,97 +1,123 @@
 import PaystackPop from "@paystack/inline-js";
 import { api } from "../lib/axios";
 
-/* ── Types ─────────────────────────────────────────────────────────────── */
+// ─── Backend plan contract ─────────────────────────────────────────────────────
+// POST /api/payments/initialize  → body: { plan: "weekly" | "monthly" }
+// GET  /api/payments/verify/:reference
+// GET  /api/subscription/status
 
-export type BillingCycle = "monthly" | "yearly";
+export type PlanKey = "weekly" | "monthly";
 
-export interface InitializePaymentPayload {
-  plan: "pro_business";
-  billingCycle: BillingCycle;
-}
+// ─── Prices (kobo — 1 NGN = 100 kobo) ──────────────────────────────────────────
+// Amounts match backend PLANS config exactly
+export const PLAN_PRICES: Record<PlanKey, { amount: number; label: string; naira: number }> = {
+  weekly:  { amount: 150_000,  label: "₦1,500 / week",  naira: 1_500  },
+  monthly: { amount: 550_000,  label: "₦5,500 / month", naira: 5_500  },
+};
+
+// Keep BillingCycle as an alias so other files don't break
+export type BillingCycle = PlanKey;
+
+// ─── API response types ────────────────────────────────────────────────────────
 
 export interface InitializePaymentResponse {
   success: boolean;
+  message: string;
+  payment: {
+    id: string;
+    reference: string;
+    plan: PlanKey;
+    amount: number;
+    amountInNaira: number;
+  };
+  authorizationUrl: string;
   accessCode: string;
-  reference: string;
 }
 
 export interface VerifyPaymentResponse {
   success: boolean;
   message: string;
   subscription: {
-    plan: string;
-    billingCycle: BillingCycle;
-    status: "active" | "trial" | "expired";
-    expiresAt: string;
+    plan: PlanKey;
+    amount: number;
+    startDate: string;
+    endDate: string;
+    status: "active";
   };
 }
 
-/* ── Prices (kobo — 1 NGN = 100 kobo) ──────────────────────────────────── */
+export interface SubscriptionStatusResponse {
+  success: boolean;
+  subscription: {
+    status: "trial" | "active" | "expired";
+    isPremium: boolean;
+    expiresAt: string | null;
+    daysRemaining: number;
+  };
+}
 
-export const PLAN_PRICES: Record<BillingCycle, { amount: number; label: string }> = {
-  monthly: { amount: 1_500_000, label: "₦15,000 / month" },
-  yearly:  { amount: 13_500_000, label: "₦135,000 / year" },
-};
-
-/* ── Paystack public key ────────────────────────────────────────────────── */
+// ─── Paystack public key ────────────────────────────────────────────────────────
 
 const PAYSTACK_PUBLIC_KEY =
   (import.meta.env.VITE_PAYSTACK_PUBLIC_KEY as string | undefined) ?? "";
 
-/* ── API calls ─────────────────────────────────────────────────────────── */
+// ─── API calls ──────────────────────────────────────────────────────────────────
 
 /**
- * POST /api/business/payment/initialize
- * Backend creates a Paystack transaction and returns accessCode + reference.
+ * POST /api/payments/initialize
+ * Body: { plan: "weekly" | "monthly" }
+ * Returns accessCode + reference from Paystack via backend.
  */
 export async function initializePayment(
-  payload: InitializePaymentPayload
+  plan: PlanKey
 ): Promise<InitializePaymentResponse> {
   const { data } = await api.post<InitializePaymentResponse>(
-    "/business/payment/initialize",
-    payload
+    "/payments/initialize",
+    { plan }
   );
   return data;
 }
 
 /**
- * POST /api/business/payment/verify
- * Backend verifies the transaction with Paystack and activates the subscription.
+ * GET /api/payments/verify/:reference
+ * Verifies payment with Paystack and activates business premium.
  */
 export async function verifyPayment(
   reference: string
 ): Promise<VerifyPaymentResponse> {
-  const { data } = await api.post<VerifyPaymentResponse>(
-    "/business/payment/verify",
-    { reference }
+  const { data } = await api.get<VerifyPaymentResponse>(
+    `/payments/verify/${reference}`
   );
   return data;
 }
 
-/* ── Orchestrated checkout ──────────────────────────────────────────────── */
+/**
+ * GET /api/subscription/status
+ * Returns current subscription status for the logged-in business.
+ */
+export async function getSubscriptionStatus(): Promise<SubscriptionStatusResponse> {
+  const { data } = await api.get<SubscriptionStatusResponse>("/subscription/status");
+  return data;
+}
+
+// ─── Checkout orchestration ─────────────────────────────────────────────────────
 
 export interface OpenCheckoutOptions {
   email: string;
-  billingCycle: BillingCycle;
+  plan: PlanKey;
   onSuccess: (reference: string) => void;
   onCancel: () => void;
   onError: (err: Error) => void;
 }
 
 /**
- * Full Paystack inline checkout flow.
- *
- * Opens the Paystack popup directly using the public key + email + amount.
- * No backend initialization call is needed — Paystack generates the reference
- * client-side and the popup handles everything.
- *
- * onSuccess(reference) fires when the user completes payment.
- * The caller should then call verifyPayment(reference) to confirm server-side
- * once POST /api/business/payment/verify is available on the backend.
+ * Full Paystack inline checkout flow:
+ * 1. Calls POST /api/payments/initialize to get accessCode + reference from backend
+ * 2. Opens Paystack popup using the accessCode (server-authorized flow)
+ * 3. onSuccess(reference) fires — caller then calls verifyPayment(reference)
  */
 export async function openPaystackCheckout(opts: OpenCheckoutOptions): Promise<void> {
-  const { email, billingCycle, onSuccess, onCancel, onError } = opts;
+  const { email, plan, onSuccess, onCancel, onError } = opts;
 
   if (!PAYSTACK_PUBLIC_KEY) {
     onError(new Error("Payment is not configured. Please contact support."));
@@ -99,13 +125,19 @@ export async function openPaystackCheckout(opts: OpenCheckoutOptions): Promise<v
   }
 
   try {
+    // Initialize on backend first — backend creates the Payment record
+    // and returns the Paystack accessCode
+    const init = await initializePayment(plan);
+
     const popup = new PaystackPop();
     popup.newTransaction({
       key: PAYSTACK_PUBLIC_KEY,
       email,
-      amount: PLAN_PRICES[billingCycle].amount,
+      amount: PLAN_PRICES[plan].amount,
       currency: "NGN",
-      metadata: { plan: "pro_business", billingCycle },
+      accessCode: init.accessCode,
+      ref: init.payment.reference,
+      metadata: { plan, btbs_payment_id: init.payment.id },
       onSuccess: (transaction) => onSuccess(transaction.reference),
       onCancel,
     });

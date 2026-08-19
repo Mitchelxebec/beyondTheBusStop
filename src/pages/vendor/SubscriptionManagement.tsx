@@ -16,50 +16,19 @@ import {
 import { BottomNavBar, Toast, VENDOR_NAV_ITEMS } from "../../components";
 import { useAuth } from "../../contexts/AuthContext";
 import { api } from "../../lib/axios";
-import type { BillingCycle } from "../../services/payment";
 
 // ─── Backend contract ──────────────────────────────────────────────────────────
-// GET /api/business/subscription
-// Response shape:
-// {
-//   success: boolean;
-//   subscription: {
-//     plan: string;                              // "pro_business" | "free"
-//     billingCycle: "monthly" | "yearly";
-//     status: "trial" | "active" | "expired";
-//     trialEndsAt: string | null;               // ISO 8601
-//     nextBillingDate: string | null;           // ISO 8601
-//     monthlyPrice: number;                     // in NGN (not kobo)
-//     paymentMethod: {
-//       type: "card";
-//       last4: string;
-//       expiry: string;                         // "MM/YY"
-//     } | null;
-//   } | null;
-// }
-//
-// DELETE /api/business/subscription
-// Response: { success: boolean; message: string }
+// GET  /api/subscription/status
+// Response: { success, subscription: { status, isPremium, expiresAt, daysRemaining } }
 
-interface PaymentMethod {
-  type: "card";
-  last4: string;
-  expiry: string;
-}
-
-interface Subscription {
-  plan: string;
-  billingCycle: BillingCycle;
-  status: "trial" | "active" | "expired";
-  trialEndsAt: string | null;
-  nextBillingDate: string | null;
-  monthlyPrice: number;
-  paymentMethod: PaymentMethod | null;
-}
-
-interface SubscriptionResponse {
+interface SubscriptionStatusResponse {
   success: boolean;
-  subscription: Subscription | null;
+  subscription: {
+    status: SubscriptionStatus;
+    isPremium: boolean;
+    expiresAt: string | null;
+    daysRemaining: number;
+  } | null;
 }
 
 // ─── Helpers ───────────────────────────────────────────────────────────────────
@@ -73,20 +42,12 @@ function formatDate(iso: string | null | undefined): string {
   });
 }
 
-function daysUntil(iso: string | null | undefined): number {
-  if (!iso) return 0;
-  const diff = new Date(iso).getTime() - Date.now();
-  return Math.max(0, Math.ceil(diff / (1000 * 60 * 60 * 24)));
-}
-
-function formatNGN(amount: number): string {
-  return `₦${amount.toLocaleString("en-NG")}`;
-}
-
 // ─── Status badge ──────────────────────────────────────────────────────────────
 
-const StatusBadge = ({ status }: { status: Subscription["status"] }) => {
-  const map = {
+type SubscriptionStatus = "trial" | "active" | "expired";
+
+const StatusBadge = ({ status }: { status: SubscriptionStatus }) => {
+  const map: Record<SubscriptionStatus, { label: string; bg: string; text: string; border: string; dot: string }> = {
     trial:   { label: "Trial",   bg: "bg-[#FFF4D6]", text: "text-[#6F5400]", border: "border-[#FFC72C]/40", dot: "bg-[#FFC72C]" },
     active:  { label: "Active",  bg: "bg-[#E6FAF6]", text: "text-[#005047]", border: "border-[#00C9A7]/40", dot: "bg-[#00C9A7]" },
     expired: { label: "Expired", bg: "bg-[#FCE8E6]", text: "text-[#BA1A1A]", border: "border-[#BA1A1A]/30", dot: "bg-[#BA1A1A]"  },
@@ -177,16 +138,16 @@ const SubscriptionManagement = () => {
     setTimeout(() => setToastMsg(null), 4000);
   };
 
-  // ── GET /api/business/subscription ────────────────────────────────────────
+  // ── GET /api/subscription/status ────────────────────────────────────────
   const {
     data,
     isLoading,
     isError,
     refetch,
-  } = useQuery<SubscriptionResponse>({
+  } = useQuery<SubscriptionStatusResponse>({
     queryKey: ["business", "subscription"],
     queryFn: async () => {
-      const { data } = await api.get<SubscriptionResponse>("/business/subscription");
+      const { data } = await api.get<SubscriptionStatusResponse>("/subscription/status");
       return data;
     },
     enabled: !!session?.token,
@@ -194,10 +155,11 @@ const SubscriptionManagement = () => {
 
   const sub = data?.subscription ?? null;
 
-  // ── DELETE /api/business/subscription ─────────────────────────────────────
+  // ── DELETE /api/subscription — no delete endpoint exists yet, navigate to upgrade instead
   const cancelMutation = useMutation({
     mutationFn: async () => {
-      const { data } = await api.delete<{ success: boolean; message: string }>("/business/subscription");
+      // Backend doesn't expose a cancel endpoint yet — placeholder
+      const { data } = await api.delete<{ success: boolean; message: string }>("/subscription");
       return data;
     },
     onSuccess: (res) => {
@@ -207,7 +169,7 @@ const SubscriptionManagement = () => {
     },
     onError: (err: Error) => {
       setShowCancel(false);
-      showToast(err.message || "Could not cancel subscription. Please try again or contact support.");
+      showToast(err.message || "Could not cancel subscription. Please contact support.");
     },
   });
 
@@ -251,7 +213,7 @@ const SubscriptionManagement = () => {
   }
 
   // ─── No active subscription ────────────────────────────────────────────────
-  if (!sub || sub.plan === "free") {
+  if (!sub || sub.status === "expired") {
     return (
       <div className="flex flex-col min-h-dvh bg-[#F5F5F0]">
         <BottomNavBar items={VENDOR_NAV_ITEMS} />
@@ -305,7 +267,8 @@ const SubscriptionManagement = () => {
   }
 
   // ─── Active subscription ───────────────────────────────────────────────────
-  const daysLeft = sub.status === "trial" ? daysUntil(sub.trialEndsAt) : null;
+  // Backend returns: { status, isPremium, expiresAt, daysRemaining }
+  const daysLeft = sub.daysRemaining ?? 0;
 
   return (
     <div className="flex flex-col min-h-dvh bg-[#F5F5F0]">
@@ -343,51 +306,41 @@ const SubscriptionManagement = () => {
                 </span>
                 <h2
                   id="sub-plan-heading"
-                  className="text-base font-bold text-white m-0 capitalize"
+                  className="text-base font-bold text-white m-0"
                 >
-                  {sub.plan === "pro_business" ? "Pro Business" : sub.plan}
+                  Pro Business
                 </h2>
-                <span className="text-xs text-[#005047] font-medium capitalize">
-                  {sub.billingCycle} billing
+                <span className="text-xs text-[#005047] font-medium">
+                  {sub.isPremium ? "Premium Active" : "Standard"}
                 </span>
               </div>
               <StatusBadge status={sub.status} />
             </div>
 
-            {/* Trial countdown */}
-            {sub.status === "trial" && daysLeft !== null && (
+            {/* Countdown */}
+            {daysLeft > 0 && (
               <div className="flex items-center gap-2 bg-white/20 rounded-xl px-3 py-2.5">
                 <Clock className="w-4 h-4 text-white shrink-0" />
                 <span className="text-xs font-semibold text-white">
-                  {daysLeft} day{daysLeft !== 1 ? "s" : ""} left in your free trial
-                  {sub.trialEndsAt ? ` — ends ${formatDate(sub.trialEndsAt)}` : ""}
+                  {daysLeft} day{daysLeft !== 1 ? "s" : ""} remaining
+                  {sub.expiresAt ? ` — expires ${formatDate(sub.expiresAt)}` : ""}
                 </span>
               </div>
             )}
 
             <div className="h-px bg-white/20" />
 
-            <div className="grid grid-cols-2 gap-4">
-              <div className="flex flex-col gap-0.5">
-                <span className="text-[10px] font-bold uppercase tracking-wider text-[#005047]">
-                  {sub.status === "trial" ? "First Payment" : "Next Billing"}
-                </span>
-                <span className="text-sm font-bold text-white">
-                  {formatDate(sub.nextBillingDate)}
-                </span>
-              </div>
-              <div className="flex flex-col gap-0.5">
-                <span className="text-[10px] font-bold uppercase tracking-wider text-[#005047]">
-                  {sub.billingCycle === "yearly" ? "Annual Price" : "Monthly Price"}
-                </span>
-                <span className="text-sm font-bold text-white">
-                  {formatNGN(sub.monthlyPrice)}/mo
-                </span>
-              </div>
+            <div className="flex flex-col gap-0.5">
+              <span className="text-[10px] font-bold uppercase tracking-wider text-[#005047]">
+                {sub.status === "trial" ? "Trial Ends" : "Subscription Expires"}
+              </span>
+              <span className="text-sm font-bold text-white">
+                {formatDate(sub.expiresAt)}
+              </span>
             </div>
           </section>
 
-          {/* Payment method */}
+          {/* Payment method — not yet in backend response, show CTA */}
           <section
             aria-labelledby="payment-method-heading"
             className="bg-white rounded-2xl p-5 border border-black/5 shadow-xs flex flex-col gap-3"
@@ -398,44 +351,23 @@ const SubscriptionManagement = () => {
             >
               Payment Method
             </h3>
-
-            {sub.paymentMethod ? (
-              <div className="flex items-center gap-3 p-3.5 rounded-xl bg-[#F4F1EE] border border-black/5">
-                <div className="w-10 h-10 rounded-lg bg-[#1C1B1B] flex items-center justify-center shrink-0">
-                  <CreditCard className="w-5 h-5 text-white" />
-                </div>
-                <div className="flex flex-col flex-1 min-w-0">
-                  <span className="text-sm font-bold text-[#1C1B1B]">
-                    •••• {sub.paymentMethod.last4}
-                  </span>
-                  <span className="text-xs text-[#747878]">
-                    Expires {sub.paymentMethod.expiry}
-                  </span>
-                </div>
-                <button
-                  type="button"
-                  onClick={() => navigate("/vendor/upgrade")}
-                  className="flex items-center gap-1 text-xs font-semibold text-[#00C9A7] hover:underline"
-                  aria-label="Update payment method"
-                >
-                  Update <ChevronRight className="w-3 h-3" />
-                </button>
+            <div className="flex items-center gap-3 p-3.5 rounded-xl bg-[#F4F1EE] border border-black/5">
+              <div className="w-10 h-10 rounded-lg bg-[#1C1B1B] flex items-center justify-center shrink-0">
+                <CreditCard className="w-5 h-5 text-white" />
               </div>
-            ) : (
-              <div className="flex items-center gap-3 p-3.5 rounded-xl bg-[#FFF4D6] border border-[#FFC72C]/30">
-                <AlertTriangle className="w-4 h-4 text-[#6F5400] shrink-0" />
-                <span className="text-xs text-[#6F5400] font-medium flex-1">
-                  No payment method on file. Add one before your trial ends.
-                </span>
-                <button
-                  type="button"
-                  onClick={() => navigate("/vendor/upgrade")}
-                  className="text-xs font-bold text-[#6F5400] hover:underline shrink-0"
-                >
-                  Add →
-                </button>
+              <div className="flex flex-col flex-1 min-w-0">
+                <span className="text-sm font-bold text-[#1C1B1B]">Paystack</span>
+                <span className="text-xs text-[#747878]">Managed by Paystack</span>
               </div>
-            )}
+              <button
+                type="button"
+                onClick={() => navigate("/vendor/upgrade")}
+                className="flex items-center gap-1 text-xs font-semibold text-[#00C9A7] hover:underline"
+                aria-label="Update payment method"
+              >
+                Update <ChevronRight className="w-3 h-3" />
+              </button>
+            </div>
           </section>
 
           {/* What's included */}
@@ -464,11 +396,10 @@ const SubscriptionManagement = () => {
               className="w-full flex items-center justify-center gap-2 py-3.5 rounded-xl bg-[#FFC72C] text-[#1C1B1B] text-sm font-bold hover:bg-[#F0B81E] active:scale-[0.98] transition-all shadow-sm"
             >
               <RefreshCw className="w-4 h-4" />
-              {sub.status === "expired" ? "Renew Subscription" : "Manage / Upgrade Plan"}
+              Manage / Upgrade Plan
             </button>
 
-            {sub.status !== "expired" && (
-              <button
+            <button
                 type="button"
                 onClick={() => setShowCancel(true)}
                 className="w-full flex items-center justify-center gap-2 py-3.5 rounded-xl border-2 border-[#BA1A1A]/30 bg-[#FCE8E6] text-[#BA1A1A] text-sm font-bold hover:bg-[#BA1A1A]/10 active:scale-[0.98] transition-all"
@@ -476,7 +407,6 @@ const SubscriptionManagement = () => {
                 <XCircle className="w-4 h-4" />
                 Cancel Subscription
               </button>
-            )}
           </section>
 
           {/* Help */}

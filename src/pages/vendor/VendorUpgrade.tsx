@@ -6,7 +6,7 @@ import {
   openPaystackCheckout,
   verifyPayment,
   PLAN_PRICES,
-  type BillingCycle,
+  type PlanKey,
 } from "../../services/payment";
 
 // ─── Icons ──────────────────────────────────────────────────────────────────────
@@ -37,18 +37,30 @@ const LockIcon = () => (
   </svg>
 );
 
-// ─── Component ─────────────────────────────────────────────────────────────────
+// ─── Plan definitions ──────────────────────────────────────────────────────────
+// Maps directly to backend PLANS: weekly (₦1,500) | monthly (₦5,500)
+
+const PLANS: { key: PlanKey; label: string; badge?: string }[] = [
+  { key: "weekly",  label: "Weekly"  },
+  { key: "monthly", label: "Monthly", badge: "Best Value" },
+];
+
+// ─── Component ──────────────────────────────────────────────────────────────────
 
 /**
- * Vendor Upgrade / Subscription Page
+ * VendorUpgrade — /vendor/upgrade
  *
- * Reached by clicking "Renew" or any locked feature (Boost Listing, Payments, Analytics).
- * Payment is handled via Paystack inline popup.
+ * Plans match backend exactly:
+ *   weekly  → ₦1,500  (POST /api/payments/initialize { plan: "weekly" })
+ *   monthly → ₦5,500  (POST /api/payments/initialize { plan: "monthly" })
+ *
+ * After Paystack popup success:
+ *   GET /api/payments/verify/:reference → activates business.isPremium
  */
 const VendorUpgrade = () => {
   const navigate = useNavigate();
   const { session } = useAuth();
-  const [billingCycle, setBillingCycle] = useState<BillingCycle>("yearly");
+  const [selectedPlan, setSelectedPlan] = useState<PlanKey>("monthly");
   const [isProcessing, setIsProcessing] = useState(false);
   const [toastMsg, setToastMsg] = useState<string | null>(null);
 
@@ -72,30 +84,32 @@ const VendorUpgrade = () => {
 
     await openPaystackCheckout({
       email: session.user.email,
-      billingCycle,
+      plan: selectedPlan,
 
-      // ── Payment completed in popup ──────────────────────────────────────
       onSuccess: async (reference) => {
         try {
-          // Attempt backend verification — gracefully handles if endpoint not yet live
           await verifyPayment(reference);
-        } catch {
-          // Verification endpoint not yet implemented on backend — that's OK.
-          // Payment was confirmed by Paystack client-side. Reference saved for backend team.
-          console.info("[BTBS] Payment reference for backend verification:", reference);
+          showToast("Subscription activated! Boost Listing, Payments, and Analytics are now unlocked.");
+        } catch (err) {
+          // Verify still confirms payment on backend — log reference for safety
+          console.info("[BTBS] Paystack reference:", reference);
+          const msg = err instanceof Error ? err.message : "";
+          // Only show error if it's not a "already verified" scenario
+          if (msg && !msg.toLowerCase().includes("already")) {
+            showToast("Payment received. Your plan will activate shortly.");
+          } else {
+            showToast("Subscription activated! Your plan is now active.");
+          }
         }
-        showToast("Payment successful! Your Pro Business plan is now active.");
         setIsProcessing(false);
         setTimeout(() => navigate("/vendor/home"), 1800);
       },
 
-      // ── User closed popup without paying ──────────────────────────────
       onCancel: () => {
         setIsProcessing(false);
         showToast("Payment cancelled. Your plan was not changed.");
       },
 
-      // ── Script load or init error ──────────────────────────────────────
       onError: (err) => {
         setIsProcessing(false);
         showToast(err.message || "Could not start checkout. Please try again.");
@@ -114,7 +128,8 @@ const VendorUpgrade = () => {
         aria-label="Vendor Upgrade & Plans"
       >
         <div className="flex flex-col gap-6 px-4 sm:px-6 pt-6 pb-16">
-          {/* Top Bar */}
+
+          {/* Header */}
           <div className="flex items-center gap-3">
             <button
               onClick={() => navigate("/vendor/home")}
@@ -131,7 +146,7 @@ const VendorUpgrade = () => {
             </div>
           </div>
 
-          {/* Account Status Card with active Auth Session */}
+          {/* Account info */}
           <div className="bg-white rounded-2xl p-4 sm:p-5 border border-neutral-100 shadow-xs flex items-center justify-between">
             <div className="flex flex-col">
               <span className="text-xs text-[#747878] font-medium">Upgrading Plan For</span>
@@ -141,11 +156,11 @@ const VendorUpgrade = () => {
               )}
             </div>
             <span className="px-3 py-1 rounded-full text-xs font-bold bg-[#FFF4D6] text-[#6F5400] border border-[#FFC72C]/40">
-              Free Tier (Active)
+              Free Tier
             </span>
           </div>
 
-          {/* Intro Card */}
+          {/* Intro */}
           <div className="bg-white rounded-2xl p-5 border border-neutral-100 shadow-xs flex flex-col gap-2">
             <h2 className="text-base font-semibold text-[#1C1B1B] m-0">
               Grow Your Business at High-Traffic Transit Stops
@@ -155,34 +170,35 @@ const VendorUpgrade = () => {
             </p>
           </div>
 
-          {/* Billing Toggle */}
+          {/* Plan selector */}
           <div className="flex items-center justify-center gap-2 bg-[#F4F1EE] p-1 rounded-xl max-w-xs mx-auto w-full">
-            {(["monthly", "yearly"] as BillingCycle[]).map((cycle) => (
+            {PLANS.map(({ key, label, badge }) => (
               <button
-                key={cycle}
+                key={key}
                 type="button"
-                onClick={() => setBillingCycle(cycle)}
-                className={`flex-1 py-2 rounded-lg text-xs font-bold transition-all flex items-center justify-center gap-1 ${
-                  billingCycle === cycle
-                    ? cycle === "yearly"
+                onClick={() => setSelectedPlan(key)}
+                className={`flex-1 py-2 rounded-lg text-xs font-bold transition-all flex items-center justify-center gap-1.5 ${
+                  selectedPlan === key
+                    ? key === "monthly"
                       ? "bg-[#005047] text-white shadow-xs"
                       : "bg-white text-[#1C1B1B] shadow-xs"
                     : "text-[#747878] hover:text-[#1C1B1B]"
                 }`}
               >
-                <span>{cycle === "monthly" ? "Monthly" : "Annual"}</span>
-                {cycle === "yearly" && (
+                <span>{label}</span>
+                {badge && (
                   <span className="text-[9px] bg-[#FFC72C] text-[#6F5400] px-1.5 py-0.5 rounded-full font-extrabold">
-                    -25%
+                    {badge}
                   </span>
                 )}
               </button>
             ))}
           </div>
 
-          {/* Pricing Plans Grid */}
+          {/* Plans grid */}
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-            {/* Free Starter (Current) */}
+
+            {/* Free Starter */}
             <div className="bg-white rounded-2xl p-5 border border-neutral-200 flex flex-col justify-between gap-4">
               <div className="flex flex-col gap-2">
                 <span className="text-xs font-bold uppercase text-[#747878]">Free Starter</span>
@@ -191,33 +207,27 @@ const VendorUpgrade = () => {
                   <span className="text-xs text-[#747878]">/ forever</span>
                 </div>
                 <p className="text-xs text-[#747878]">Standard organic business presence at transit stops.</p>
-
                 <div className="flex flex-col gap-2 mt-2 pt-3 border-t border-neutral-100">
                   <div className="flex items-center gap-2 text-xs text-[#1C1B1B]">
-                    <CheckIcon />
-                    <span>Create Listing (Free & Unlimited)</span>
+                    <CheckIcon /><span>Create Listing (Free & Unlimited)</span>
                   </div>
                   <div className="flex items-center gap-2 text-xs text-[#747878]">
-                    <LockIcon />
-                    <span className="line-through">Boost Listing</span>
+                    <LockIcon /><span className="line-through">Boost Listing</span>
                   </div>
                   <div className="flex items-center gap-2 text-xs text-[#747878]">
-                    <LockIcon />
-                    <span className="line-through">Payments & Invoicing</span>
+                    <LockIcon /><span className="line-through">Payments & Invoicing</span>
                   </div>
                   <div className="flex items-center gap-2 text-xs text-[#747878]">
-                    <LockIcon />
-                    <span className="line-through">Traffic Analytics</span>
+                    <LockIcon /><span className="line-through">Traffic Analytics</span>
                   </div>
                 </div>
               </div>
-
               <span className="text-center text-xs font-bold text-[#747878] py-2 bg-neutral-100 rounded-xl">
                 Current Plan
               </span>
             </div>
 
-            {/* Pro Merchant (Recommended) */}
+            {/* Pro Business */}
             <div className="relative bg-linear-to-b from-[#005047]/5 to-[#79F7E3]/15 rounded-2xl p-5 border-2 border-[#005047] flex flex-col justify-between gap-4 shadow-sm">
               <div className="absolute -top-3 right-4 bg-[#005047] text-white text-[10px] font-bold px-2.5 py-0.5 rounded-full uppercase tracking-wider flex items-center gap-1">
                 <SparklesIcon /> Recommended
@@ -227,34 +237,29 @@ const VendorUpgrade = () => {
                 <span className="text-xs font-bold uppercase text-[#005047]">Pro Business</span>
                 <div className="flex items-baseline gap-1">
                   <span className="text-3xl font-black text-[#1C1B1B]">
-                    {PLAN_PRICES[billingCycle].label.split(" / ")[0]}
+                    {PLAN_PRICES[selectedPlan].label.split(" / ")[0]}
                   </span>
                   <span className="text-xs text-[#444748]">
-                    / {PLAN_PRICES[billingCycle].label.split(" / ")[1]}
+                    / {PLAN_PRICES[selectedPlan].label.split(" / ")[1]}
                   </span>
                 </div>
                 <p className="text-xs text-[#444748]">Full access to all promotional & analytics power tools.</p>
 
                 <div className="flex flex-col gap-2 mt-2 pt-3 border-t border-[#005047]/20">
                   <div className="flex items-center gap-2 text-xs font-medium text-[#1C1B1B]">
-                    <CheckIcon />
-                    <span>Create Listing (Free & Always Unlocked)</span>
+                    <CheckIcon /><span>Create Listing (Free & Always Unlocked)</span>
                   </div>
                   <div className="flex items-center gap-2 text-xs font-semibold text-[#005047]">
-                    <CheckIcon />
-                    <span>⚡ Boost Listing (3x Priority Placement)</span>
+                    <CheckIcon /><span>⚡ Boost Listing (3x Priority Placement)</span>
                   </div>
                   <div className="flex items-center gap-2 text-xs font-semibold text-[#005047]">
-                    <CheckIcon />
-                    <span>💳 Payments & Automated Invoicing</span>
+                    <CheckIcon /><span>💳 Payments & Automated Invoicing</span>
                   </div>
                   <div className="flex items-center gap-2 text-xs font-semibold text-[#005047]">
-                    <CheckIcon />
-                    <span>📊 Full Commuter Traffic Analytics</span>
+                    <CheckIcon /><span>📊 Full Commuter Traffic Analytics</span>
                   </div>
                   <div className="flex items-center gap-2 text-xs font-semibold text-[#005047]">
-                    <CheckIcon />
-                    <span>10 Monthly Free Boost Credits</span>
+                    <CheckIcon /><span>10 Monthly Free Boost Credits</span>
                   </div>
                 </div>
               </div>
@@ -265,12 +270,11 @@ const VendorUpgrade = () => {
                 disabled={isProcessing}
                 width="full"
               >
-                {isProcessing ? "Opening checkout…" : `Pay ${PLAN_PRICES[billingCycle].label.split(" / ")[0]}`}
+                {isProcessing ? "Opening checkout…" : `Pay ${PLAN_PRICES[selectedPlan].label.split(" / ")[0]}`}
               </PrimaryButton>
             </div>
           </div>
 
-          {/* Toast */}
           <Toast message={toastMsg} />
 
           <div className="flex justify-center">

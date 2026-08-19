@@ -59,7 +59,7 @@ const SubscriptionTrialOffer = () => {
 
     await openPaystackCheckout({
       email: session.user.email,
-      billingCycle: "monthly",
+      plan: "monthly",
 
       onSuccess: async (reference) => {
         try {

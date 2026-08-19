@@ -17,6 +17,7 @@ import {
 import { BottomNavBar, Toast, VENDOR_NAV_ITEMS } from "../../components";
 import { useAuth } from "../../contexts/AuthContext";
 import { getProfile } from "../../services/auth";
+import { getSubscriptionStatus } from "../../services/payment";
 import { useRoutes } from "../../hooks/useRoutes";
 
 // ─── Figma-matched Section Label ──────────────────────────────────────────────
@@ -128,14 +129,20 @@ const VendorProfile = () => {
   const currentUserId = session?.user?._id || session?.user?.id;
   const myListingsCount = allRoutes.filter((r) => r.createdBy === currentUserId).length;
 
-  // ── Static: Business subscription data ────────────────────────────────────
-  // TODO: replace with real API response when GET /api/business/subscription endpoint exists
-  // Business model fields: isPremium, subscriptionStatus ('trial'|'active'|'expired'), boostCredits, trialEndDate
-  // (BTBS-BACKEND/src/models/business.model.js:24-46)
-  const STATIC_SUBSCRIPTION = {
-    plan: "Pro Tier Active",
-    status: "active" as const,
-  };
+  // ── Live: Subscription status — GET /api/subscription/status ─────────────
+  const { data: subData } = useQuery({
+    queryKey: ["business", "subscription"],
+    queryFn: getSubscriptionStatus,
+    enabled: !!session?.token,
+  });
+  const subStatus = subData?.subscription?.status ?? null;
+  const subLabel = subStatus === "active"
+    ? "Pro Business · Active"
+    : subStatus === "trial"
+    ? "Pro Business · Trial"
+    : subStatus === "expired"
+    ? "Expired — Renew Now"
+    : "Free Tier";
 
   // ── Static: Rating & Earnings ──────────────────────────────────────────────
   // TODO: replace with real API response when GET /api/business/metrics endpoint exists
@@ -373,12 +380,14 @@ const VendorProfile = () => {
                 icon={<CreditCard className="w-5 h-5 text-[#6F5400]" />}
                 title="Billing & Payments"
                 subtitle="Paystack account, history"
-                onClick={() => navigate("/vendor/upgrade")}
+                onClick={() => navigate(
+                  subStatus === "active" || subStatus === "trial"
+                    ? "/vendor/subscription"
+                    : "/vendor/upgrade"
+                )}
               />
 
-              {/* Subscription Plan */}
-              {/* STATIC: subscriptionStatus from Business model — no read endpoint yet */}
-              {/* TODO: replace with real subscription status from GET /api/business/subscription */}
+              {/* Subscription Plan — live from GET /api/subscription/status */}
               <div className="flex items-center justify-between px-4 py-3.5 bg-white hover:bg-[#FFFBF0] transition-colors group">
                 <div className="flex items-center gap-3.5">
                   <div className="w-10 h-10 rounded-xl bg-[#FFF4D6] flex items-center justify-center shrink-0">
@@ -386,16 +395,24 @@ const VendorProfile = () => {
                   </div>
                   <div>
                     <p className="text-sm font-semibold text-[#1C1B1B] m-0">Subscription Plan</p>
-                    <p className="text-xs text-[#747878] m-0 mt-0.5">{STATIC_SUBSCRIPTION.plan}</p>
+                    <p className={`text-xs m-0 mt-0.5 font-medium ${
+                      subStatus === "expired" ? "text-[#BA1A1A]" : "text-[#747878]"
+                    }`}>
+                      {subLabel}
+                    </p>
                   </div>
                 </div>
                 <button
                   type="button"
                   id="manage-subscription-btn"
-                  onClick={() => navigate("/vendor/upgrade")}
+                  onClick={() => navigate(
+                    subStatus === null || subStatus === "expired"
+                      ? "/vendor/upgrade"
+                      : "/vendor/subscription"
+                  )}
                   className="px-3 py-1 rounded-lg bg-[#FFC72C] text-[#1C1B1B] text-xs font-bold hover:bg-[#F0B81E] active:scale-95 transition-all shrink-0"
                 >
-                  MANAGE
+                  {subStatus === null || subStatus === "expired" ? "UPGRADE" : "MANAGE"}
                 </button>
               </div>
             </div>

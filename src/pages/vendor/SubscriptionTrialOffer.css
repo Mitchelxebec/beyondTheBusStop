@@ -1,0 +1,448 @@
+* {
+  margin: 0;
+  padding: 0;
+  box-sizing: border-box;
+}
+
+body {
+  font-family: Arial, Helvetica, sans-serif;
+  background: #ffffff;
+  color: #222;
+}
+
+
+/* =====================================
+   APP
+===================================== */
+
+.app {
+  width: 100%;
+  min-height: 100vh;
+  background: #ffffff;
+}
+
+
+/* =====================================
+   PAGE TITLE
+===================================== */
+
+.page-title {
+  color: #008bd2;
+
+  font-size: 12px;
+  font-weight: 500;
+
+  margin-left: 3px;
+  margin-top: 3px;
+  margin-bottom: 4px;
+}
+
+
+/* =====================================
+   PHONE
+===================================== */
+
+.phone {
+  position: relative;
+
+  width: 248px;
+  height: 516px;
+
+  margin-left: 3px;
+
+  background: #fffafa;
+
+  border: 1px solid #009cff;
+
+  overflow: hidden;
+}
+
+
+/* =====================================
+   HEADER
+===================================== */
+
+.header {
+  height: 35px;
+
+  display: flex;
+  align-items: center;
+
+  padding: 0 10px;
+
+  background: #fffafa;
+}
+
+
+.back-button {
+  border: none;
+
+  background: transparent;
+
+  color: #222;
+
+  font-size: 17px;
+
+  cursor: pointer;
+
+  padding: 0;
+
+  width: 18px;
+}
+
+
+.header-content {
+  display: flex;
+  align-items: center;
+
+  gap: 6px;
+
+  margin-left: 9px;
+
+  font-size: 8px;
+
+  color: #222;
+}
+
+
+.header-icon {
+  width: 16px;
+  height: 16px;
+
+  display: flex;
+  align-items: center;
+  justify-content: center;
+
+  border-radius: 4px;
+
+  background: #8b6d00;
+
+  color: white;
+
+  font-size: 8px;
+  font-weight: bold;
+}
+
+
+/* =====================================
+   MAIN CONTENT
+===================================== */
+
+.main-content {
+  padding: 14px 9px 55px;
+
+  text-align: center;
+}
+
+
+/* =====================================
+   TRIAL OFFER
+===================================== */
+
+.trial-offer {
+  display: inline-block;
+
+  padding: 5px 9px;
+
+  border-radius: 12px;
+
+  background: #ffe5aa;
+
+  color: #876400;
+
+  font-size: 7px;
+
+  margin-bottom: 8px;
+}
+
+
+/* =====================================
+   HEADING
+===================================== */
+
+.main-content h1 {
+  font-size: 10px;
+
+  font-weight: 500;
+
+  margin-bottom: 6px;
+}
+
+
+.intro-text {
+  color: #555;
+
+  font-size: 7px;
+
+  line-height: 1.45;
+
+  margin-bottom: 16px;
+}
+
+
+/* =====================================
+   SUBSCRIPTION CARD
+===================================== */
+
+.subscription-card {
+  width: 100%;
+
+  background: #ffffff;
+
+  border-radius: 9px;
+
+  border-top: 4px solid #00b7a5;
+
+  overflow: hidden;
+
+  text-align: left;
+
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.04);
+}
+
+
+/* =====================================
+   PLAN INFO
+===================================== */
+
+.plan-info {
+  padding: 10px 10px 8px;
+}
+
+
+.plan-name {
+  font-size: 8px;
+
+  font-weight: 500;
+
+  margin-bottom: 3px;
+}
+
+
+.plan-price {
+  font-size: 8px;
+
+  font-weight: 700;
+}
+
+
+.plan-price span {
+  font-size: 7px;
+
+  font-weight: 400;
+
+  margin-left: 2px;
+}
+
+
+/* =====================================
+   DATES
+===================================== */
+
+.dates-card {
+  background: #00b09f;
+
+  margin: 0 9px;
+
+  padding: 8px 9px;
+
+  border-radius: 6px;
+
+  color: #073f3a;
+}
+
+
+.date-row {
+  display: flex;
+
+  justify-content: space-between;
+
+  align-items: center;
+
+  margin-bottom: 7px;
+
+  font-size: 7px;
+}
+
+
+.date-row:last-child {
+  margin-bottom: 0;
+}
+
+
+.date-row strong {
+  color: #111;
+
+  font-size: 7px;
+
+  font-weight: 700;
+}
+
+
+/* =====================================
+   INCLUDED
+===================================== */
+
+.included-section {
+  padding: 10px 10px 8px;
+}
+
+
+.included-section h2 {
+  font-size: 7px;
+
+  font-weight: 500;
+
+  color: #555;
+
+  margin-bottom: 8px;
+}
+
+
+.included-section ul {
+  list-style: none;
+}
+
+
+.included-section li {
+  display: flex;
+
+  align-items: flex-start;
+
+  gap: 6px;
+
+  font-size: 7px;
+
+  line-height: 1.4;
+
+  margin-bottom: 7px;
+
+  color: #333;
+}
+
+
+.included-section li:last-child {
+  margin-bottom: 0;
+}
+
+
+.check {
+  flex-shrink: 0;
+
+  width: 9px;
+  height: 9px;
+
+  display: flex;
+
+  align-items: center;
+  justify-content: center;
+
+  margin-top: 1px;
+
+  border-radius: 50%;
+
+  background: #00c8b5;
+
+  color: white;
+
+  font-size: 6px;
+
+  font-weight: bold;
+}
+
+
+/* =====================================
+   DISCLAIMER
+===================================== */
+
+.disclaimer {
+  margin-top: 11px;
+
+  color: #777;
+
+  font-size: 5.5px;
+
+  line-height: 1.45;
+
+  text-align: center;
+}
+
+
+/* =====================================
+   BOTTOM ACTION
+===================================== */
+
+.bottom-action {
+  position: absolute;
+
+  bottom: 8px;
+
+  left: 9px;
+  right: 9px;
+
+  display: flex;
+
+  justify-content: center;
+}
+
+
+.start-button {
+  width: 169px;
+
+  height: 25px;
+
+  border: none;
+
+  border-radius: 9px;
+
+  background: #ffbd21;
+
+  color: #6a4c00;
+
+  font-size: 7px;
+
+  cursor: pointer;
+
+  display: flex;
+
+  align-items: center;
+  justify-content: center;
+
+  gap: 5px;
+
+  box-shadow: 0 1px 2px rgba(0, 0, 0, 0.08);
+}
+
+
+.start-button span {
+  font-size: 10px;
+}
+
+
+/* =====================================
+   HOVER
+===================================== */
+
+.start-button:hover {
+  background: #f3ae0c;
+}
+
+
+.back-button:hover {
+  color: #008bd2;
+}
+
+
+/* =====================================
+   RESPONSIVE
+===================================== */
+
+@media (max-width: 400px) {
+
+  .phone {
+    width: calc(100vw - 34px);
+
+    max-width: 248px;
+  }
+
+}

@@ -33,6 +33,7 @@ const ShareTrip             = lazy(() => import("./pages/commuter/ShareTrip"));
 const RouteDetails          = lazy(() => import("./pages/commuter/RouteDetails"));
 const NotFound              = lazy(() => import("./pages/NotFound"));
 const ComponentShowcase     = lazy(() => import("./pages/ComponentShowcase"));
+const SubscriptionTrialOffer = lazy(() => import("./pages/vendor/SubscriptionTrialOffer"));
 
 const s = (el: React.ReactNode) => (
   <Suspense fallback={<PageLoader />}>{el}</Suspense>
@@ -84,6 +85,7 @@ export const router = createBrowserRouter([
   { path: "/vendor/analytics",        element: auth(<VendorAnalytics />, "business") },
   { path: "/vendor/profile",          element: auth(<VendorProfile />, "business") },
   { path: "/vendor/create-listing",   element: auth(<CreateListing />, "business") },
+  { path: "/vendor/subscription/trial", element: auth(<SubscriptionTrialOffer />, "business") },
 
   // ── Shared: both commuter and business roles ───────────────────────────────
   { path: "/routes",                  element: auth(<VendorRoutes />) },
@@ -106,6 +108,7 @@ export const router = createBrowserRouter([
   { path: "/dev/saved-routes",        element: s(<SavedRoutes />) },
   { path: "/dev/routes/:id",          element: s(<RouteDetails />) },
   { path: "/dev/create-listing",      element: s(<CreateListing />) },
+  { path: "/dev/subscription-trialOffer", element: s(<SubscriptionTrialOffer />) },
   { path: "/dev/share",               element: s(<ShareTrip />) },
 
   // ── Catch-all ─────────────────────────────────────────────────────────────

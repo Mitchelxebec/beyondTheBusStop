@@ -5,6 +5,7 @@ export type UserRole = "commuter" | "business";
 export interface LoginPayload {
   email: string;
   password: string;
+  expectedRole?: UserRole;
 }
 
 /** User object returned inside login/register responses */

@@ -38,7 +38,8 @@ export interface LocationSearchResult {
 export interface LocationSearchResponse {
   success: boolean;
   count: number;
-  results: LocationSearchResult[];
+  places?: LocationSearchResult[];
+  results?: LocationSearchResult[];
 }
 
 /**
@@ -93,13 +94,14 @@ export async function resolveCoordinates(
     }
   }
 
-  // 2. Try live backend place search
+  // 2. Try live backend place search (reads places array from backend response)
   try {
     const { data } = await api.get<LocationSearchResponse>("/locations/search", {
       params: { q: name },
     });
-    if (data.results && data.results.length > 0) {
-      const loc = data.results[0].location;
+    const items = data.places ?? data.results;
+    if (items && items.length > 0) {
+      const loc = items[0].location;
       if (loc.latitude && loc.longitude) {
         return { lat: loc.latitude, lng: loc.longitude };
       }
@@ -114,6 +116,7 @@ export async function resolveCoordinates(
 
 /**
  * GET /api/locations/nearby — Live Google Places proximity endpoint.
+ * Normalizes backend latitude/longitude into lat/lng.
  */
 export async function getNearbyPlaces(
   lat: number,
@@ -121,10 +124,60 @@ export async function getNearbyPlaces(
   type: "hospital" | "police" | "market"
 ): Promise<NearbySearchResponse> {
   try {
-    const { data } = await api.get<NearbySearchResponse>("/locations/nearby", {
+    const { data } = await api.get<{
+      success?: boolean;
+      type?: string;
+      count?: number;
+      places?: Array<{
+        placeId: string;
+        name: string;
+        address: string;
+        location?: {
+          latitude?: number;
+          longitude?: number;
+          lat?: number;
+          lng?: number;
+        };
+        distance?: number;
+        distanceUnit?: string;
+        rating?: number | null;
+        userRatingsTotal?: number;
+        openNow?: boolean | null;
+        types?: string[];
+        category?: "hospital" | "police" | "market" | "vendor";
+      }>;
+    }>("/locations/nearby", {
       params: { lat, lng, type },
     });
-    return data;
+
+    const rawPlaces = data.places || [];
+    const normalizedPlaces: NearbyPlace[] = rawPlaces.map((p) => {
+      const latitude = p.location?.latitude ?? p.location?.lat ?? 0;
+      const longitude = p.location?.longitude ?? p.location?.lng ?? 0;
+      return {
+        placeId: p.placeId,
+        name: p.name,
+        address: p.address,
+        location: {
+          lat: latitude,
+          lng: longitude,
+        },
+        distance: p.distance ?? 0,
+        distanceUnit: p.distanceUnit ?? "km",
+        rating: p.rating ?? null,
+        userRatingsTotal: p.userRatingsTotal ?? 0,
+        openNow: p.openNow ?? null,
+        types: p.types ?? [],
+        category: p.category ?? type,
+      };
+    });
+
+    return {
+      success: data.success ?? true,
+      type: data.type ?? type,
+      count: normalizedPlaces.length,
+      places: normalizedPlaces,
+    };
   } catch {
     // If nearby endpoint errors or key is unavailable, return empty list gracefully
     return { success: false, type, count: 0, places: [] };

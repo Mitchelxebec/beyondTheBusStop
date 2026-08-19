@@ -15,7 +15,8 @@ export function useLogin(role: UserRole) {
   const navigate = useNavigate();
 
   return useMutation({
-    mutationFn: (payload: LoginPayload) => login(payload),
+    mutationFn: (payload: LoginPayload) =>
+      login({ ...payload, expectedRole: role }),
     onSuccess: (data) => {
       setSession({ token: data.user.token, user: data.user, role });
       navigate(role === "business" ? "/vendor/home" : "/home", { replace: true });

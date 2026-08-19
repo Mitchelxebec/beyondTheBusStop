@@ -49,7 +49,7 @@ const ResetPassword = () => {
   const [pwValue, setPwValue]    = useState("");
 
   const { mutate, isPending, error } = useMutation({
-    mutationFn: (payload: { email: string; otp: string; password: string }) =>
+    mutationFn: (payload: { email: string; otp: string; newPassword: string }) =>
       api.post("/auth/reset-password", payload).then(r => r.data),
     onSuccess: () => navigate("/auth/reset-success"),
   });
@@ -60,7 +60,7 @@ const ResetPassword = () => {
 
   const onSubmit = (values: FormValues) => {
     if (!email || !otp) return;
-    mutate({ email, otp, password: values.password });
+    mutate({ email, otp, newPassword: values.password });
   };
 
   const strength = getStrength(pwValue);

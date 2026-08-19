@@ -162,9 +162,29 @@ const ShareTrip = () => {
 
       {/* ── Page sub-header ────────────────────────────────────────────────── */}
       <div className="w-full pt-16">
-        <div className="px-4 sm:px-6 py-4 w-full mx-auto" style={{ maxWidth: "min(100%, 72rem)" }}>
-          <h1 className="text-base font-semibold text-[#1C1B1B] m-0">Share Trip</h1>
-          <p className="text-xs text-[#747878] m-0">Keep your loved ones informed about your journey.</p>
+        <div className="px-4 sm:px-6 py-4 w-full mx-auto flex items-center justify-between" style={{ maxWidth: "min(100%, 72rem)" }}>
+          <div className="flex items-center gap-3">
+            <button
+              onClick={() => navigate(-1)}
+              className="p-1.5 -ml-1.5 rounded-lg text-[#1C1B1B] hover:bg-black/5 active:scale-95 transition-all cursor-pointer"
+              aria-label="Go back"
+            >
+              <BackIcon />
+            </button>
+            <div>
+              <h1 className="text-base font-semibold text-[#1C1B1B] m-0">Share Trip</h1>
+              <p className="text-xs text-[#747878] m-0">Keep your loved ones informed about your journey.</p>
+            </div>
+          </div>
+
+          {session?.user && (
+            <div className="hidden sm:flex items-center gap-1.5 px-3 py-1.5 rounded-full bg-white border border-black/5 text-xs text-[#444748] shadow-2xs">
+              <ProfileIcon />
+              <span className="font-medium truncate max-w-[140px]">
+                {session.user.fullName || "Commuter"}
+              </span>
+            </div>
+          )}
         </div>
       </div>
 

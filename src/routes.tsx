@@ -26,6 +26,7 @@ const VendorAnalytics        = lazy(() => import("./pages/vendor/VendorAnalytics
 const VendorUpgrade         = lazy(() => import("./pages/vendor/VendorUpgrade"));
 const VendorProfile         = lazy(() => import("./pages/vendor/VendorProfile"));
 const CreateListing         = lazy(() => import("./pages/vendor/CreateListing"));
+const SubscriptionManagement = lazy(() => import("./pages/vendor/SubscriptionManagement"));
 const SearchResults         = lazy(() => import("./pages/commuter/SearchResults"));
 const CommuterProfile       = lazy(() => import("./pages/commuter/CommuterProfile"));
 const SavedRoutes           = lazy(() => import("./pages/commuter/SavedRoutes"));
@@ -87,6 +88,7 @@ export const router = createBrowserRouter([
   { path: "/vendor/analytics",        element: auth(<VendorAnalytics />, "business") },
   { path: "/vendor/profile",          element: auth(<VendorProfile />, "business") },
   { path: "/vendor/create-listing",   element: auth(<CreateListing />, "business") },
+  { path: "/vendor/subscription",      element: auth(<SubscriptionManagement />, "business") },
   { path: "/vendor/subscription/trial", element: auth(<SubscriptionTrialOffer />, "business") },
 
   // ── Shared: both commuter and business roles ───────────────────────────────
@@ -110,6 +112,7 @@ export const router = createBrowserRouter([
   { path: "/dev/saved-routes",        element: s(<SavedRoutes />) },
   { path: "/dev/routes/:id",          element: s(<RouteDetails />) },
   { path: "/dev/create-listing",      element: s(<CreateListing />) },
+  { path: "/dev/subscription",         element: s(<SubscriptionManagement />) },
   { path: "/dev/subscription-trialOffer", element: s(<SubscriptionTrialOffer />) },
   { path: "/dev/share",               element: s(<ShareTrip />) },
 

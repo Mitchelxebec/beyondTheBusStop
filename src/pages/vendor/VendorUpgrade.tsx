@@ -2,6 +2,12 @@ import { useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { BottomNavBar, PrimaryButton, SecondaryButton, Toast, VENDOR_NAV_ITEMS } from "../../components";
 import { useAuth } from "../../contexts/AuthContext";
+import {
+  openPaystackCheckout,
+  verifyPayment,
+  PLAN_PRICES,
+  type BillingCycle,
+} from "../../services/payment";
 
 // ─── Icons ──────────────────────────────────────────────────────────────────────
 
@@ -37,31 +43,63 @@ const LockIcon = () => (
  * Vendor Upgrade / Subscription Page
  *
  * Reached by clicking "Renew" or any locked feature (Boost Listing, Payments, Analytics).
- *
- * // TODO: replace with real payment / subscription gateway endpoint when ready (POST /api/business/subscribe)
+ * Payment is handled via Paystack inline popup.
  */
 const VendorUpgrade = () => {
   const navigate = useNavigate();
   const { session } = useAuth();
-  const [billingCycle, setBillingCycle] = useState<"monthly" | "yearly">("yearly");
+  const [billingCycle, setBillingCycle] = useState<BillingCycle>("yearly");
   const [isProcessing, setIsProcessing] = useState(false);
-  const [successMsg, setSuccessMsg] = useState<string | null>(null);
+  const [toastMsg, setToastMsg] = useState<string | null>(null);
 
   const businessName =
     session?.user?.businessName ||
     session?.user?.fullName ||
     (session?.user?.email ? session.user.email.split("@")[0] : "Business Owner");
 
-  const handleSubscribe = () => {
+  const showToast = (msg: string) => {
+    setToastMsg(msg);
+    setTimeout(() => setToastMsg(null), 4000);
+  };
+
+  const handleSubscribe = async () => {
+    if (!session?.user?.email) {
+      showToast("Could not find your account email. Please log in again.");
+      return;
+    }
+
     setIsProcessing(true);
-    // TODO: replace with real payment gateway (Paystack/Flutterwave/Stripe) checkout integration
-    setTimeout(() => {
-      setIsProcessing(false);
-      setSuccessMsg("Subscription activated! Unlocked Boost Listing, Payments, and Analytics.");
-      setTimeout(() => {
-        navigate("/vendor/home");
-      }, 1800);
-    }, 1000);
+
+    await openPaystackCheckout({
+      email: session.user.email,
+      billingCycle,
+
+      // ── Payment completed in popup ──────────────────────────────────────
+      onSuccess: async (reference) => {
+        try {
+          await verifyPayment(reference);
+          showToast("Subscription activated! Boost Listing, Payments, and Analytics are now unlocked.");
+          setTimeout(() => navigate("/vendor/home"), 1800);
+        } catch (err) {
+          const msg = err instanceof Error ? err.message : "Payment succeeded but verification failed. Contact support.";
+          showToast(msg);
+        } finally {
+          setIsProcessing(false);
+        }
+      },
+
+      // ── User closed popup without paying ──────────────────────────────
+      onCancel: () => {
+        setIsProcessing(false);
+        showToast("Payment cancelled. Your plan was not changed.");
+      },
+
+      // ── Script load or init error ──────────────────────────────────────
+      onError: (err) => {
+        setIsProcessing(false);
+        showToast(err.message || "Could not start checkout. Please try again.");
+      },
+    });
   };
 
   return (
@@ -118,31 +156,27 @@ const VendorUpgrade = () => {
 
           {/* Billing Toggle */}
           <div className="flex items-center justify-center gap-2 bg-[#F4F1EE] p-1 rounded-xl max-w-xs mx-auto w-full">
-            <button
-              type="button"
-              onClick={() => setBillingCycle("monthly")}
-              className={`flex-1 py-2 rounded-lg text-xs font-bold transition-all ${
-                billingCycle === "monthly"
-                  ? "bg-white text-[#1C1B1B] shadow-xs"
-                  : "text-[#747878] hover:text-[#1C1B1B]"
-              }`}
-            >
-              Monthly
-            </button>
-            <button
-              type="button"
-              onClick={() => setBillingCycle("yearly")}
-              className={`flex-1 py-2 rounded-lg text-xs font-bold transition-all flex items-center justify-center gap-1 ${
-                billingCycle === "yearly"
-                  ? "bg-[#005047] text-white shadow-xs"
-                  : "text-[#747878] hover:text-[#1C1B1B]"
-              }`}
-            >
-              <span>Annual</span>
-              <span className="text-[9px] bg-[#FFC72C] text-[#6F5400] px-1.5 py-0.2 rounded-full font-extrabold">
-                -25%
-              </span>
-            </button>
+            {(["monthly", "yearly"] as BillingCycle[]).map((cycle) => (
+              <button
+                key={cycle}
+                type="button"
+                onClick={() => setBillingCycle(cycle)}
+                className={`flex-1 py-2 rounded-lg text-xs font-bold transition-all flex items-center justify-center gap-1 ${
+                  billingCycle === cycle
+                    ? cycle === "yearly"
+                      ? "bg-[#005047] text-white shadow-xs"
+                      : "bg-white text-[#1C1B1B] shadow-xs"
+                    : "text-[#747878] hover:text-[#1C1B1B]"
+                }`}
+              >
+                <span>{cycle === "monthly" ? "Monthly" : "Annual"}</span>
+                {cycle === "yearly" && (
+                  <span className="text-[9px] bg-[#FFC72C] text-[#6F5400] px-1.5 py-0.5 rounded-full font-extrabold">
+                    -25%
+                  </span>
+                )}
+              </button>
+            ))}
           </div>
 
           {/* Pricing Plans Grid */}
@@ -192,10 +226,10 @@ const VendorUpgrade = () => {
                 <span className="text-xs font-bold uppercase text-[#005047]">Pro Business</span>
                 <div className="flex items-baseline gap-1">
                   <span className="text-3xl font-black text-[#1C1B1B]">
-                    {billingCycle === "yearly" ? "₦135,000" : "₦15,000"}
+                    {PLAN_PRICES[billingCycle].label.split(" / ")[0]}
                   </span>
                   <span className="text-xs text-[#444748]">
-                    {billingCycle === "yearly" ? "/ year" : "/ month"}
+                    / {PLAN_PRICES[billingCycle].label.split(" / ")[1]}
                   </span>
                 </div>
                 <p className="text-xs text-[#444748]">Full access to all promotional & analytics power tools.</p>
@@ -230,13 +264,13 @@ const VendorUpgrade = () => {
                 disabled={isProcessing}
                 width="full"
               >
-                {isProcessing ? "Activating..." : "Upgrade Now"}
+                {isProcessing ? "Opening checkout…" : `Pay ${PLAN_PRICES[billingCycle].label.split(" / ")[0]}`}
               </PrimaryButton>
             </div>
           </div>
 
-          {/* Success Toast */}
-          <Toast message={successMsg} />
+          {/* Toast */}
+          <Toast message={toastMsg} />
 
           <div className="flex justify-center">
             <SecondaryButton onClick={() => navigate("/vendor/home")} width="auto">

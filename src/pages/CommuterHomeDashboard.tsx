@@ -71,7 +71,7 @@ const SafetyPointItem = ({ point }: { point: SafetyPoint }) => {
       <div className="w-14 h-14 rounded-2xl bg-[#F1EDEC] flex items-center justify-center">
         {icon}
       </div>
-      <span className="text-[#444748] text-[10px] leading-3.75 font-normal text-center w-14 line-clamp-2">
+      <span className="text-[#444748] text-[10px] leading-3.75 font-semibold text-center w-14 line-clamp-2">
         {point.name}
       </span>
     </div>
@@ -99,7 +99,7 @@ const RecentSearchItem = ({
     <div className="w-8 h-8 rounded-full bg-[#EBE7E6] flex items-center justify-center shrink-0">
       <Clock className="w-3.5 h-3.5 text-[#444748]" aria-hidden="true" />
     </div>
-    <span className="text-[#1C1B1B] text-base leading-6 font-normal">{query}</span>
+    <span className="text-[#1C1B1B] text-sm leading-6 font-semibold">{query}</span>
   </button>
 );
 
@@ -207,11 +207,11 @@ const CommuterHomeDashboard = () => {
           <section aria-labelledby="greeting-heading" className="flex flex-col gap-1">
             <h1
               id="greeting-heading"
-              className="text-[#1C1B1B] text-base leading-6 font-normal m-0"
+              className="text-[#1C1B1B] text-2xl leading-tight font-extrabold m-0"
             >
               {greeting}
             </h1>
-            <p className="text-[#444748] text-base leading-6 font-normal m-0">
+            <p className="text-[#747878] text-sm leading-6 font-medium m-0">
               Lagos is moving fast today. Where to?
             </p>
           </section>

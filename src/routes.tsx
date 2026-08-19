@@ -31,6 +31,7 @@ const CommuterProfile       = lazy(() => import("./pages/commuter/CommuterProfil
 const SavedRoutes           = lazy(() => import("./pages/commuter/SavedRoutes"));
 const ShareTrip             = lazy(() => import("./pages/commuter/ShareTrip"));
 const RouteDetails          = lazy(() => import("./pages/commuter/RouteDetails"));
+const PublicTrip            = lazy(() => import("./pages/commuter/PublicTrip"));
 const NotFound              = lazy(() => import("./pages/NotFound"));
 const ComponentShowcase     = lazy(() => import("./pages/ComponentShowcase"));
 const SubscriptionTrialOffer = lazy(() => import("./pages/vendor/SubscriptionTrialOffer"));
@@ -56,6 +57,7 @@ const auth = (el: React.ReactNode, role?: "commuter" | "business") => (
 
 export const router = createBrowserRouter([
   // ── Public (no auth needed) ───────────────────────────────────────────────
+  { path: "/trip/:shareToken",        element: s(<PublicTrip />) },
   { path: "/",                        element: s(<Splash />) },
   { path: "/onboarding",              element: <Navigate to="/onboarding/1" replace /> },
   { path: "/onboarding/1",            element: s(<Onboarding1 />) },

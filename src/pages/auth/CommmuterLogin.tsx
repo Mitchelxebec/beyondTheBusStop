@@ -13,6 +13,12 @@ const schema = z.object({
 });
 type FormValues = z.infer<typeof schema>;
 
+// Detect the backend's role-mismatch message so we can offer a redirect link
+const isVendorOnCommuterPage = (err: unknown): boolean => {
+  if (!(err instanceof Error)) return false;
+  return err.message.toLowerCase().includes("registered as a vendor");
+};
+
 const CommmuterLogin = () => {
   const [showPassword, setShowPassword] = useState(false);
   const [toastMessage, setToastMessage] = useState<string | null>(null);
@@ -83,9 +89,20 @@ const CommmuterLogin = () => {
         </div>
 
         {error && (
-          <p role="alert" className="text-xs text-red-600 bg-red-50 border border-red-200 rounded-lg px-3 py-2">
-            {error instanceof Error ? error.message : "Login failed. Try again."}
-          </p>
+          <div role="alert" className="flex flex-col gap-2 text-xs bg-red-50 border border-red-200 rounded-lg px-3 py-2">
+            <p className="text-red-600">
+              {error instanceof Error ? error.message : "Login failed. Try again."}
+            </p>
+            {isVendorOnCommuterPage(error) && (
+              <button
+                type="button"
+                onClick={() => navigate("/auth/vendor/login")}
+                className="self-start font-semibold text-[#00C9A7] hover:underline"
+              >
+                Go to Vendor Login →
+              </button>
+            )}
+          </div>
         )}
 
         <div className="flex flex-col items-center gap-3 w-full">

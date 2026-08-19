@@ -3,9 +3,6 @@ import { useQuery } from "@tanstack/react-query";
 import { useNavigate } from "react-router-dom";
 import {
   BottomNavBar,
-  PrimaryButton,
-  SecondaryButton,
-  TextInput,
   Toast,
   VENDOR_NAV_ITEMS,
 } from "../components";
@@ -92,12 +89,6 @@ const CookingPotIcon = () => (
   </svg>
 );
 
-const CloseIcon = () => (
-  <svg width="20" height="20" viewBox="0 0 20 20" fill="none" aria-hidden="true">
-    <path d="M5 5L15 15M5 15L15 5" stroke="#444748" strokeWidth="1.8" strokeLinecap="round" />
-  </svg>
-);
-
 
 
 // ─── Component ─────────────────────────────────────────────────────────────────
@@ -134,14 +125,6 @@ const VendorDashboard = () => {
     return "Good evening,";
   })();
 
-  // ─── Free Feature State (Create Listing is always unlocked & free) ───────────
-  const [showCreateListingModal, setShowCreateListingModal] = useState(false);
-  const [newListing, setNewListing] = useState({
-    title: "",
-    targetStop: "",
-    offer: "",
-    category: "Food & Drinks",
-  });
   const [toastMessage, setToastMessage] = useState<string | null>(null);
 
   const showToast = (msg: string) => {
@@ -149,20 +132,13 @@ const VendorDashboard = () => {
     setTimeout(() => setToastMessage(null), 3500);
   };
 
-  const handleCreateListingSubmit = (e: React.FormEvent) => {
-    e.preventDefault();
-    if (!newListing.title.trim() || !newListing.targetStop.trim()) return;
-
-    // TODO: replace with real API response when create listing endpoint exists (POST /api/business/listings)
-    setShowCreateListingModal(false);
-    setNewListing({ title: "", targetStop: "", offer: "", category: "Food & Drinks" });
-    showToast("Promotional listing published successfully!");
-  };
-
   // ─── Locked State Actions ───────────────────────────────────────────────────
   // TODO: replace with real subscriptionStatus check when the endpoint exists (GET /api/business/subscription)
   // Cross-reference: BTBS-BACKEND/src/models/business.model.js tracks subscriptionStatus ('trial' | 'active' | 'expired')
-  const handleLockedAction = (_featureName?: string) => {
+  const handleLockedAction = (featureName?: string) => {
+    if (featureName) {
+      showToast(`${featureName} is a premium feature.`);
+    }
     navigate("/vendor/upgrade");
   };
 
@@ -404,78 +380,6 @@ const VendorDashboard = () => {
 
         </div>
       </main>
-
-      {/* ── Create Listing Modal (Free for all vendors) ─────────────── */}
-      {showCreateListingModal && (
-        <div className="fixed inset-0 z-50 bg-black/40 backdrop-blur-xs flex items-center justify-center p-4">
-          <div className="bg-white rounded-2xl max-w-md w-full p-6 shadow-xl flex flex-col gap-4 animate-in fade-in zoom-in duration-150">
-            <div className="flex items-center justify-between border-b border-neutral-100 pb-3">
-              <div>
-                <h2 className="text-lg font-bold text-[#1C1B1B] m-0">Create Promotional Listing</h2>
-                <p className="text-xs text-[#747878] m-0">Free promotion for transit commuters</p>
-              </div>
-              <button
-                onClick={() => setShowCreateListingModal(false)}
-                className="p-1 rounded-lg hover:bg-neutral-100 text-[#444748] transition-colors"
-                aria-label="Close modal"
-              >
-                <CloseIcon />
-              </button>
-            </div>
-
-            <form onSubmit={handleCreateListingSubmit} className="flex flex-col gap-4">
-              <TextInput
-                label="Offer Headline / Promotion Title"
-                placeholder="e.g. 20% Off All Cold Drinks & Pastries"
-                value={newListing.title}
-                onChange={(e) => setNewListing((prev) => ({ ...prev, title: e.target.value }))}
-                required
-              />
-
-              <TextInput
-                label="Target Bus Stop / Terminal"
-                placeholder="e.g. Ojota Bus Terminus, CMS, Ikeja"
-                value={newListing.targetStop}
-                onChange={(e) => setNewListing((prev) => ({ ...prev, targetStop: e.target.value }))}
-                required
-              />
-
-              <div className="grid grid-cols-2 gap-3">
-                <TextInput
-                  label="Discount / Offer Tag"
-                  placeholder="e.g. 20% OFF"
-                  value={newListing.offer}
-                  onChange={(e) => setNewListing((prev) => ({ ...prev, offer: e.target.value }))}
-                />
-
-                <div className="flex flex-col gap-1.5">
-                  <label className="text-sm font-medium text-gray-700 px-1">Category</label>
-                  <select
-                    value={newListing.category}
-                    onChange={(e) => setNewListing((prev) => ({ ...prev, category: e.target.value }))}
-                    className="w-full h-11 bg-gray-50 rounded-lg px-3 text-sm text-gray-900 border border-gray-200 outline-none"
-                  >
-                    <option value="Food & Drinks">Food & Drinks</option>
-                    <option value="Electronics & Repairs">Electronics & Repairs</option>
-                    <option value="Fashion & Retail">Fashion & Retail</option>
-                    <option value="Health & Beauty">Health & Beauty</option>
-                    <option value="Services & Logistics">Services & Logistics</option>
-                  </select>
-                </div>
-              </div>
-
-              <div className="flex justify-end gap-2 pt-3 border-t border-neutral-100">
-                <SecondaryButton onClick={() => setShowCreateListingModal(false)} width="auto">
-                  Cancel
-                </SecondaryButton>
-                <PrimaryButton type="submit" width="auto">
-                  Publish Listing
-                </PrimaryButton>
-              </div>
-            </form>
-          </div>
-        </div>
-      )}
 
       {/* ── Toast Notification ───────────────────────────────────────── */}
       <Toast message={toastMessage} />

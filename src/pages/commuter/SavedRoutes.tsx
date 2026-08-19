@@ -212,7 +212,7 @@ const SavedRoutes = () => {
 
           {/* Subtitle / Counter */}
           <div className="flex items-center justify-between">
-            <p className="text-sm text-[#444748] m-0">
+            <p className="text-sm font-semibold text-[#444748] m-0">
               Quick access to your regular commute corridors
             </p>
             <span className="text-xs font-semibold px-2.5 py-1 rounded-full bg-[#F4F1EE] text-[#5A5C5D]">
@@ -311,7 +311,7 @@ const SavedRoutes = () => {
                         {route.duration}
                       </span>
                       <span>•</span>
-                      <span className="font-medium text-[#1C1B1B]">
+                      <span className="font-bold text-[#1C1B1B]">
                         ₦{route.fareLow} - ₦{route.fareHigh}
                       </span>
                     </div>

@@ -1,13 +1,32 @@
 import { useNavigate } from "react-router-dom";
 import { PrimaryButton } from "../../components";
+import onboard2Img from "../../assets/onboard2.jpg";
 
 const Onboarding2 = () => {
   const navigate = useNavigate();
 
   return (
-    <main className="min-h-screen bg-[#F5F5F0] flex flex-col">
+    <main className="min-h-screen flex flex-col relative overflow-hidden">
+
+      {/* Full-bleed background photo */}
+      <img
+        src={onboard2Img}
+        alt=""
+        aria-hidden="true"
+        className="absolute inset-0 w-full h-full object-cover object-center pointer-events-none"
+        style={{ opacity: 0.12 }}
+        draggable={false}
+      />
+
+      {/* Warm tint — lets photo show through */}
+      <div
+        className="absolute inset-0 pointer-events-none"
+        aria-hidden="true"
+        style={{ background: "rgba(245,245,240,0.62)" }}
+      />
+
       {/* Skip */}
-      <div className="flex justify-end px-5 pt-12">
+      <div className="relative flex justify-end px-5 pt-12">
         <button
           type="button"
           onClick={() => navigate("/auth/role-select")}
@@ -18,9 +37,23 @@ const Onboarding2 = () => {
       </div>
 
       {/* Illustration */}
-      <div className="flex-1 min-h-0 flex items-center justify-center px-6 py-4">
+      <div className="relative flex-1 min-h-0 flex items-center justify-center px-6 py-4">
         <div className="relative flex items-center justify-center w-52 h-52">
-          <div className="absolute top-0 left-8 w-28 h-28 rounded-full bg-[#00C9A7]/10" />
+          {/* Photo circle — replaces the plain teal circle */}
+          <div className="absolute top-0 left-8 w-28 h-28 rounded-full overflow-hidden shadow-md">
+            <img
+              src={onboard2Img}
+              alt=""
+              aria-hidden="true"
+              className="w-full h-full object-cover object-center"
+              draggable={false}
+            />
+            <div
+              className="absolute inset-0 rounded-full"
+              style={{ background: "rgba(245,245,240,0.30)" }}
+              aria-hidden="true"
+            />
+          </div>
           <div className="relative z-10 bg-white rounded-2xl shadow-md border border-gray-100 p-3 w-44">
             <div className="flex items-center justify-between mb-2">
               <span className="bg-[#00C9A7] text-white text-[10px] font-bold px-2.5 py-1 rounded-full">
@@ -45,7 +78,7 @@ const Onboarding2 = () => {
       </div>
 
       {/* Text + controls */}
-      <div className="px-6 pb-12 flex flex-col items-center gap-6">
+      <div className="relative px-6 pb-12 flex flex-col items-center gap-6">
         <div className="flex flex-col gap-2 text-center max-w-xs">
           <h2 className="text-base font-bold text-gray-900 leading-snug">
             Discover trusted routes &amp; nearby essentials.

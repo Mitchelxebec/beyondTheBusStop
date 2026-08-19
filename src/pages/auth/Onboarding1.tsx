@@ -21,11 +21,11 @@ const Onboarding1 = () => {
         draggable={false}
       />
 
-      {/* Warm tint layer — pulls the photo toward the app's #F5F5F0 base */}
+      {/* Warm tint layer — lets more of the photo show through */}
       <div
         className="absolute inset-0 pointer-events-none"
         aria-hidden="true"
-        style={{ background: "rgba(245,245,240,0.82)" }}
+        style={{ background: "rgba(245,245,240,0.62)" }}
       />
 
       {/* Skip — exactly as before, now relative so it sits above layers */}

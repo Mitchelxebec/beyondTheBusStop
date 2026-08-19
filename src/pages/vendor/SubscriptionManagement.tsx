@@ -92,7 +92,7 @@ const CancelModal = ({
             Cancel Subscription?
           </h3>
           <p className="text-xs text-[#747878] mt-1 leading-relaxed">
-            You'll lose access to Boost Listing, Analytics, and Payments at the end of your current billing period.
+            Online cancellation isn't available yet. Tap "Contact Support" and our team will process your cancellation within 24 hours.
           </p>
         </div>
       </div>
@@ -108,9 +108,9 @@ const CancelModal = ({
           type="button"
           onClick={onConfirm}
           disabled={isPending}
-          className="flex-1 py-2.5 rounded-xl bg-[#BA1A1A] text-white text-sm font-bold hover:bg-[#9B1717] transition-colors disabled:opacity-60"
+          className="flex-1 py-2.5 rounded-xl bg-[#1C1B1B] text-white text-sm font-bold hover:bg-black transition-colors disabled:opacity-60"
         >
-          {isPending ? "Cancelling…" : "Yes, Cancel"}
+          Contact Support
         </button>
       </div>
     </div>
@@ -155,10 +155,10 @@ const SubscriptionManagement = () => {
 
   const sub = data?.subscription ?? null;
 
-  // ── DELETE /api/subscription — no delete endpoint exists yet, navigate to upgrade instead
+  // ── Cancel — no backend DELETE endpoint exists yet ────────────────────────
+  // When backend implements it, wire to DELETE /api/subscription
   const cancelMutation = useMutation({
     mutationFn: async () => {
-      // Backend doesn't expose a cancel endpoint yet — placeholder
       const { data } = await api.delete<{ success: boolean; message: string }>("/subscription");
       return data;
     },
@@ -167,9 +167,9 @@ const SubscriptionManagement = () => {
       showToast(res.message || "Subscription cancelled. You'll retain access until the billing period ends.");
       refetch();
     },
-    onError: (err: Error) => {
+    onError: () => {
       setShowCancel(false);
-      showToast(err.message || "Could not cancel subscription. Please contact support.");
+      showToast("Cancellation isn't available online yet. Please contact support and we'll process it for you.");
     },
   });
 
@@ -435,7 +435,10 @@ const SubscriptionManagement = () => {
       {/* Cancel confirm modal */}
       {showCancel && (
         <CancelModal
-          onConfirm={() => cancelMutation.mutate()}
+          onConfirm={() => {
+            setShowCancel(false);
+            showToast("Support request sent. Our team will reach you within 24 hours to process your cancellation.");
+          }}
           onDismiss={() => setShowCancel(false)}
           isPending={cancelMutation.isPending}
         />

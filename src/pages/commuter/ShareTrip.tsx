@@ -1,39 +1,17 @@
-import { useState, useRef } from "react";
+import { useState, useEffect } from "react";
 import { useNavigate, useLocation } from "react-router-dom";
 import { useAuth } from "../../contexts/AuthContext";
 import {
   BottomNavBar,
   DEFAULT_NAV_ITEMS,
   PrimaryButton,
+  SecondaryButton,
   SectionLabel,
   Toast,
 } from "../../components";
-
-// ─── Types ─────────────────────────────────────────────────────────────────────
-
-interface TrustedContact {
-  id: string;
-  name: string;
-  relation: string;
-  initials: string;
-  color: string;
-  selected: boolean;
-}
-
-// ─── Static data ──────────────────────────────────────────────────────────────
-// TODO: replace with GET /api/user/trusted-contacts
-// Response shape: { contacts: { id, name, relation, initials, color }[] }
-
-const DEFAULT_CONTACTS: TrustedContact[] = [
-  {
-    id: "1",
-    name: "Blessing",
-    relation: "Sister • Trusted Contact",
-    initials: "B",
-    color: "#F8BA2A",
-    selected: true,
-  },
-];
+import { useCreateTrip, useStartTrip, useEndTrip } from "../../hooks/useTrips";
+import { shareTrip } from "../../services/trips";
+import type { Trip } from "../../types/trips";
 
 // ─── Icons ─────────────────────────────────────────────────────────────────────
 
@@ -64,41 +42,51 @@ const FareIcon = () => (
   </svg>
 );
 
-const BusIcon = () => (
-  <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
-    <path d="M8 6h8M3 6h18M3 10h18M5 18H3v-8h18v8h-2M9 18h6" />
-    <circle cx="7.5" cy="18.5" r="1.5" />
-    <circle cx="16.5" cy="18.5" r="1.5" />
-  </svg>
-);
-
 const ShieldIcon = () => (
   <svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor" stroke="none" aria-hidden="true">
     <path d="M12 2L4 6v6c0 5.25 3.5 10.15 8 11 4.5-.85 8-5.75 8-11V6l-8-4z" />
   </svg>
 );
 
-const SendIcon = () => (
+const WhatsAppIcon = () => (
+  <svg width="18" height="18" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true">
+    <path d="M17.472 14.382c-.297-.149-1.758-.867-2.03-.967-.273-.099-.471-.148-.67.15-.197.297-.767.966-.94 1.164-.173.199-.347.223-.644.075-.297-.15-1.255-.463-2.39-1.475-.883-.788-1.48-1.761-1.653-2.059-.173-.297-.018-.458.13-.606.134-.133.298-.347.446-.52.149-.174.198-.298.298-.497.099-.198.05-.371-.025-.52-.075-.149-.669-1.612-.916-2.207-.242-.579-.487-.5-.669-.51-.173-.008-.371-.01-.57-.01-.198 0-.52.074-.792.372-.272.297-1.04 1.016-1.04 2.479 0 1.462 1.065 2.875 1.213 3.074.149.198 2.096 3.2 5.077 4.487.709.306 1.262.489 1.694.625.712.227 1.36.195 1.871.118.571-.085 1.758-.719 2.006-1.413.248-.694.248-1.289.173-1.413-.074-.124-.272-.198-.57-.347m-5.421 7.403h-.004a9.87 9.87 0 01-5.031-1.378l-.361-.214-3.741.982.998-3.648-.235-.374a9.86 9.86 0 01-1.51-5.26c.001-5.45 4.436-9.884 9.888-9.884 2.64 0 5.122 1.03 6.988 2.898a9.825 9.825 0 012.893 6.994c-.003 5.45-4.437 9.884-9.885 9.884m8.413-18.297A11.815 11.815 0 0012.05 0C5.495 0 .16 5.335.157 11.892c0 2.096.547 4.142 1.588 5.945L.057 24l6.305-1.654a11.882 11.882 0 005.683 1.448h.005c6.554 0 11.89-5.335 11.893-11.893a11.821 11.821 0 00-3.48-8.413z" />
+  </svg>
+);
+
+const CopyIcon = () => (
   <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
-    <line x1="22" y1="2" x2="11" y2="13" />
-    <polygon points="22 2 15 22 11 13 2 9 22 2" />
+    <rect x="9" y="9" width="13" height="13" rx="2" ry="2" />
+    <path d="M5 15H4a2 2 0 01-2-2V4a2 2 0 012-2h9a2 2 0 012 2v1" />
   </svg>
 );
 
-const AddContactIcon = () => (
-  <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
-    <path d="M16 21v-2a4 4 0 00-4-4H6a4 4 0 00-4 4v2" />
-    <circle cx="9" cy="7" r="4" />
-    <line x1="19" y1="8" x2="19" y2="14" />
-    <line x1="16" y1="11" x2="22" y2="11" />
+const CheckCircleIcon = () => (
+  <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#00C9A7" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
+    <path d="M22 11.08V12a10 10 0 11-5.93-9.14" />
+    <polyline points="22 4 12 14.01 9 11.01" />
   </svg>
 );
 
-const CheckIcon = () => (
-  <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="white" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
-    <polyline points="20 6 9 17 4 12" />
+const StopIcon = () => (
+  <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
+    <rect x="3" y="3" width="18" height="18" rx="2" />
   </svg>
 );
+
+const ShareIcon = () => (
+  <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
+    <circle cx="18" cy="5" r="3" />
+    <circle cx="6" cy="12" r="3" />
+    <circle cx="18" cy="19" r="3" />
+    <line x1="8.59" y1="13.51" x2="15.42" y2="17.49" />
+    <line x1="15.41" y1="6.51" x2="8.59" y2="10.49" />
+  </svg>
+);
+
+// ─── Step definitions ──────────────────────────────────────────────────────────
+
+type Step = "prepare" | "sharing" | "done";
 
 // ─── Page ──────────────────────────────────────────────────────────────────────
 
@@ -107,20 +95,18 @@ const ShareTrip = () => {
   const location = useLocation();
   const { session } = useAuth();
 
-  // Route data passed via location.state from RouteDetails CTA
-  // TODO: when wiring RouteDetails → ShareTrip, pass:
-  //   navigate("/share", { state: { origin, destination, fare, routeId } })
-  const stateRoute = (location.state as {
+  // Route data passed via location.state from RouteDetails
+  const stateRoute = location.state as {
     origin?: string;
     destination?: string;
     fare?: string;
     routeId?: string;
-  } | null);
+  } | null;
 
-  const origin      = stateRoute?.origin      ?? "Egbeda";
-  const destination = stateRoute?.destination ?? "Ikeja";
-  const fare        = stateRoute?.fare        ?? "₦400";
-  // const routeId  = stateRoute?.routeId;  // used in POST payload when wiring
+  const origin      = stateRoute?.origin      ?? "–";
+  const destination = stateRoute?.destination ?? "–";
+  const fare        = stateRoute?.fare        ?? "–";
+  const routeId     = stateRoute?.routeId;
 
   const now = new Date().toLocaleTimeString("en-US", {
     hour: "numeric",
@@ -128,41 +114,114 @@ const ShareTrip = () => {
     hour12: true,
   });
 
-  const [contacts, setContacts] = useState<TrustedContact[]>(DEFAULT_CONTACTS);
-  const [vehicleDetail, setVehicleDetail] = useState("");
-  const [toastMsg, setToastMsg] = useState<string | null>(null);
-  const vehicleRef = useRef<HTMLInputElement>(null);
+  // ── State ──────────────────────────────────────────────────────────────────
+  const [step, setStep]           = useState<Step>("prepare");
+  const [activeTrip, setActiveTrip] = useState<Trip | null>(null);
+  const [sharePayload, setSharePayload] = useState<{
+    shareToken: string;
+    shareUrl: string;
+    whatsappMessage: string;
+  } | null>(null);
+  const [copied, setCopied]       = useState(false);
+  const [toastMsg, setToastMsg]   = useState<string | null>(null);
+  const [endConfirm, setEndConfirm] = useState(false);
 
-  const toggleContact = (id: string) => {
-    setContacts(prev =>
-      prev.map(c => c.id === id ? { ...c, selected: !c.selected } : c)
-    );
-  };
+  // ── Mutations ──────────────────────────────────────────────────────────────
+  const createTripMutation = useCreateTrip();
+  const startTripMutation  = useStartTrip();
+  const endTripMutation    = useEndTrip();
 
-  const selectedCount = contacts.filter(c => c.selected).length;
+  // ── Derived ───────────────────────────────────────────────────────────────
+  const isBusy =
+    createTripMutation.isPending ||
+    startTripMutation.isPending ||
+    endTripMutation.isPending;
 
-  const handleShare = () => {
-    if (selectedCount === 0) {
-      setToastMsg("Select at least one contact to share with.");
-      setTimeout(() => setToastMsg(null), 3000);
-      return;
-    }
-    // TODO: POST /api/trips/share
-    // Body: { origin, destination, fare, vehicleDetail, routeId, contactIds: string[] }
-    // On success: navigate to confirmation or show persistent tracking UI
-    setToastMsg("Trip shared! Your contacts have been notified.");
+  // ── Show toast helper ──────────────────────────────────────────────────────
+  const showToast = (msg: string) => {
+    setToastMsg(msg);
     setTimeout(() => setToastMsg(null), 3500);
   };
 
+  // ── No routeId guard ──────────────────────────────────────────────────────
+  useEffect(() => {
+    if (!routeId) {
+      showToast("No route selected. Please choose a route first.");
+    }
+  }, [routeId]);
+
+  // ─── Step 1 → 2: Create trip + start it + fetch share payload ──────────────
+  const handleStartSharing = async () => {
+    if (!routeId) {
+      showToast("No route selected. Go back and pick a route.");
+      return;
+    }
+
+    try {
+      // 1. Create the trip record
+      const createRes = await createTripMutation.mutateAsync(routeId);
+      const trip = createRes.trip;
+
+      // 2. Immediately start the trip so live tracking is enabled
+      await startTripMutation.mutateAsync(trip._id);
+
+      // 3. Fetch share payload (token + WhatsApp message + URL)
+      const shareRes = await shareTrip(trip._id);
+
+      setActiveTrip({ ...trip, status: "active" });
+      setSharePayload(shareRes.share);
+      setStep("sharing");
+    } catch (err: unknown) {
+      const msg = err instanceof Error ? err.message : "Something went wrong.";
+      showToast(msg);
+    }
+  };
+
+  // ─── Open WhatsApp with pre-filled message ────────────────────────────────
+  const handleWhatsApp = () => {
+    if (!sharePayload) return;
+    const text = encodeURIComponent(
+      `${sharePayload.whatsappMessage}\n\n🔗 Track live: ${sharePayload.shareUrl}`
+    );
+    window.open(`https://wa.me/?text=${text}`, "_blank", "noopener,noreferrer");
+  };
+
+  // ─── Copy share link to clipboard ────────────────────────────────────────
+  const handleCopyLink = async () => {
+    if (!sharePayload?.shareUrl) return;
+    try {
+      await navigator.clipboard.writeText(sharePayload.shareUrl);
+      setCopied(true);
+      setTimeout(() => setCopied(false), 2500);
+    } catch {
+      showToast("Could not copy link. Please copy it manually.");
+    }
+  };
+
+  // ─── End trip ─────────────────────────────────────────────────────────────
+  const handleEndTrip = async () => {
+    if (!activeTrip) return;
+    setEndConfirm(false);
+    try {
+      await endTripMutation.mutateAsync(activeTrip._id);
+      setStep("done");
+    } catch (err: unknown) {
+      const msg = err instanceof Error ? err.message : "Could not end trip.";
+      showToast(msg);
+    }
+  };
+
+  // ─── Render ────────────────────────────────────────────────────────────────
   return (
     <div className="flex flex-col min-h-dvh bg-[#F5F5F0]">
-
-      {/* ── Navbar ─────────────────────────────────────────────────────────── */}
       <BottomNavBar items={DEFAULT_NAV_ITEMS} />
 
-      {/* ── Page sub-header ────────────────────────────────────────────────── */}
+      {/* ── Sub-header ──────────────────────────────────────────────────────── */}
       <div className="w-full pt-16">
-        <div className="px-4 sm:px-6 py-4 w-full mx-auto flex items-center justify-between" style={{ maxWidth: "min(100%, 72rem)" }}>
+        <div
+          className="px-4 sm:px-6 py-4 w-full mx-auto flex items-center justify-between"
+          style={{ maxWidth: "min(100%, 72rem)" }}
+        >
           <div className="flex items-center gap-3">
             <button
               onClick={() => navigate(-1)}
@@ -173,14 +232,18 @@ const ShareTrip = () => {
             </button>
             <div>
               <h1 className="text-base font-semibold text-[#1C1B1B] m-0">Share Trip</h1>
-              <p className="text-xs text-[#747878] m-0">Keep your loved ones informed about your journey.</p>
+              <p className="text-xs text-[#747878] m-0">
+                {step === "prepare" && "Start your trip and get a live tracking link."}
+                {step === "sharing" && "Your trip is live — share the link with your contacts."}
+                {step === "done"    && "Trip completed. Stay safe!"}
+              </p>
             </div>
           </div>
 
           {session?.user && (
             <div className="hidden sm:flex items-center gap-1.5 px-3 py-1.5 rounded-full bg-white border border-black/5 text-xs text-[#444748] shadow-2xs">
               <ProfileIcon />
-              <span className="font-medium truncate max-w-[140px]">
+              <span className="font-medium truncate max-w-35">
                 {session.user.fullName || "Commuter"}
               </span>
             </div>
@@ -188,26 +251,23 @@ const ShareTrip = () => {
         </div>
       </div>
 
-      {/* ── Main content ───────────────────────────────────────────────────── */}
+      {/* ── Main ──────────────────────────────────────────────────────────────── */}
       <main
         className="flex-1 w-full mx-auto px-4 sm:px-6 pb-12 flex flex-col gap-6"
         style={{ maxWidth: "min(100%, 72rem)" }}
         aria-label="Share trip content"
       >
-
-        {/* On wide screens: two-column layout — route card + form */}
         <div className="flex flex-col lg:flex-row gap-6 items-start">
 
-          {/* ── Left / top: current route card ──────────────────────────── */}
-          <div className="w-full lg:w-80 shrink-0">
-            {/* TODO: replace static values with data from location.state or active trip API */}
+          {/* ── Route card ──────────────────────────────────────────────────── */}
+          <div className="w-full lg:w-80 shrink-0 flex flex-col gap-4">
             <div className="bg-[#00C9A7] rounded-2xl p-5 flex flex-col gap-4">
               <div className="flex items-start justify-between gap-3">
                 <div className="flex flex-col gap-1.5">
                   <span className="text-[10px] font-bold tracking-widest uppercase text-[#005047]">
-                    Current Route
+                    {step === "sharing" ? "Active Trip" : step === "done" ? "Completed Trip" : "Selected Route"}
                   </span>
-                  <div className="flex items-center gap-2 text-white font-bold text-lg">
+                  <div className="flex items-center gap-2 text-white font-bold text-lg flex-wrap">
                     <span>{origin}</span>
                     <span className="text-white/60">→</span>
                     <span>{destination}</span>
@@ -222,102 +282,206 @@ const ShareTrip = () => {
                 <FareIcon />
                 <span>Est. Fare: <span className="font-bold">{fare}</span></span>
               </div>
+
+              {/* Status badge */}
+              {step !== "prepare" && (
+                <div className={`flex items-center gap-2 px-3 py-1.5 rounded-full text-xs font-bold w-fit ${
+                  step === "sharing" ? "bg-white/20 text-white" : "bg-white/10 text-white/80"
+                }`}>
+                  <span className={`w-2 h-2 rounded-full ${step === "sharing" ? "bg-white animate-pulse" : "bg-white/50"}`} />
+                  {step === "sharing" ? "Live — Tracking Active" : "Trip Ended"}
+                </div>
+              )}
             </div>
 
-            {/* Safety notice — stays near the route card */}
-            <div className="flex items-start gap-3 bg-[#005047] text-white rounded-xl p-4 mt-4">
+            {/* Safety notice */}
+            <div className="flex items-start gap-3 bg-[#005047] text-white rounded-xl p-4">
               <span className="shrink-0 mt-0.5 text-[#79F7E3]">
                 <ShieldIcon />
               </span>
               <p className="text-xs leading-relaxed text-white/90">
-                Sharing your trip sends a live tracking link. They can see your
-                location until you reach your destination.
+                {step === "prepare"
+                  ? "Starting a trip generates a live tracking link. Anyone with the link can follow your journey until you end it."
+                  : step === "sharing"
+                  ? "Your trip is live. Share the link via WhatsApp or copy it to send through any channel."
+                  : "Your trip has ended. The tracking link is no longer active."}
               </p>
             </div>
           </div>
 
-          {/* ── Right / bottom: share form ───────────────────────────────── */}
+          {/* ── Right panel ─────────────────────────────────────────────────── */}
           <div className="flex-1 flex flex-col gap-5 w-full">
 
-            {/* Share with */}
-            <section className="flex flex-col gap-3">
-              <SectionLabel>Share With</SectionLabel>
-              <div className="flex flex-col gap-2">
-                {contacts.map(contact => (
-                  <button
-                    key={contact.id}
-                    type="button"
-                    onClick={() => toggleContact(contact.id)}
-                    className={`
-                      w-full flex items-center gap-3 p-3.5 rounded-xl border transition-all duration-150
-                      ${contact.selected
-                        ? "bg-[#F8BA2A]/15 border-[#F8BA2A]/40"
-                        : "bg-white border-gray-100 hover:border-gray-200"
-                      }
-                    `}
-                    aria-pressed={contact.selected}
-                  >
-                    <div
-                      className="w-10 h-10 rounded-full flex items-center justify-center text-sm font-bold text-[#1C1B1B] shrink-0"
-                      style={{ backgroundColor: contact.color }}
-                    >
-                      {contact.initials}
-                    </div>
-                    <div className="flex flex-col items-start flex-1 min-w-0">
-                      <span className="text-sm font-bold text-[#1C1B1B]">{contact.name}</span>
-                      <span className="text-xs text-[#747878]">{contact.relation}</span>
-                    </div>
-                    <div className={`w-6 h-6 rounded-full flex items-center justify-center shrink-0 transition-all ${contact.selected ? "bg-[#1C1B1B]" : "bg-gray-100"}`}>
-                      {contact.selected && <CheckIcon />}
-                    </div>
-                  </button>
-                ))}
+            {/* ── STEP: prepare ─────────────────────────────────────────────── */}
+            {step === "prepare" && (
+              <div className="flex flex-col gap-5">
+                <section className="bg-white rounded-2xl p-5 border border-black/5 flex flex-col gap-3">
+                  <SectionLabel>How it works</SectionLabel>
+                  <ol className="flex flex-col gap-3 list-none m-0 p-0">
+                    {[
+                      { n: "1", text: "Tap \"Start Trip & Get Link\" below." },
+                      { n: "2", text: "Your trip goes live and a unique tracking link is generated." },
+                      { n: "3", text: "Share the link via WhatsApp or copy it to any chat app." },
+                      { n: "4", text: "When you arrive, tap \"End Trip\" to stop sharing." },
+                    ].map(({ n, text }) => (
+                      <li key={n} className="flex items-start gap-3">
+                        <span className="w-6 h-6 rounded-full bg-[#00C9A7]/15 text-[#005047] text-xs font-bold flex items-center justify-center shrink-0">
+                          {n}
+                        </span>
+                        <span className="text-sm text-[#444748]">{text}</span>
+                      </li>
+                    ))}
+                  </ol>
+                </section>
 
-                {/* Add contact — TODO: open contact picker modal */}
-                <button
-                  type="button"
-                  className="w-full flex items-center gap-3 p-3.5 rounded-xl border border-dashed border-gray-300 bg-white text-[#747878] hover:border-gray-400 hover:text-[#1C1B1B] transition-colors"
-                  aria-label="Add another contact"
-                >
-                  <div className="w-10 h-10 rounded-full bg-gray-100 flex items-center justify-center shrink-0">
-                    <AddContactIcon />
+                {!routeId && (
+                  <div className="bg-[#FEF7E0] border border-[#FFC72C]/40 rounded-xl p-4 text-xs text-[#6F5400] font-medium">
+                    No route selected. Please go back and open a route first, then tap "Share Trip".
                   </div>
-                  <span className="text-sm font-medium">Add another contact...</span>
-                </button>
-              </div>
-            </section>
+                )}
 
-            {/* Vehicle details */}
-            <section className="flex flex-col gap-3">
-              <SectionLabel>Vehicle Details (Optional)</SectionLabel>
-              {/* TODO: send vehicleDetail in POST /api/trips/share body */}
-              <div
-                className="flex items-center gap-3 bg-white rounded-xl border border-gray-100 px-4 py-3 focus-within:border-[#00C9A7]/60 transition-colors cursor-text"
-                onClick={() => vehicleRef.current?.focus()}
-              >
-                <span className="text-[#747878] shrink-0"><BusIcon /></span>
-                <input
-                  ref={vehicleRef}
-                  type="text"
-                  value={vehicleDetail}
-                  onChange={e => setVehicleDetail(e.target.value)}
-                  placeholder="e.g., White Danfo, Plate: KJA-123"
-                  className="flex-1 bg-transparent text-sm text-[#1C1B1B] placeholder-gray-400 outline-none"
-                  aria-label="Vehicle description (optional)"
-                />
-              </div>
-            </section>
+                <PrimaryButton
+                  width="full"
+                  onClick={handleStartSharing}
+                  disabled={isBusy || !routeId}
+                >
+                  <ShareIcon />
+                  {isBusy ? "Starting trip…" : "Start Trip & Get Link"}
+                </PrimaryButton>
 
-            {/* CTA */}
-            <PrimaryButton
-              width="full"
-              onClick={handleShare}
-              disabled={selectedCount === 0}
-              className="mt-2"
-            >
-              <SendIcon />
-              Share Now
-            </PrimaryButton>
+                <SecondaryButton width="full" onClick={() => navigate(-1)}>
+                  Cancel
+                </SecondaryButton>
+              </div>
+            )}
+
+            {/* ── STEP: sharing ─────────────────────────────────────────────── */}
+            {step === "sharing" && sharePayload && (
+              <div className="flex flex-col gap-5">
+
+                {/* Share link card */}
+                <section className="bg-white rounded-2xl p-5 border border-black/5 flex flex-col gap-4">
+                  <SectionLabel>Your Live Tracking Link</SectionLabel>
+
+                  {/* URL display */}
+                  <div className="flex items-center gap-2 bg-[#F4F1EE] rounded-xl px-4 py-3 border border-black/5">
+                    <span className="text-xs text-[#444748] flex-1 break-all font-mono leading-relaxed">
+                      {sharePayload.shareUrl}
+                    </span>
+                    <button
+                      type="button"
+                      onClick={handleCopyLink}
+                      className="shrink-0 p-2 rounded-lg bg-white border border-black/10 text-[#1C1B1B] hover:bg-[#00C9A7]/10 hover:border-[#00C9A7]/40 transition-all active:scale-95"
+                      aria-label="Copy link"
+                    >
+                      {copied ? <CheckCircleIcon /> : <CopyIcon />}
+                    </button>
+                  </div>
+
+                  {copied && (
+                    <p className="text-xs text-[#005047] font-semibold -mt-2">
+                      ✓ Link copied to clipboard
+                    </p>
+                  )}
+
+                  {/* WhatsApp CTA */}
+                  <button
+                    type="button"
+                    onClick={handleWhatsApp}
+                    className="w-full flex items-center justify-center gap-2.5 px-5 py-3.5 rounded-xl bg-[#25D366] text-white text-sm font-bold hover:bg-[#1EBE5D] active:scale-[0.98] transition-all shadow-sm"
+                  >
+                    <WhatsAppIcon />
+                    Share on WhatsApp
+                  </button>
+
+                  <SecondaryButton
+                    width="full"
+                    onClick={handleCopyLink}
+                  >
+                    <CopyIcon />
+                    {copied ? "Copied!" : "Copy Link"}
+                  </SecondaryButton>
+                </section>
+
+                {/* Trip info summary */}
+                <section className="bg-white rounded-2xl p-5 border border-black/5 flex flex-col gap-2">
+                  <SectionLabel>Trip Summary</SectionLabel>
+                  {activeTrip && (
+                    <dl className="grid grid-cols-2 gap-x-4 gap-y-2 text-sm">
+                      <dt className="text-[#747878] text-xs">Vehicle</dt>
+                      <dd className="font-semibold text-[#1C1B1B] capitalize m-0">{activeTrip.vehicleType}</dd>
+                      <dt className="text-[#747878] text-xs">Boarding</dt>
+                      <dd className="font-semibold text-[#1C1B1B] m-0">{activeTrip.boardingPoint.name}</dd>
+                      <dt className="text-[#747878] text-xs">Drop-off</dt>
+                      <dd className="font-semibold text-[#1C1B1B] m-0">{activeTrip.dropOffPoint.name}</dd>
+                      <dt className="text-[#747878] text-xs">Fare range</dt>
+                      <dd className="font-semibold text-[#1C1B1B] m-0">₦{activeTrip.fareLow} – ₦{activeTrip.fareHigh}</dd>
+                    </dl>
+                  )}
+                </section>
+
+                {/* End trip */}
+                {!endConfirm ? (
+                  <button
+                    type="button"
+                    onClick={() => setEndConfirm(true)}
+                    className="w-full flex items-center justify-center gap-2 px-5 py-3.5 rounded-xl border-2 border-[#BA1A1A]/40 bg-[#FCE8E6] text-[#BA1A1A] text-sm font-bold hover:bg-[#BA1A1A]/10 active:scale-[0.98] transition-all"
+                    disabled={isBusy}
+                  >
+                    <StopIcon />
+                    {isBusy ? "Ending trip…" : "End Trip"}
+                  </button>
+                ) : (
+                  <div className="flex flex-col gap-3 bg-[#FCE8E6] rounded-2xl p-4 border border-[#BA1A1A]/20">
+                    <p className="text-sm font-semibold text-[#BA1A1A] m-0">
+                      Are you sure you want to end this trip? The tracking link will stop working.
+                    </p>
+                    <div className="flex gap-3">
+                      <button
+                        type="button"
+                        onClick={handleEndTrip}
+                        disabled={isBusy}
+                        className="flex-1 py-2.5 rounded-xl bg-[#BA1A1A] text-white text-sm font-bold hover:bg-[#9B1717] transition-colors disabled:opacity-60"
+                      >
+                        {isBusy ? "Ending…" : "Yes, End Trip"}
+                      </button>
+                      <button
+                        type="button"
+                        onClick={() => setEndConfirm(false)}
+                        className="flex-1 py-2.5 rounded-xl bg-white border border-black/10 text-[#1C1B1B] text-sm font-semibold hover:bg-neutral-50 transition-colors"
+                      >
+                        Keep Sharing
+                      </button>
+                    </div>
+                  </div>
+                )}
+              </div>
+            )}
+
+            {/* ── STEP: done ────────────────────────────────────────────────── */}
+            {step === "done" && (
+              <div className="flex flex-col gap-5">
+                <section className="bg-white rounded-2xl p-6 border border-black/5 flex flex-col items-center gap-4 text-center">
+                  <div className="w-14 h-14 rounded-full bg-[#00C9A7]/15 flex items-center justify-center">
+                    <CheckCircleIcon />
+                  </div>
+                  <div>
+                    <h2 className="text-base font-bold text-[#1C1B1B] m-0">Trip Completed</h2>
+                    <p className="text-xs text-[#747878] mt-1">
+                      Your tracking link has been deactivated. You arrived safely!
+                    </p>
+                  </div>
+                </section>
+
+                <PrimaryButton width="full" onClick={() => navigate("/home")}>
+                  Back to Home
+                </PrimaryButton>
+
+                <SecondaryButton width="full" onClick={() => navigate("/routes")}>
+                  Browse Routes
+                </SecondaryButton>
+              </div>
+            )}
 
           </div>
         </div>

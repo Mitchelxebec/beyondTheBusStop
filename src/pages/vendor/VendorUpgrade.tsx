@@ -1,10 +1,12 @@
 import { useState } from "react";
 import { useNavigate } from "react-router-dom";
+import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { BottomNavBar, PrimaryButton, SecondaryButton, Toast, VENDOR_NAV_ITEMS } from "../../components";
 import { useAuth } from "../../contexts/AuthContext";
 import {
   openPaystackCheckout,
   verifyPayment,
+  getSubscriptionStatus,
   PLAN_PRICES,
   type PlanKey,
 } from "../../services/payment";
@@ -60,9 +62,27 @@ const PLANS: { key: PlanKey; label: string; badge?: string }[] = [
 const VendorUpgrade = () => {
   const navigate = useNavigate();
   const { session } = useAuth();
+  const queryClient = useQueryClient();
   const [selectedPlan, setSelectedPlan] = useState<PlanKey>("monthly");
   const [isProcessing, setIsProcessing] = useState(false);
   const [toastMsg, setToastMsg] = useState<string | null>(null);
+
+  // ── Live subscription status — drives badge and CTA text ──────────────────
+  const { data: subData } = useQuery({
+    queryKey: ["business", "subscription"],
+    queryFn: getSubscriptionStatus,
+    enabled: !!session?.token,
+  });
+  const subStatus = subData?.subscription?.status ?? null;
+
+  // Badge config
+  const statusBadge = subStatus === "active"
+    ? { label: "Pro Business · Active", bg: "bg-[#E6FAF6]", text: "text-[#005047]", border: "border-[#00C9A7]/40" }
+    : subStatus === "trial"
+    ? { label: "Trial Active", bg: "bg-[#FFF4D6]", text: "text-[#6F5400]", border: "border-[#FFC72C]/40" }
+    : subStatus === "expired"
+    ? { label: "Expired", bg: "bg-[#FCE8E6]", text: "text-[#BA1A1A]", border: "border-[#BA1A1A]/30" }
+    : { label: "Free Tier", bg: "bg-[#FFF4D6]", text: "text-[#6F5400]", border: "border-[#FFC72C]/40" };
 
   const businessName =
     session?.user?.businessName ||
@@ -101,8 +121,10 @@ const VendorUpgrade = () => {
             showToast("Subscription activated! Your plan is now active.");
           }
         }
+        // Invalidate subscription cache so badge updates everywhere immediately
+        queryClient.invalidateQueries({ queryKey: ["business", "subscription"] });
         setIsProcessing(false);
-        setTimeout(() => navigate("/vendor/home"), 1800);
+        setTimeout(() => navigate("/vendor/subscription"), 1800);
       },
 
       onCancel: () => {
@@ -155,8 +177,8 @@ const VendorUpgrade = () => {
                 <span className="text-xs text-[#747878]">{session.user.email}</span>
               )}
             </div>
-            <span className="px-3 py-1 rounded-full text-xs font-bold bg-[#FFF4D6] text-[#6F5400] border border-[#FFC72C]/40">
-              Free Tier
+            <span className={`px-3 py-1 rounded-full text-xs font-bold border ${statusBadge.bg} ${statusBadge.text} ${statusBadge.border}`}>
+              {statusBadge.label}
             </span>
           </div>
 
@@ -198,32 +220,54 @@ const VendorUpgrade = () => {
           {/* Plans grid */}
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
 
-            {/* Free Starter */}
+            {/* Free Starter / Current Plan */}
             <div className="bg-white rounded-2xl p-5 border border-neutral-200 flex flex-col justify-between gap-4">
               <div className="flex flex-col gap-2">
-                <span className="text-xs font-bold uppercase text-[#747878]">Free Starter</span>
-                <div className="flex items-baseline gap-1">
-                  <span className="text-2xl font-black text-[#1C1B1B]">₦0</span>
-                  <span className="text-xs text-[#747878]">/ forever</span>
-                </div>
-                <p className="text-xs text-[#747878]">Standard organic business presence at transit stops.</p>
+                <span className="text-xs font-bold uppercase text-[#747878]">
+                  {subStatus === "active" || subStatus === "trial" ? "Your Current Plan" : "Free Starter"}
+                </span>
+                {subStatus === "active" || subStatus === "trial" ? (
+                  <>
+                    <div className="flex items-baseline gap-1">
+                      <span className="text-2xl font-black text-[#005047]">Pro Business</span>
+                    </div>
+                    <p className="text-xs text-[#747878]">
+                      {subStatus === "trial" ? "Trial active — full features unlocked." : "All promotional & analytics tools active."}
+                    </p>
+                  </>
+                ) : (
+                  <>
+                    <div className="flex items-baseline gap-1">
+                      <span className="text-2xl font-black text-[#1C1B1B]">₦0</span>
+                      <span className="text-xs text-[#747878]">/ forever</span>
+                    </div>
+                    <p className="text-xs text-[#747878]">Standard organic business presence at transit stops.</p>
+                  </>
+                )}
                 <div className="flex flex-col gap-2 mt-2 pt-3 border-t border-neutral-100">
                   <div className="flex items-center gap-2 text-xs text-[#1C1B1B]">
                     <CheckIcon /><span>Create Listing (Free & Unlimited)</span>
                   </div>
-                  <div className="flex items-center gap-2 text-xs text-[#747878]">
-                    <LockIcon /><span className="line-through">Boost Listing</span>
+                  <div className={`flex items-center gap-2 text-xs ${subStatus === "active" || subStatus === "trial" ? "text-[#005047] font-semibold" : "text-[#747878]"}`}>
+                    {subStatus === "active" || subStatus === "trial" ? <CheckIcon /> : <LockIcon />}
+                    <span className={subStatus === "active" || subStatus === "trial" ? "" : "line-through"}>Boost Listing</span>
                   </div>
-                  <div className="flex items-center gap-2 text-xs text-[#747878]">
-                    <LockIcon /><span className="line-through">Payments & Invoicing</span>
+                  <div className={`flex items-center gap-2 text-xs ${subStatus === "active" || subStatus === "trial" ? "text-[#005047] font-semibold" : "text-[#747878]"}`}>
+                    {subStatus === "active" || subStatus === "trial" ? <CheckIcon /> : <LockIcon />}
+                    <span className={subStatus === "active" || subStatus === "trial" ? "" : "line-through"}>Payments & Invoicing</span>
                   </div>
-                  <div className="flex items-center gap-2 text-xs text-[#747878]">
-                    <LockIcon /><span className="line-through">Traffic Analytics</span>
+                  <div className={`flex items-center gap-2 text-xs ${subStatus === "active" || subStatus === "trial" ? "text-[#005047] font-semibold" : "text-[#747878]"}`}>
+                    {subStatus === "active" || subStatus === "trial" ? <CheckIcon /> : <LockIcon />}
+                    <span className={subStatus === "active" || subStatus === "trial" ? "" : "line-through"}>Traffic Analytics</span>
                   </div>
                 </div>
               </div>
-              <span className="text-center text-xs font-bold text-[#747878] py-2 bg-neutral-100 rounded-xl">
-                Current Plan
+              <span className={`text-center text-xs font-bold py-2 rounded-xl ${
+                subStatus === "active" || subStatus === "trial"
+                  ? "bg-[#E6FAF6] text-[#005047]"
+                  : "bg-neutral-100 text-[#747878]"
+              }`}>
+                {subStatus === "active" ? "Active Plan ✓" : subStatus === "trial" ? "Trial Active ✓" : "Current Plan"}
               </span>
             </div>
 

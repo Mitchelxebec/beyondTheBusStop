@@ -1,4 +1,3 @@
-import { useEffect } from "react";
 import { useNavigate } from "react-router-dom";
 import { AppLogo, PrimaryButton } from "../../components";
 import busesImg from "../../assets/buses.jpg";

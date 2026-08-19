@@ -1,11 +1,11 @@
-const CACHE_NAME = "btbs-shell-v1";
+const CACHE_NAME = "btbs-shell-v2";
 
-// Verified static frontend resources that exist in the project
+// Static app shell assets to pre-cache on install
 const PRECACHE_RESOURCES = [
   "/",
   "/manifest.json",
-  "/btbs.png",
-  "/favicon.svg",
+  "/btbsPNG.png",
+  "/btbsSVG.svg",
   "/icons.svg",
 ];
 

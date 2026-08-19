@@ -10,10 +10,7 @@ import {
   ArrowRight,
   TrendingUp,
   Coins,
-  Copy,
-  Mail,
   X,
-  ExternalLink,
   Store as VendorIcon,
   Info,
 } from "lucide-react";
@@ -24,7 +21,6 @@ import {
   ConfidenceBadge,
   PrimaryButton,
   SecondaryButton,
-  Toast,
   VENDOR_NAV_ITEMS,
 } from "../../components";
 import RouteMap from "../../components/RouteMap";
@@ -131,83 +127,7 @@ const RouteDetails = () => {
     return item.category === activeCategoryFilter;
   });
 
-  // ── 4. Share Trip State & Modal ─────────────────────────────────────────────
-  const [isShareModalOpen, setIsShareModalOpen] = useState(false);
-  const [shareEmail, setShareEmail] = useState("");
-  const [shareNote, setShareNote] = useState("");
-  const [isSendingEmail, setIsSendingEmail] = useState(false);
-  const [toastMessage, setToastMessage] = useState<string | null>(null);
-
-  const showToast = (msg: string) => {
-    setToastMessage(msg);
-    setTimeout(() => setToastMessage(null), 3500);
-  };
-
-  // Generate shareable link
-  const shareableUrl = typeof window !== "undefined" ? window.location.href : "";
-
-  const handleCopyLink = async () => {
-    try {
-      if (navigator.clipboard && navigator.clipboard.writeText) {
-        await navigator.clipboard.writeText(shareableUrl);
-        showToast("Live trip link copied to clipboard!");
-      } else {
-        showToast("Link: " + shareableUrl);
-      }
-    } catch {
-      showToast("Link: " + shareableUrl);
-    }
-  };
-
-  const handleNativeShare = async () => {
-    if (navigator.share) {
-      try {
-        await navigator.share({
-          title: `BTBS Route: ${originName} → ${destName}`,
-          text: `Check live transit fare & route corridor for ${originName} to ${destName} on Beyond the Bus Stop.`,
-          url: shareableUrl,
-        });
-      } catch {
-        // User dismissed share dialog
-      }
-    } else {
-      handleCopyLink();
-    }
-  };
-
-  const handleSendShareEmail = async (e: React.FormEvent) => {
-    e.preventDefault();
-    if (!shareEmail.trim()) {
-      showToast("Please enter a valid email address");
-      return;
-    }
-
-    setIsSendingEmail(true);
-
-    try {
-      if (navigator.clipboard && navigator.clipboard.writeText) {
-        await navigator.clipboard.writeText(shareableUrl);
-      }
-    } catch {
-      // ignore clipboard error
-    }
-
-    // =========================================================================
-    // TODO: replace with real backend trip-share endpoint (POST /api/routes/:id/share)
-    // when a dedicated route sharing controller is added to BTBS-BACKEND.
-    // The Brevo email utility (sendEmail.js) is generic, but currently only exposed
-    // internally for OTP / auth flows.
-    // =========================================================================
-    setTimeout(() => {
-      setIsSendingEmail(false);
-      setIsShareModalOpen(false);
-      setShareEmail("");
-      setShareNote("");
-      showToast("Link copied — share it directly for now, email delivery is coming soon");
-    }, 600);
-  };
-
-  // ── 5. Loading & Error States ───────────────────────────────────────────────
+  // ── 4. Loading & Error States ───────────────────────────────────────────────
   if (isRouteLoading) {
     return (
       <div className="flex flex-col min-h-dvh bg-[#FDFAF8]">
@@ -269,7 +189,14 @@ const RouteDetails = () => {
             trailing={
               <button
                 type="button"
-                onClick={() => setIsShareModalOpen(true)}
+                onClick={() => navigate("/share", {
+                  state: {
+                    origin: originName,
+                    destination: destName,
+                    fare: `₦${route.fareLow.toLocaleString()} – ₦${route.fareHigh.toLocaleString()}`,
+                    routeId: route._id,
+                  }
+                })}
                 className="w-9 h-9 rounded-xl bg-white border border-neutral-200 flex items-center justify-center text-[#1C1B1B] hover:bg-neutral-50 transition-colors shadow-2xs"
                 aria-label="Share trip details"
                 title="Share Trip"
@@ -556,15 +483,22 @@ const RouteDetails = () => {
             )}
           </section>
 
-          {/* 5 · Action Buttons: Share Trip & Confirmations ───────────────── */}
+          {/* 5 · Action Buttons ───────────────────────────────────────── */}
           <section className="flex flex-col sm:flex-row gap-3 pt-3">
             <PrimaryButton
               id="share-trip-btn"
-              onClick={() => setIsShareModalOpen(true)}
+              onClick={() => navigate("/share", {
+                state: {
+                  origin: originName,
+                  destination: destName,
+                  fare: `₦${route.fareLow.toLocaleString()} – ₦${route.fareHigh.toLocaleString()}`,
+                  routeId: route._id,
+                }
+              })}
               width="full"
             >
               <Share2 className="w-4 h-4" />
-              <span>Share Live Trip Details</span>
+              <span>Share Trip</span>
             </PrimaryButton>
 
             <SecondaryButton
@@ -577,146 +511,6 @@ const RouteDetails = () => {
           </section>
         </div>
       </main>
-
-      {/* ── 6. Share Trip Modal / Drawer ──────────────────────────────────── */}
-      {isShareModalOpen && (
-        <div
-          role="dialog"
-          aria-modal="true"
-          aria-labelledby="share-trip-modal-title"
-          className="fixed inset-0 z-50 bg-black/40 backdrop-blur-xs flex items-end sm:items-center justify-center p-0 sm:p-4"
-          onClick={() => setIsShareModalOpen(false)}
-        >
-          <div
-            className="bg-white rounded-t-3xl sm:rounded-2xl p-6 max-w-lg w-full shadow-2xl border border-black/10 flex flex-col gap-4 max-h-[90vh] overflow-y-auto animate-in slide-in-from-bottom-5 duration-200"
-            onClick={(e) => e.stopPropagation()}
-          >
-            {/* Header */}
-            <div className="flex items-center justify-between border-b border-black/8 pb-3">
-              <div className="flex items-center gap-2">
-                <div className="w-8 h-8 rounded-xl bg-[#79F7E3]/30 text-[#005047] flex items-center justify-center">
-                  <Share2 className="w-4 h-4" />
-                </div>
-                <div>
-                  <h3 id="share-trip-modal-title" className="text-base font-bold text-[#1C1B1B] m-0">
-                    Share Trip with Trusted Contact
-                  </h3>
-                  <span className="text-xs text-[#747878]">
-                    Keep loved ones informed of your transit corridor
-                  </span>
-                </div>
-              </div>
-              <button
-                type="button"
-                onClick={() => setIsShareModalOpen(false)}
-                className="w-8 h-8 rounded-full bg-[#F4F1EE] flex items-center justify-center text-[#444748] hover:bg-[#EAE7E4] transition-colors"
-                aria-label="Close share dialog"
-              >
-                <X className="w-4 h-4" />
-              </button>
-            </div>
-
-            {/* Trip Preview Banner */}
-            <div className="bg-[#F9F8F6] p-3.5 rounded-xl border border-black/5 flex flex-col gap-1">
-              <span className="text-[10px] font-bold uppercase tracking-wider text-[#005047]">
-                Active Transit Route
-              </span>
-              <span className="text-sm font-bold text-[#1C1B1B]">
-                {originName} → {destName} ({route.vehicleType})
-              </span>
-              <span className="text-xs text-[#747878]">
-                Estimated Fare: ₦{route.fareLow.toLocaleString()} – ₦{route.fareHigh.toLocaleString()}
-              </span>
-            </div>
-
-            {/* 1 · Shareable Link Action */}
-            <div className="flex flex-col gap-2">
-              <label className="text-xs font-bold uppercase tracking-wider text-[#747878]">
-                Shareable Route Link
-              </label>
-              <div className="flex items-center gap-2 bg-[#F4F1EE] p-1.5 rounded-xl border border-neutral-200">
-                <input
-                  type="text"
-                  readOnly
-                  value={shareableUrl}
-                  className="flex-1 bg-transparent px-2 text-xs text-[#1C1B1B] outline-none truncate font-mono"
-                />
-                <button
-                  type="button"
-                  onClick={handleCopyLink}
-                  className="px-3 py-1.5 rounded-lg bg-[#005047] text-white text-xs font-bold hover:bg-[#003d36] transition-colors flex items-center gap-1 shrink-0"
-                >
-                  <Copy className="w-3.5 h-3.5" />
-                  <span>Copy</span>
-                </button>
-              </div>
-            </div>
-
-            {/* Native Mobile Share Button */}
-            <button
-              type="button"
-              onClick={handleNativeShare}
-              className="w-full py-2.5 px-4 rounded-xl bg-white border border-neutral-300 text-xs font-bold text-[#1C1B1B] hover:bg-neutral-50 flex items-center justify-center gap-2 transition-colors"
-            >
-              <ExternalLink className="w-3.5 h-3.5" />
-              <span>Share via WhatsApp, Messages, or Apps</span>
-            </button>
-
-            {/* Divider */}
-            <div className="flex items-center gap-3 my-1">
-              <div className="h-px bg-neutral-200 flex-1" />
-              <span className="text-[10px] uppercase font-bold text-[#747878]">or email trip</span>
-              <div className="h-px bg-neutral-200 flex-1" />
-            </div>
-
-            {/* 2 · Email Share Form (Simulated flow per Step 0 audit) */}
-            <form onSubmit={handleSendShareEmail} className="flex flex-col gap-3">
-              <div className="flex flex-col gap-1">
-                <label htmlFor="share-email" className="text-xs font-bold text-[#1C1B1B]">
-                  Contact's Email Address
-                </label>
-                <div className="relative flex items-center">
-                  <Mail className="w-4 h-4 text-[#747878] absolute left-3 pointer-events-none" />
-                  <input
-                    id="share-email"
-                    type="email"
-                    required
-                    value={shareEmail}
-                    onChange={(e) => setShareEmail(e.target.value)}
-                    placeholder="friend@example.com"
-                    className="w-full h-10 pl-9 pr-3 rounded-xl bg-[#F4F1EE] text-xs text-[#1C1B1B] outline-none border border-neutral-200 focus:ring-2 focus:ring-[#79F7E3]"
-                  />
-                </div>
-              </div>
-
-              <div className="flex flex-col gap-1">
-                <label htmlFor="share-note" className="text-xs font-bold text-[#1C1B1B]">
-                  Personal Note (Optional)
-                </label>
-                <input
-                  id="share-note"
-                  type="text"
-                  value={shareNote}
-                  onChange={(e) => setShareNote(e.target.value)}
-                  placeholder="e.g. In the bus now, should arrive in 35 mins"
-                  className="w-full h-10 px-3 rounded-xl bg-[#F4F1EE] text-xs text-[#1C1B1B] outline-none border border-neutral-200 focus:ring-2 focus:ring-[#79F7E3]"
-                />
-              </div>
-
-              <PrimaryButton
-                type="submit"
-                disabled={isSendingEmail}
-                width="full"
-              >
-                {isSendingEmail ? "Preparing Link…" : "Copy Link & Share"}
-              </PrimaryButton>
-            </form>
-          </div>
-        </div>
-      )}
-
-      {/* Floating Toast Notification */}
-      <Toast message={toastMessage} />
     </div>
   );
 };

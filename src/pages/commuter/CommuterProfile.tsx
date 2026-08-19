@@ -357,7 +357,7 @@ const CommuterProfile = () => {
               type="button"
               id="logout-btn"
               onClick={handleLogout}
-              className="w-full flex items-center justify-center gap-2.5 py-3.5 px-4 rounded-xl bg-white border border-[#E05252]/20 text-[#D32F2F] font-semibold text-sm hover:bg-[#FEECEC] active:scale-[0.99] transition-all shadow-sm"
+              className="w-full flex items-center justify-center gap-2.5 py-3.5 px-4 rounded-xl bg-white border border-[#E05252]/20 text-[#D32F2F] font-bold text-sm hover:bg-[#FEECEC] active:scale-[0.99] transition-all shadow-sm"
             >
               <LogoutIcon />
               <span>Log Out</span>

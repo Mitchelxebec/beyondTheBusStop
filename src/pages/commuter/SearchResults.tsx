@@ -181,7 +181,7 @@ const SearchResults = () => {
       <div className="sticky top-16 z-20 bg-[#F5F5F0]/95 backdrop-blur-sm border-b border-gray-200 px-4 pt-4 pb-3">
         <div className="flex items-center gap-3 w-full mx-auto" style={{ maxWidth: "min(100%, 68rem)" }}>
           <BackButton onClick={() => navigate(-1)} />
-          <span className="text-base font-semibold text-gray-900">
+          <span className="text-base font-bold text-gray-900">
             Destination Search
           </span>
         </div>
@@ -214,7 +214,7 @@ const SearchResults = () => {
         <div className="flex items-center justify-between">
           <div className="flex flex-col gap-0.5">
             <SectionLabel>Live Transit Corridors</SectionLabel>
-            <p className="text-sm font-semibold text-gray-900">
+            <p className="text-sm font-bold text-gray-900">
               {activeQuery ? `Routes matching "${activeQuery}"` : "All Verified Routes"}
             </p>
           </div>

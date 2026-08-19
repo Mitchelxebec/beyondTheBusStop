@@ -80,32 +80,36 @@ export interface OpenCheckoutOptions {
 }
 
 /**
- * Full Paystack inline checkout flow:
- * 1. Calls backend to initialize the transaction (gets accessCode + reference)
- * 2. Opens the Paystack popup via @paystack/inline-js
+ * Full Paystack inline checkout flow.
  *
- * Calls onSuccess(reference) when payment completes —
- * caller should then call verifyPayment(reference) to confirm server-side.
+ * Opens the Paystack popup directly using the public key + email + amount.
+ * No backend initialization call is needed — Paystack generates the reference
+ * client-side and the popup handles everything.
+ *
+ * onSuccess(reference) fires when the user completes payment.
+ * The caller should then call verifyPayment(reference) to confirm server-side
+ * once POST /api/business/payment/verify is available on the backend.
  */
 export async function openPaystackCheckout(opts: OpenCheckoutOptions): Promise<void> {
   const { email, billingCycle, onSuccess, onCancel, onError } = opts;
 
-  try {
-    const init = await initializePayment({ plan: "pro_business", billingCycle });
+  if (!PAYSTACK_PUBLIC_KEY) {
+    onError(new Error("Payment is not configured. Please contact support."));
+    return;
+  }
 
+  try {
     const popup = new PaystackPop();
     popup.newTransaction({
       key: PAYSTACK_PUBLIC_KEY,
       email,
       amount: PLAN_PRICES[billingCycle].amount,
       currency: "NGN",
-      accessCode: init.accessCode,
-      ref: init.reference,
       metadata: { plan: "pro_business", billingCycle },
       onSuccess: (transaction) => onSuccess(transaction.reference),
       onCancel,
     });
   } catch (err) {
-    onError(err instanceof Error ? err : new Error("Payment setup failed."));
+    onError(err instanceof Error ? err : new Error("Could not open payment. Please try again."));
   }
 }

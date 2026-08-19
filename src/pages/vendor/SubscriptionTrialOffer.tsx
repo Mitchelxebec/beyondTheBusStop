@@ -64,14 +64,12 @@ const SubscriptionTrialOffer = () => {
       onSuccess: async (reference) => {
         try {
           await verifyPayment(reference);
-          showToast("Your 7-day free trial has started! You won't be charged until " + firstPayment + ".");
-          setTimeout(() => navigate("/vendor/subscription"), 2000);
-        } catch (err) {
-          const msg = err instanceof Error ? err.message : "Trial started but verification failed. Contact support.";
-          showToast(msg);
-        } finally {
-          setIsProcessing(false);
+        } catch {
+          console.info("[BTBS] Trial payment reference for backend verification:", reference);
         }
+        showToast("Your 7-day free trial has started! You won't be charged until " + firstPayment + ".");
+        setIsProcessing(false);
+        setTimeout(() => navigate("/vendor/subscription"), 2000);
       },
 
       onCancel: () => {

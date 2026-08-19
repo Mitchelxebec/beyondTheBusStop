@@ -1,7 +1,7 @@
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { z } from "zod";
-import { useNavigate } from "react-router-dom";
+import { useNavigate, useSearchParams } from "react-router-dom";
 import { AppLogo, PrimaryButton, SecondaryButton, TextInput, Toast } from "../../components";
 import { GoogleIcon, EyeIcon, LockIcon, OrDivider, AuthShell, MailIcon } from "./_shared";
 import { useLogin } from "../../hooks/useLogin";
@@ -23,7 +23,10 @@ const CommmuterLogin = () => {
   const [showPassword, setShowPassword] = useState(false);
   const [toastMessage, setToastMessage] = useState<string | null>(null);
   const navigate = useNavigate();
-  const { mutate: doLogin, isPending, error } = useLogin("commuter");
+  const [searchParams] = useSearchParams();
+  const sessionExpired = searchParams.get("session_expired") === "1";
+  const returnPath = searchParams.get("return") ?? "/home";
+  const { mutate: doLogin, isPending, error } = useLogin("commuter", returnPath);
 
   const showToast = (msg: string) => {
     setToastMessage(msg);
@@ -42,6 +45,11 @@ const CommmuterLogin = () => {
 
   return (
     <AuthShell>
+      {sessionExpired && (
+        <div className="w-full px-4 py-3 rounded-xl bg-[#FFF4D6] border border-[#FFC72C]/40 text-xs text-[#6F5400] font-medium text-center">
+          Your session expired. Please log in again to continue.
+        </div>
+      )}
       <AppLogo size="sm" showWordmark={false} />
 
       <div className="flex flex-col gap-1 text-center w-full">

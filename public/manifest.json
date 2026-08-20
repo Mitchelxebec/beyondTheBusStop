@@ -1,6 +1,6 @@
 {
   "name": "Beyond the Bus Stop",
-  "short_name": "ByndBus",
+  "short_name": "BTBS",
   "description": "The mapping layer Google Maps doesn't have. Real-time fare transparency and route tracking for danfo and keke commuters.",
   "display": "standalone",
   "display_override": ["window-controls-overlay", "standalone", "minimal-ui"],
@@ -12,7 +12,7 @@
   "icons": [
     {
       "src": "/btbsPNG.png",
-      "sizes": "192x192",
+      "sizes": "250x250",
       "type": "image/png",
       "purpose": "any"
     },

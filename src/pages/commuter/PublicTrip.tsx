@@ -1,5 +1,7 @@
+import { useState, useEffect } from "react";
 import { useParams } from "react-router-dom";
 import { usePublicTrip } from "../../hooks/useTrips";
+import { getSocket, type LocationUpdatedEvent } from "../../lib/socket";
 import type { PublicTrip as PublicTripType } from "../../types/trips";
 import { formatFareRange } from "../../types/routes";
 
@@ -66,8 +68,15 @@ const DetailRow = ({
 
 // ─── Trip card ────────────────────────────────────────────────────────────────
 
-const TripCard = ({ trip }: { trip: PublicTripType }) => {
+interface TripCardProps {
+  trip: PublicTripType;
+  liveLocation: { latitude: number; longitude: number; updatedAt: string } | null;
+  sharingStopped: boolean;
+}
+
+const TripCard = ({ trip, liveLocation, sharingStopped }: TripCardProps) => {
   const status = STATUS_STYLES[trip.status] ?? STATUS_STYLES.planned;
+  const effectiveLocation = liveLocation || trip.currentLocation;
 
   return (
     <div className="flex flex-col gap-5">
@@ -129,19 +138,26 @@ const TripCard = ({ trip }: { trip: PublicTripType }) => {
         </div>
       </div>
 
-      {/* Active location card */}
-      {trip.status === "active" && trip.currentLocation && (
-        <div className="bg-[#005047] rounded-2xl p-5 flex flex-col gap-2">
-          <div className="flex items-center gap-2">
-            <span className="w-2 h-2 rounded-full bg-[#00C9A7] animate-pulse" />
-            <span className="text-xs font-bold text-[#79F7E3] uppercase tracking-wider">
-              Live Location
-            </span>
+      {/* Active live location card */}
+      {trip.status === "active" && effectiveLocation && (
+        <div className="bg-[#005047] rounded-2xl p-5 flex flex-col gap-2 shadow-sm animate-in fade-in duration-200">
+          <div className="flex items-center justify-between">
+            <div className="flex items-center gap-2">
+              <span className="w-2 h-2 rounded-full bg-[#00C9A7] animate-pulse" />
+              <span className="text-xs font-bold text-[#79F7E3] uppercase tracking-wider">
+                Live Location {liveLocation ? "(Streaming)" : ""}
+              </span>
+            </div>
+            {sharingStopped && (
+              <span className="text-[11px] text-amber-300 font-medium">
+                Sharing paused
+              </span>
+            )}
           </div>
           <p className="text-sm text-white/90 m-0">
             Last updated:{" "}
             <span className="font-semibold text-white">
-              {new Date(trip.currentLocation.updatedAt).toLocaleTimeString("en-US", {
+              {new Date(effectiveLocation.updatedAt).toLocaleTimeString("en-US", {
                 hour: "numeric",
                 minute: "2-digit",
                 hour12: true,
@@ -149,8 +165,8 @@ const TripCard = ({ trip }: { trip: PublicTripType }) => {
             </span>
           </p>
           <p className="text-xs text-white/60 font-mono m-0">
-            {trip.currentLocation.latitude.toFixed(5)},{" "}
-            {trip.currentLocation.longitude.toFixed(5)}
+            {effectiveLocation.latitude.toFixed(5)},{" "}
+            {effectiveLocation.longitude.toFixed(5)}
           </p>
         </div>
       )}
@@ -179,6 +195,48 @@ const TripCard = ({ trip }: { trip: PublicTripType }) => {
 const PublicTrip = () => {
   const { shareToken } = useParams<{ shareToken: string }>();
   const { data: trip, isLoading, isError, error } = usePublicTrip(shareToken);
+  const [liveLocation, setLiveLocation] = useState<{
+    latitude: number;
+    longitude: number;
+    updatedAt: string;
+  } | null>(null);
+  const [sharingStopped, setSharingStopped] = useState(false);
+
+  // ── Socket.IO Live Tracker Connection ──────────────────────────────────────
+  useEffect(() => {
+    if (!shareToken) return;
+
+    const socket = getSocket();
+    if (!socket.connected) {
+      socket.connect();
+    }
+
+    // 1. Join room
+    socket.emit("joinTrip", shareToken);
+
+    // 2. Receive location updates
+    const handleLocationUpdated = (data: LocationUpdatedEvent) => {
+      setLiveLocation({
+        latitude: data.latitude,
+        longitude: data.longitude,
+        updatedAt: data.updatedAt,
+      });
+      setSharingStopped(false);
+    };
+
+    // 3. Handle stop location sharing
+    const handleSharingStopped = () => {
+      setSharingStopped(true);
+    };
+
+    socket.on("locationUpdated", handleLocationUpdated);
+    socket.on("locationSharingStopped", handleSharingStopped);
+
+    return () => {
+      socket.off("locationUpdated", handleLocationUpdated);
+      socket.off("locationSharingStopped", handleSharingStopped);
+    };
+  }, [shareToken]);
 
   return (
     <div className="flex flex-col min-h-dvh bg-[#F5F5F0]">
@@ -217,10 +275,17 @@ const PublicTrip = () => {
           </div>
         )}
 
-        {trip && <TripCard trip={trip} />}
+        {trip && (
+          <TripCard
+            trip={trip}
+            liveLocation={liveLocation}
+            sharingStopped={sharingStopped}
+          />
+        )}
       </main>
     </div>
   );
 };
 
 export default PublicTrip;
+

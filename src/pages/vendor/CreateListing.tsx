@@ -1,30 +1,15 @@
 import { useState, useRef } from "react";
 import { useNavigate } from "react-router-dom";
-import { Camera, X, AlertCircle, Loader2 } from "lucide-react";
-import { api } from "../../lib/axios";
+import { Camera, X, AlertCircle, Loader2, Building2, Tag } from "lucide-react";
 import { useAuth } from "../../contexts/AuthContext";
-import TextInput from "../../components/TextInput";
 import PrimaryButton from "../../components/PrimaryButton";
 import Toast from "../../components/Toast";
 import LocationPickerMap from "../../components/LocationPickerMap";
-
-// ─── Constants ────────────────────────────────────────────────────────────────
-
-const CATEGORIES = [
-  "Food & Drinks",
-  "Electronics & Repairs",
-  "Fashion & Retail",
-  "Health & Beauty",
-  "Services & Logistics",
-] as const;
-
-type Category = (typeof CATEGORIES)[number];
+import { createListing, uploadListingPhotos } from "../../services/listings";
 
 // ─── Types ─────────────────────────────────────────────────────────────────────
 
 interface FormErrors {
-  businessName?: string;
-  category?: string;
   location?: string;
   description?: string;
 }
@@ -49,25 +34,27 @@ const DEFAULT_LNG = 3.3841;
  * Matches Figma node 354-1981 (Step 1 of 1: Basic Info).
  *
  * Fields:
- *  - Business Name (required)
- *  - Category (required, 5 options matching VendorDashboard)
+ *  - Business Name & Category: Read-only display properties from vendor business profile
  *  - Location via draggable Leaflet map (required — user must move pin)
  *  - Business Description (required, min 20 chars)
- *  - Upload Photos (optional — client-side preview only until POST /api/upload exists)
+ *  - Upload Photos (up to 5 images uploaded to Cloudinary via POST /api/listings/upload)
  *
  * Submit:
- *  - Fires POST /api/listings with JSON body
+ *  - Uploads photos to POST /api/listings/upload to obtain Cloudinary URLs
+ *  - Fires POST /api/listings with JSON body including hosted photoUrls
  *  - On success: toast → navigate to /vendor/home
  *  - On failure: inline error, form data preserved
- *  - Photos submitted as [] until backend upload endpoint exists
  */
 const CreateListing = () => {
   const navigate = useNavigate();
   const { session } = useAuth();
 
+  // Read-only business profile info from session
+  const displayBusinessName =
+    session?.user?.businessName || session?.user?.fullName || "Your Business";
+  const displayCategory = session?.user?.category || "Services & Logistics";
+
   // ── Form state ──────────────────────────────────────────────────────────────
-  const [businessName, setBusinessName] = useState("");
-  const [category, setCategory] = useState<Category>("Food & Drinks");
   const [description, setDescription] = useState("");
   const [location, setLocation] = useState<{ lat: number; lng: number } | null>(null);
   const [locationMoved, setLocationMoved] = useState(false);
@@ -128,12 +115,6 @@ const CreateListing = () => {
   const validate = (): boolean => {
     const newErrors: FormErrors = {};
 
-    if (!businessName.trim() || businessName.trim().length < 2) {
-      newErrors.businessName = "Business name must be at least 2 characters.";
-    }
-    if (!category) {
-      newErrors.category = "Please select a category.";
-    }
     if (!locationMoved) {
       newErrors.location = "Please adjust the pin to mark your business location.";
     }
@@ -155,25 +136,30 @@ const CreateListing = () => {
     setIsSubmitting(true);
 
     try {
-      await api.post(
-        "/listings",
-        {
-          businessName: businessName.trim(),
-          category,
-          description: description.trim(),
-          location: {
-            lat: location!.lat,
-            lng: location!.lng,
-          },
-          // photoUrls submitted as [] until POST /api/upload endpoint exists on backend
-          photoUrls: [],
-        },
-        {
-          headers: session?.token
-            ? { Authorization: `Bearer ${session.token}` }
-            : {},
+      let uploadedPhotoUrls: string[] = [];
+
+      // 1. Upload photos to Cloudinary if user selected any
+      if (photos.length > 0) {
+        const filesToUpload = photos.map((p) => p.file);
+        uploadedPhotoUrls = await uploadListingPhotos(filesToUpload);
+
+        if (!uploadedPhotoUrls || uploadedPhotoUrls.length === 0) {
+          throw new Error("Failed to upload photos. Please check your connection and try again.");
         }
-      );
+      }
+
+      // 2. Submit listing with real hosted Cloudinary URLs
+      await createListing({
+        description: description.trim(),
+        location: {
+          lat: location!.lat,
+          lng: location!.lng,
+        },
+        photoUrls: uploadedPhotoUrls,
+      });
+
+      // Free blob URLs
+      photos.forEach((p) => URL.revokeObjectURL(p.previewUrl));
 
       showToast("Listing created successfully!");
       setTimeout(() => navigate("/vendor/home"), 1500);
@@ -251,58 +237,44 @@ const CreateListing = () => {
             </div>
           )}
 
-          {/* ── Business Name ────────────────────────────────────────────── */}
-          <div className="flex flex-col gap-1">
-            <TextInput
-              id="business-name"
-              label="Business Name"
-              placeholder="e.g. Mama Joy's Kitchen"
-              value={businessName}
-              onChange={(e) => {
-                setBusinessName(e.target.value);
-                if (errors.businessName)
-                  setErrors((prev) => ({ ...prev, businessName: undefined }));
-              }}
-              error={!!errors.businessName}
-              required
-              autoComplete="organization"
-            />
-            {errors.businessName && (
-              <p className="text-xs text-red-500 px-1">{errors.businessName}</p>
-            )}
-          </div>
+          {/* ── Read-Only Business Profile Info ─────────────────────────── */}
+          <div className="bg-white rounded-2xl p-4 border border-black/5 shadow-xs flex flex-col gap-3">
+            <div className="flex items-center justify-between">
+              <span className="text-[10px] font-bold uppercase tracking-wider text-[#747878]">
+                Business Profile Details
+              </span>
+              <span className="text-[10px] text-[#A4A7A7] font-medium">
+                Read-only
+              </span>
+            </div>
 
-          {/* ── Category ────────────────────────────────────────────────── */}
-          <div className="flex flex-col gap-1.5">
-            <label
-              htmlFor="listing-category"
-              className="text-sm font-medium text-gray-700 px-1"
-            >
-              Category
-            </label>
-            <select
-              id="listing-category"
-              value={category}
-              onChange={(e) => {
-                setCategory(e.target.value as Category);
-                if (errors.category)
-                  setErrors((prev) => ({ ...prev, category: undefined }));
-              }}
-              className={`w-full h-11 bg-gray-50 rounded-lg px-3 text-sm text-gray-900 border outline-none transition-colors ${
-                errors.category
-                  ? "border-red-400 focus:border-red-500"
-                  : "border-gray-200 focus:border-gray-400"
-              }`}
-            >
-              {CATEGORIES.map((cat) => (
-                <option key={cat} value={cat}>
-                  {cat}
-                </option>
-              ))}
-            </select>
-            {errors.category && (
-              <p className="text-xs text-red-500 px-1">{errors.category}</p>
-            )}
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 pt-0.5">
+              {/* Business Name */}
+              <div className="flex items-start gap-2.5 bg-[#F5F5F0] rounded-xl p-3">
+                <Building2 className="w-4 h-4 text-[#747878] shrink-0 mt-0.5" />
+                <div className="flex flex-col min-w-0">
+                  <span className="text-[10px] font-medium text-[#747878]">
+                    Business Name
+                  </span>
+                  <span className="text-sm font-bold text-[#1C1B1B] truncate">
+                    {displayBusinessName}
+                  </span>
+                </div>
+              </div>
+
+              {/* Category */}
+              <div className="flex items-start gap-2.5 bg-[#F5F5F0] rounded-xl p-3">
+                <Tag className="w-4 h-4 text-[#005047] shrink-0 mt-0.5" />
+                <div className="flex flex-col min-w-0">
+                  <span className="text-[10px] font-medium text-[#747878]">
+                    Category
+                  </span>
+                  <span className="text-sm font-semibold text-[#005047] truncate">
+                    {displayCategory}
+                  </span>
+                </div>
+              </div>
+            </div>
           </div>
 
           {/* ── Location (Draggable Map) ──────────────────────────────────── */}
@@ -447,7 +419,7 @@ const CreateListing = () => {
 
             {/* Transparent note about upload */}
             <p className="text-[11px] text-[#A4A7A7] px-1 m-0">
-              Photos will be attached when the upload feature is enabled on the server.
+              Supported formats: JPG, PNG, WEBP (up to 5 photos, max 5MB each).
             </p>
           </div>
         </form>
@@ -466,7 +438,7 @@ const CreateListing = () => {
             {isSubmitting ? (
               <span className="flex items-center gap-2">
                 <Loader2 className="w-4 h-4 animate-spin" aria-hidden="true" />
-                Submitting…
+                {photos.length > 0 ? "Uploading & Creating…" : "Submitting…"}
               </span>
             ) : (
               "ADD LISTING"
@@ -482,3 +454,4 @@ const CreateListing = () => {
 };
 
 export default CreateListing;
+

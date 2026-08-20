@@ -11,6 +11,7 @@ import {
 } from "../../components";
 import { useCreateTrip, useStartTrip, useEndTrip } from "../../hooks/useTrips";
 import { shareTrip } from "../../services/trips";
+import { getSocket } from "../../lib/socket";
 import type { Trip } from "../../types/trips";
 
 // ─── Icons ─────────────────────────────────────────────────────────────────────
@@ -168,14 +169,84 @@ const ShareTrip = () => {
       // 3. Fetch share payload (token + WhatsApp message + URL)
       const shareRes = await shareTrip(trip._id);
 
-      setActiveTrip({ ...trip, status: "active" });
-      setSharePayload(shareRes.share);
+      const shareToken = shareRes.share.shareToken;
+      // Construct guaranteed valid URL from window.location.origin
+      const validShareUrl = `${window.location.origin}/trip/${shareToken}`;
+      const cleanWhatsappMessage = (shareRes.share.whatsappMessage || "").replace(
+        /undefined\/trip\/\w+/g,
+        validShareUrl
+      );
+
+      setActiveTrip({ ...trip, status: "active", shareToken });
+      setSharePayload({
+        ...shareRes.share,
+        shareToken,
+        shareUrl: validShareUrl,
+        whatsappMessage: cleanWhatsappMessage,
+      });
       setStep("sharing");
     } catch (err: unknown) {
       const msg = err instanceof Error ? err.message : "Something went wrong.";
       showToast(msg);
     }
   };
+
+  // ─── Live Location Broadcasting via Socket.IO ──────────────────────────────
+  useEffect(() => {
+    if (step !== "sharing" || !activeTrip?.shareToken || activeTrip.status !== "active") {
+      return;
+    }
+
+    const socket = getSocket();
+    if (!socket.connected) {
+      socket.connect();
+    }
+
+    const shareToken = activeTrip.shareToken;
+    let lastLat: number | null = null;
+    let lastLng: number | null = null;
+
+    const sendLocation = (pos: GeolocationPosition) => {
+      const { latitude, longitude } = pos.coords;
+      // Broadcast if coordinates moved by ~10m or on first position
+      if (
+        lastLat === null ||
+        Math.abs(latitude - lastLat) > 0.0001 ||
+        Math.abs(longitude - (lastLng ?? 0)) > 0.0001
+      ) {
+        lastLat = latitude;
+        lastLng = longitude;
+        socket.emit("locationUpdate", {
+          shareToken,
+          latitude,
+          longitude,
+        });
+      }
+    };
+
+    let watchId: number | null = null;
+    if ("geolocation" in navigator) {
+      // Send immediate initial position
+      navigator.geolocation.getCurrentPosition(
+        sendLocation,
+        (err) => console.warn("Geolocation initial error:", err),
+        { enableHighAccuracy: true, timeout: 10000, maximumAge: 5000 }
+      );
+
+      // Continuously watch moving position
+      watchId = navigator.geolocation.watchPosition(
+        sendLocation,
+        (err) => console.warn("Geolocation watch error:", err),
+        { enableHighAccuracy: true, timeout: 10000, maximumAge: 5000 }
+      );
+    }
+
+    return () => {
+      if (watchId !== null) {
+        navigator.geolocation.clearWatch(watchId);
+      }
+    };
+  }, [step, activeTrip?.shareToken, activeTrip?.status]);
 
   // ─── Open WhatsApp with pre-filled message ────────────────────────────────
   const handleWhatsApp = () => {
@@ -203,6 +274,10 @@ const ShareTrip = () => {
     if (!activeTrip) return;
     setEndConfirm(false);
     try {
+      const socket = getSocket();
+      if (socket.connected && activeTrip.shareToken) {
+        socket.emit("stopLocationSharing", activeTrip.shareToken);
+      }
       await endTripMutation.mutateAsync(activeTrip._id);
       setStep("done");
     } catch (err: unknown) {

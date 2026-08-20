@@ -35,6 +35,62 @@ export async function getMyListings(): Promise<GetMyListingsResponse> {
   return data;
 }
 
+export interface CreateListingPayload {
+  description: string;
+  location: {
+    lat: number;
+    lng: number;
+  };
+  photoUrls?: string[];
+}
+
+export interface CreateListingResponse {
+  success: boolean;
+  listing: MyListing;
+}
+
+/**
+ * POST /api/listings/upload
+ * Uploads up to 5 image files to Cloudinary via backend proxy.
+ * Field name: "photos".
+ * Auth: protect middleware (listing.routes.js:43-48).
+ */
+export async function uploadListingPhotos(files: File[]): Promise<string[]> {
+  if (!files || files.length === 0) return [];
+  const formData = new FormData();
+  files.slice(0, 5).forEach((file) => {
+    formData.append("photos", file);
+  });
+
+  const { data } = await api.post<{ success: boolean; urls?: string[]; message?: string }>(
+    "/listings/upload",
+    formData,
+    {
+      headers: {
+        "Content-Type": "multipart/form-data",
+      },
+    }
+  );
+
+  if (!data.success || !Array.isArray(data.urls) || data.urls.length === 0) {
+    throw new Error(data.message || "Failed to upload photos. Please check your connection and try again.");
+  }
+
+  return data.urls;
+}
+
+/**
+ * POST /api/listings
+ * Creates a new listing with description, location coords, and photoUrls.
+ * Auth: protect + requireActiveSubscription (listing.routes.js:24-29).
+ */
+export async function createListing(
+  payload: CreateListingPayload
+): Promise<CreateListingResponse> {
+  const { data } = await api.post<CreateListingResponse>("/listings", payload);
+  return data;
+}
+
 export interface UpdateListingPayload {
   description?: string;
   location?: {

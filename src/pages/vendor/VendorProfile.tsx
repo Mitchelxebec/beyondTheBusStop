@@ -14,7 +14,7 @@ import {
   ArrowLeft,
   Star,
 } from "lucide-react";
-import { BottomNavBar, Toast, VENDOR_NAV_ITEMS } from "../../components";
+import { BottomNavBar, Toast, VENDOR_NAV_ITEMS, HelpSupportModal } from "../../components";
 import { useAuth } from "../../contexts/AuthContext";
 import { getProfile } from "../../services/auth";
 import { getSubscriptionStatus } from "../../services/payment";
@@ -433,8 +433,17 @@ const VendorProfile = () => {
         </div>
       </main>
 
-      {/* ── Lightweight modal stub for non-data settings items ─────── */}
-      {activeModal && (
+      {/* ── Help & Support Modal with tap-to-call action ──────────── */}
+      <HelpSupportModal
+        isOpen={activeModal === "Help & Support"}
+        onClose={() => setActiveModal(null)}
+        title="Help & Support"
+        subtitle="Need help managing your merchant profile, listings, billing, or promotion tools? Call our team directly."
+        role="vendor"
+      />
+
+      {/* ── Lightweight modal stub for non-data settings items (Security, Notifications, Business Details) ─────── */}
+      {activeModal && activeModal !== "Help & Support" && (
         <div
           role="dialog"
           aria-modal="true"

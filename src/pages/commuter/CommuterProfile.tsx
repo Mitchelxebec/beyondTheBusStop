@@ -1,6 +1,6 @@
 import { useState } from "react";
 import { useNavigate } from "react-router-dom";
-import { BottomNavBar, PageHeader, NotificationBell, Toast } from "../../components";
+import { BottomNavBar, PageHeader, NotificationBell, Toast, HelpSupportModal } from "../../components";
 import { useAuth } from "../../contexts/AuthContext";
 
 // ── Types & Placeholder Data ───────────────────────────────────────────────────
@@ -367,8 +367,17 @@ const CommuterProfile = () => {
         </div>
       </main>
 
-      {/* Lightweight modal stub for non-data menu triggers */}
-      {activeModal && (
+      {/* Help & Support Modal with direct tap-to-call action */}
+      <HelpSupportModal
+        isOpen={activeModal === "Help & Support Center"}
+        onClose={() => setActiveModal(null)}
+        title="Help & Support Center"
+        subtitle="Have questions about transit corridors, saved routes, or safety features? Call our support team directly."
+        role="commuter"
+      />
+
+      {/* Lightweight modal stub for non-data menu triggers (Security, Notifications, Preferences) */}
+      {activeModal && activeModal !== "Help & Support Center" && (
         <div
           role="dialog"
           aria-modal="true"

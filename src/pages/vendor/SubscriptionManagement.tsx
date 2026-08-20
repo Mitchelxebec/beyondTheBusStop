@@ -1,6 +1,6 @@
 import { useState } from "react";
 import { useNavigate } from "react-router-dom";
-import { useQuery, useMutation } from "@tanstack/react-query";
+import { useQuery } from "@tanstack/react-query";
 import {
   ArrowLeft,
   CreditCard,
@@ -12,8 +12,14 @@ import {
   BadgeCheck,
   Clock,
   AlertTriangle,
+  Phone,
 } from "lucide-react";
-import { BottomNavBar, Toast, VENDOR_NAV_ITEMS } from "../../components";
+import {
+  BottomNavBar,
+  VENDOR_NAV_ITEMS,
+  SUPPORT_TEL_HREF,
+  SUPPORT_PHONE_DISPLAY,
+} from "../../components";
 import { useAuth } from "../../contexts/AuthContext";
 import { api } from "../../lib/axios";
 
@@ -64,13 +70,9 @@ const StatusBadge = ({ status }: { status: SubscriptionStatus }) => {
 // ─── Cancel confirm modal ──────────────────────────────────────────────────────
 
 const CancelModal = ({
-  onConfirm,
   onDismiss,
-  isPending,
 }: {
-  onConfirm: () => void;
   onDismiss: () => void;
-  isPending: boolean;
 }) => (
   <div
     role="dialog"
@@ -92,7 +94,7 @@ const CancelModal = ({
             Cancel Subscription?
           </h3>
           <p className="text-xs text-[#747878] mt-1 leading-relaxed">
-            Online cancellation isn't available yet. Tap "Contact Support" and our team will process your cancellation within 24 hours.
+            Online automated cancellation is in development. To cancel your subscription, please call our support team directly at {SUPPORT_PHONE_DISPLAY}.
           </p>
         </div>
       </div>
@@ -104,14 +106,14 @@ const CancelModal = ({
         >
           Keep Plan
         </button>
-        <button
-          type="button"
-          onClick={onConfirm}
-          disabled={isPending}
-          className="flex-1 py-2.5 rounded-xl bg-[#1C1B1B] text-white text-sm font-bold hover:bg-black transition-colors disabled:opacity-60"
+        <a
+          href={SUPPORT_TEL_HREF}
+          onClick={onDismiss}
+          className="flex-1 py-2.5 rounded-xl bg-[#BA1A1A] text-white text-sm font-bold hover:bg-[#961515] transition-colors flex items-center justify-center gap-1.5 text-center"
         >
-          Contact Support
-        </button>
+          <Phone className="w-4 h-4" />
+          Call to Cancel
+        </a>
       </div>
     </div>
   </div>
@@ -131,12 +133,6 @@ const SubscriptionManagement = () => {
   const navigate = useNavigate();
   const { session } = useAuth();
   const [showCancel, setShowCancel] = useState(false);
-  const [toastMsg, setToastMsg] = useState<string | null>(null);
-
-  const showToast = (msg: string) => {
-    setToastMsg(msg);
-    setTimeout(() => setToastMsg(null), 4000);
-  };
 
   // ── GET /api/subscription/status ────────────────────────────────────────
   const {
@@ -154,24 +150,6 @@ const SubscriptionManagement = () => {
   });
 
   const sub = data?.subscription ?? null;
-
-  // ── Cancel — no backend DELETE endpoint exists yet ────────────────────────
-  // When backend implements it, wire to DELETE /api/subscription
-  const cancelMutation = useMutation({
-    mutationFn: async () => {
-      const { data } = await api.delete<{ success: boolean; message: string }>("/subscription");
-      return data;
-    },
-    onSuccess: (res) => {
-      setShowCancel(false);
-      showToast(res.message || "Subscription cancelled. You'll retain access until the billing period ends.");
-      refetch();
-    },
-    onError: () => {
-      setShowCancel(false);
-      showToast("Cancellation isn't available online yet. Please contact support and we'll process it for you.");
-    },
-  });
 
   // ─── Loading ───────────────────────────────────────────────────────────────
   if (isLoading) {
@@ -261,7 +239,6 @@ const SubscriptionManagement = () => {
             </section>
           </div>
         </main>
-        <Toast message={toastMsg} />
       </div>
     );
   }
@@ -420,13 +397,14 @@ const SubscriptionManagement = () => {
                 Our support team is available 24/7 for billing queries.
               </span>
             </div>
-            <button
-              type="button"
-              onClick={() => showToast("Support request sent. Our team will reach you shortly.")}
-              className="shrink-0 text-xs font-bold text-[#00C9A7] hover:underline flex items-center gap-1"
+            <a
+              href={SUPPORT_TEL_HREF}
+              className="shrink-0 text-xs font-bold text-[#00C9A7] hover:underline flex items-center gap-1.5 py-1.5 px-3 rounded-xl bg-[#00C9A7]/10 hover:bg-[#00C9A7]/20 transition-colors"
+              aria-label={`Call support at ${SUPPORT_PHONE_DISPLAY}`}
             >
-              Contact <ChevronRight className="w-3 h-3" />
-            </button>
+              <Phone className="w-3.5 h-3.5" />
+              Call Support
+            </a>
           </section>
 
         </div>
@@ -435,16 +413,9 @@ const SubscriptionManagement = () => {
       {/* Cancel confirm modal */}
       {showCancel && (
         <CancelModal
-          onConfirm={() => {
-            setShowCancel(false);
-            showToast("Support request sent. Our team will reach you within 24 hours to process your cancellation.");
-          }}
           onDismiss={() => setShowCancel(false)}
-          isPending={cancelMutation.isPending}
         />
       )}
-
-      <Toast message={toastMsg} />
     </div>
   );
 };

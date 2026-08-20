@@ -15,5 +15,12 @@ export { default as Toast } from "./Toast";
 export { default as RouteCard } from "./RouteCard";
 export { default as RouteMap } from "./RouteMap";
 export { default as EditListingModal } from "./EditListingModal";
+export {
+  default as HelpSupportModal,
+  SUPPORT_PHONE_NUMBER,
+  SUPPORT_PHONE_DISPLAY,
+  SUPPORT_TEL_HREF,
+} from "./HelpSupportModal";
 export { DEFAULT_NAV_ITEMS, VENDOR_NAV_ITEMS } from "./navItems";
+
 

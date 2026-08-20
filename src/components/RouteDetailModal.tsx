@@ -1,4 +1,4 @@
-import { getRoutePlaceName, type Route, type ConfidenceLevel } from "../types/routes";
+import { getRoutePlaceName, formatFareRange, type Route, type ConfidenceLevel } from "../types/routes";
 
 const CONFIDENCE_CLASSES: Record<ConfidenceLevel, { bg: string; text: string; dot: string }> = {
   High:        { bg: "bg-[#E6FAF6]", text: "text-[#007A62]", dot: "bg-[#00C9A7]" },
@@ -71,7 +71,7 @@ export const RouteDetailModal = ({ route, onClose }: RouteDetailModalProps) => {
           <div>
             <span className="text-xs text-[#747878] block">Fare Range</span>
             <span className="text-base font-bold text-[#1C1B1B]">
-              ₦{route.fareLow.toLocaleString()} – ₦{route.fareHigh.toLocaleString()}
+              {formatFareRange(route.fareLow, route.fareHigh)}
             </span>
           </div>
           <div>
@@ -88,7 +88,7 @@ export const RouteDetailModal = ({ route, onClose }: RouteDetailModalProps) => {
             <span className="font-semibold text-[#1C1B1B]">Confidence Score</span>
             <ConfidenceBadge level={route.confidenceLevel} />
           </div>
-          {route.averageFare !== undefined && (
+          {typeof route.averageFare === "number" && (
             <div className="flex items-center justify-between">
               <span className="font-semibold text-[#1C1B1B]">Average Confirmed Fare</span>
               <span className="font-bold text-[#005047]">
@@ -97,6 +97,7 @@ export const RouteDetailModal = ({ route, onClose }: RouteDetailModalProps) => {
             </div>
           )}
         </div>
+
 
         {/* Close Button */}
         <div className="pt-2">

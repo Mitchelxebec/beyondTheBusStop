@@ -26,7 +26,7 @@ import {
 import RouteMap from "../../components/RouteMap";
 import { useAuth } from "../../contexts/AuthContext";
 import { useRouteById } from "../../hooks/useRoutes";
-import { getRoutePlaceName } from "../../types/routes";
+import { getRoutePlaceName, formatFareRange } from "../../types/routes";
 import {
   resolveCoordinates,
   getMergedNearbyEssentials,
@@ -193,7 +193,7 @@ const RouteDetails = () => {
                   state: {
                     origin: originName,
                     destination: destName,
-                    fare: `₦${route.fareLow.toLocaleString()} – ₦${route.fareHigh.toLocaleString()}`,
+                    fare: formatFareRange(route.fareLow, route.fareHigh),
                     routeId: route._id,
                   }
                 })}
@@ -247,7 +247,7 @@ const RouteDetails = () => {
                   <Coins className="w-3 h-3 text-[#FFC72C]" /> Estimated Fare
                 </span>
                 <span className="text-base sm:text-lg font-black text-[#1C1B1B]">
-                  ₦{route.fareLow.toLocaleString()} – ₦{route.fareHigh.toLocaleString()}
+                  {formatFareRange(route.fareLow, route.fareHigh)}
                 </span>
                 <span className="text-[10px] text-[#747878]">Standard fare window</span>
               </div>
@@ -258,7 +258,11 @@ const RouteDetails = () => {
                   <TrendingUp className="w-3 h-3 text-[#005047]" /> Avg. Confirmed
                 </span>
                 <span className="text-base sm:text-lg font-black text-[#005047]">
-                  ₦{(route.averageFare ?? (route.fareLow + route.fareHigh) / 2).toLocaleString()}
+                  {typeof route.averageFare === "number"
+                    ? `₦${route.averageFare.toLocaleString()}`
+                    : typeof route.fareLow === "number" && typeof route.fareHigh === "number"
+                    ? `₦${Math.round((route.fareLow + route.fareHigh) / 2).toLocaleString()}`
+                    : "—"}
                 </span>
                 <span className="text-[10px] text-[#005047] font-medium">
                   {route.totalConfirmations ? `${route.totalConfirmations} confirmations` : "Community verified"}
@@ -491,7 +495,7 @@ const RouteDetails = () => {
                 state: {
                   origin: originName,
                   destination: destName,
-                  fare: `₦${route.fareLow.toLocaleString()} – ₦${route.fareHigh.toLocaleString()}`,
+                  fare: formatFareRange(route.fareLow, route.fareHigh),
                   routeId: route._id,
                 }
               })}

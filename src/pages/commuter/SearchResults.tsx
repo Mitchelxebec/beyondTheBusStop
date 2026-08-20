@@ -1,15 +1,18 @@
 import { useState, useMemo, useEffect } from "react";
-import { useNavigate, useSearchParams } from "react-router-dom";
-import { Search, Map } from "lucide-react";
+import { useNavigate, useSearchParams, useLocation } from "react-router-dom";
+import { Map, Plus, AlertCircle } from "lucide-react";
 import {
   BackButton,
   SectionLabel,
   BottomNavBar,
   RouteCard,
+  RouteSearchBox,
+  CreateRouteModal,
   VENDOR_NAV_ITEMS,
 } from "../../components";
 import { useAuth } from "../../contexts/AuthContext";
 import { useRoutes } from "../../hooks/useRoutes";
+import type { LocationPlace, RouteSearchParams } from "../../types/routes";
 
 // ── Loading Skeleton ──────────────────────────────────────────────────────────
 
@@ -43,38 +46,62 @@ const SkeletonCard = () => (
   </div>
 );
 
-// ── Empty State ───────────────────────────────────────────────────────────────
+// ── No Route Found Empty State (Spec Compliant) ───────────────────────────────
 
-const EmptyState = ({
-  activeQuery,
+const NoRouteEmptyState = ({
+  originName,
+  destName,
+  onCreateRoute,
   onReset,
 }: {
-  activeQuery: string;
+  originName?: string;
+  destName?: string;
+  onCreateRoute: () => void;
   onReset: () => void;
-}) => (
-  <div className="flex flex-col items-center gap-3 py-12 text-center bg-white rounded-2xl p-6 border border-gray-100">
-    <div className="w-14 h-14 rounded-2xl bg-gray-100 flex items-center justify-center">
-      <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="#C4C7C7" strokeWidth="1.5" aria-hidden="true">
-        <path strokeLinecap="round" strokeLinejoin="round" d="M9 20l-5.447-2.724A1 1 0 013 16.382V5.618a1 1 0 011.447-.894L9 7m0 13l6-3m-6 3V7m6 10l4.553 2.276A1 1 0 0021 18.382V7.618a1 1 0 00-.553-.894L15 4m0 13V4m0 0L9 7" />
-      </svg>
+}) => {
+  const corridorLabel =
+    originName && destName
+      ? `${originName} → ${destName}`
+      : destName
+      ? `to ${destName}`
+      : "for these locations";
+
+  return (
+    <div className="flex flex-col items-center gap-4 py-12 px-6 text-center bg-white rounded-3xl border border-black/5 shadow-sm">
+      <div className="w-16 h-16 rounded-2xl bg-[#FFF4D6] flex items-center justify-center text-[#6F5400] shadow-xs">
+        <AlertCircle className="w-7 h-7" />
+      </div>
+
+      <div className="flex flex-col gap-1.5 max-w-sm">
+        <h3 className="text-base font-bold text-[#1C1B1B] m-0">
+          No route found for this journey
+        </h3>
+        <p className="text-xs text-[#747878] leading-relaxed m-0">
+          No transit corridors are currently listed {corridorLabel}. Would you like to create or request this route for the community?
+        </p>
+      </div>
+
+      <div className="flex flex-col sm:flex-row items-center gap-2.5 w-full max-w-xs mt-2">
+        <button
+          type="button"
+          onClick={onCreateRoute}
+          className="w-full py-3 px-4 rounded-xl bg-[#005047] text-white text-xs font-bold hover:bg-[#003B34] active:scale-95 transition-all shadow-sm flex items-center justify-center gap-2"
+        >
+          <Plus className="w-4 h-4" />
+          <span>Create This Route</span>
+        </button>
+
+        <button
+          type="button"
+          onClick={onReset}
+          className="w-full py-3 px-4 rounded-xl bg-[#F5F5F0] text-[#1C1B1B] text-xs font-semibold hover:bg-neutral-200 transition-colors"
+        >
+          Reset & Show All
+        </button>
+      </div>
     </div>
-    <div className="flex flex-col gap-1">
-      <p className="text-sm font-semibold text-gray-900">
-        {activeQuery ? `No routes found matching "${activeQuery}"` : "No routes available"}
-      </p>
-      <p className="text-xs text-gray-400 leading-relaxed max-w-xs">
-        Try searching with a different destination name or clear filters.
-      </p>
-    </div>
-    <button
-      type="button"
-      onClick={onReset}
-      className="mt-2 px-4 py-2 rounded-xl bg-[#F5B800] text-[#1A1A1A] text-xs font-semibold hover:bg-[#FFCA28] transition-colors"
-    >
-      Reset & Show All Routes
-    </button>
-  </div>
-);
+  );
+};
 
 // ── Filter Pill ───────────────────────────────────────────────────────────────
 
@@ -107,43 +134,128 @@ const Pill = ({
 
 const SearchResults = () => {
   const navigate = useNavigate();
+  const location = useLocation();
   const { session } = useAuth();
   const isBusiness = session?.role === "business";
   const [searchParams, setSearchParams] = useSearchParams();
 
-  // Read search query from URL
-  const initialQuery =
-    searchParams.get("destination") ?? searchParams.get("query") ?? "";
+  // Read search state from navigation state (hybrid strategy) or URL params
+  const locationState = location.state as
+    | { origin?: LocationPlace; destination?: LocationPlace }
+    | undefined;
 
-  const [searchInput, setSearchInput] = useState(initialQuery);
-  const [activeQuery, setActiveQuery] = useState(initialQuery);
+  const urlOriginPlaceId = searchParams.get("originPlaceId");
+  const urlOriginName = searchParams.get("originName");
+  const urlOriginLat = searchParams.get("originLat") ? Number(searchParams.get("originLat")) : undefined;
+  const urlOriginLng = searchParams.get("originLng") ? Number(searchParams.get("originLng")) : undefined;
+
+  const urlDestPlaceId = searchParams.get("destinationPlaceId");
+  const urlDestName =
+    searchParams.get("destinationName") ??
+    searchParams.get("destination") ??
+    searchParams.get("query") ??
+    "";
+  const urlDestLat = searchParams.get("destinationLat") ? Number(searchParams.get("destinationLat")) : undefined;
+  const urlDestLng = searchParams.get("destinationLng") ? Number(searchParams.get("destinationLng")) : undefined;
+
+  const initialOrigin: LocationPlace | null = locationState?.origin ?? (
+    urlOriginName
+      ? {
+          placeId: urlOriginPlaceId ?? undefined,
+          name: urlOriginName,
+          latitude: urlOriginLat,
+          longitude: urlOriginLng,
+        }
+      : null
+  );
+
+  const initialDestination: LocationPlace | null = locationState?.destination ?? (
+    urlDestName
+      ? {
+          placeId: urlDestPlaceId ?? undefined,
+          name: urlDestName,
+          latitude: urlDestLat,
+          longitude: urlDestLng,
+        }
+      : null
+  );
+
+  const [currentOrigin, setCurrentOrigin] = useState<LocationPlace | null>(initialOrigin);
+  const [currentDest, setCurrentDest] = useState<LocationPlace | null>(initialDestination);
   const [sortBy, setSortBy] = useState<"cheapest" | "confidence" | "all">("cheapest");
   const [selectedVehicle, setSelectedVehicle] = useState<string>("All");
+  const [showCreateModal, setShowCreateModal] = useState(false);
 
   // Synchronize when URL search param changes
   useEffect(() => {
-    const q = searchParams.get("destination") ?? searchParams.get("query") ?? "";
-    setSearchInput(q);
-    setActiveQuery(q);
+    if (urlOriginName) {
+      setCurrentOrigin({
+        placeId: urlOriginPlaceId ?? undefined,
+        name: urlOriginName,
+        latitude: urlOriginLat,
+        longitude: urlOriginLng,
+      });
+    }
+    if (urlDestName) {
+      setCurrentDest({
+        placeId: urlDestPlaceId ?? undefined,
+        name: urlDestName,
+        latitude: urlDestLat,
+        longitude: urlDestLng,
+      });
+    }
   }, [searchParams]);
 
-  // Live query: searches when query is non-empty, otherwise fetches all routes
-  const { data: routes = [], isLoading, isError, error } = useRoutes(activeQuery);
-
-  const handleSearchSubmit = (e?: React.FormEvent) => {
-    if (e) e.preventDefault();
-    const trimmed = searchInput.trim();
-    setActiveQuery(trimmed);
-    if (trimmed) {
-      setSearchParams({ destination: trimmed });
-    } else {
-      setSearchParams({});
+  // Construct structured query argument for useRoutes
+  const searchArg: RouteSearchParams | string | undefined = useMemo(() => {
+    if (
+      currentOrigin?.latitude !== undefined &&
+      currentOrigin?.longitude !== undefined &&
+      currentDest?.latitude !== undefined &&
+      currentDest?.longitude !== undefined
+    ) {
+      return {
+        originLat: currentOrigin.latitude,
+        originLng: currentOrigin.longitude,
+        originName: currentOrigin.name,
+        originPlaceId: currentOrigin.placeId,
+        destinationLat: currentDest.latitude,
+        destinationLng: currentDest.longitude,
+        destinationName: currentDest.name,
+        destinationPlaceId: currentDest.placeId,
+        vehicleType: selectedVehicle !== "All" ? selectedVehicle : undefined,
+      };
     }
+    if (currentDest?.name) {
+      return currentDest.name;
+    }
+    return undefined;
+  }, [currentOrigin, currentDest, selectedVehicle]);
+
+  // Live query: searches via GET /api/routes/search when coordinates are present, else getAllRoutes
+  const { data: routes = [], isLoading, isError, error } = useRoutes(searchArg);
+
+  const handleBoxSearch = (origin: LocationPlace, dest: LocationPlace) => {
+    setCurrentOrigin(origin);
+    setCurrentDest(dest);
+
+    const params = new URLSearchParams();
+    if (origin.placeId) params.set("originPlaceId", origin.placeId);
+    if (origin.name) params.set("originName", origin.name);
+    if (origin.latitude !== undefined) params.set("originLat", String(origin.latitude));
+    if (origin.longitude !== undefined) params.set("originLng", String(origin.longitude));
+
+    if (dest.placeId) params.set("destinationPlaceId", dest.placeId);
+    if (dest.name) params.set("destinationName", dest.name);
+    if (dest.latitude !== undefined) params.set("destinationLat", String(dest.latitude));
+    if (dest.longitude !== undefined) params.set("destinationLng", String(dest.longitude));
+
+    setSearchParams(params);
   };
 
   const clearFilters = () => {
-    setSearchInput("");
-    setActiveQuery("");
+    setCurrentOrigin(null);
+    setCurrentDest(null);
     setSelectedVehicle("All");
     setSortBy("cheapest");
     setSearchParams({});
@@ -171,54 +283,45 @@ const SearchResults = () => {
   }, [routes, selectedVehicle, sortBy]);
 
   const hasResults = sortedAndFiltered.length > 0;
+  const isFiltered = Boolean(currentOrigin || currentDest || selectedVehicle !== "All" || sortBy !== "cheapest");
 
   return (
     <div className="flex flex-col min-h-dvh bg-[#F5F5F0]">
       {/* Top Navbar */}
       <BottomNavBar items={isBusiness ? VENDOR_NAV_ITEMS : undefined} />
 
-      {/* Sticky header — top-16 matches the h-16 navbar */}
+      {/* Sticky header */}
       <div className="sticky top-16 z-20 bg-[#F5F5F0]/95 backdrop-blur-sm border-b border-gray-200 px-4 pt-4 pb-3">
         <div className="flex items-center gap-3 w-full mx-auto" style={{ maxWidth: "min(100%, 68rem)" }}>
           <BackButton onClick={() => navigate(-1)} />
           <span className="text-base font-bold text-gray-900">
-            Destination Search
+            Route Search & Discovery
           </span>
         </div>
       </div>
 
       <main className="flex-1 px-4 pt-20 pb-16 flex flex-col gap-4 w-full mx-auto" style={{ maxWidth: "min(100%, 68rem)" }}>
-        {/* Search Input Bar */}
-        <form onSubmit={handleSearchSubmit} className="relative flex items-center">
-          <span className="absolute left-3.5 top-1/2 -translate-y-1/2 pointer-events-none" aria-hidden="true">
-            <Search className="w-4.5 h-4.5 text-[#747878]" />
-          </span>
-          <input
-            id="search-destination-input"
-            type="search"
-            value={searchInput}
-            onChange={(e) => setSearchInput(e.target.value)}
-            placeholder="Search destination (e.g. Computer Village, CMS, Ikeja)..."
-            className="w-full h-11 pl-10 pr-24 rounded-xl bg-white border border-gray-200 text-sm text-gray-900 placeholder:text-gray-400 outline-none focus:ring-2 focus:ring-[#F5B800]"
-          />
-          <button
-            id="search-submit-btn"
-            type="submit"
-            className="absolute right-2 top-1/2 -translate-y-1/2 px-3 py-1.5 rounded-lg bg-[#1A1A1A] text-white text-xs font-medium hover:bg-black transition-colors"
-          >
-            Search
-          </button>
-        </form>
+        {/* Dual-Input Route Search Box */}
+        <RouteSearchBox
+          initialOrigin={currentOrigin}
+          initialDestination={currentDest}
+          onSearch={handleBoxSearch}
+          variant="compact"
+        />
 
         {/* Query label */}
-        <div className="flex items-center justify-between">
+        <div className="flex items-center justify-between mt-1">
           <div className="flex flex-col gap-0.5">
-            <SectionLabel>Live Transit Corridors</SectionLabel>
-            <p className="text-sm font-bold text-gray-900">
-              {activeQuery ? `Routes matching "${activeQuery}"` : "All Verified Routes"}
+            <SectionLabel>Transit Corridors</SectionLabel>
+            <p className="text-sm font-bold text-gray-900 m-0">
+              {currentOrigin && currentDest
+                ? `${currentOrigin.name} → ${currentDest.name}`
+                : currentDest
+                ? `Routes to "${currentDest.name}"`
+                : "All Verified Routes"}
             </p>
           </div>
-          {(activeQuery || selectedVehicle !== "All" || sortBy !== "cheapest") && (
+          {isFiltered && (
             <button
               type="button"
               onClick={clearFilters}
@@ -229,7 +332,7 @@ const SearchResults = () => {
           )}
         </div>
 
-        {/* Filter + Sort Pills (Supported backend enums: Bus, Keke, Taxi, Train) */}
+        {/* Filter + Sort Pills (Supported backend enums: bus, keke, taxi) */}
         <div className="flex items-center gap-2 overflow-x-auto no-scrollbar pb-1">
           <Pill
             active={sortBy === "cheapest"}
@@ -237,7 +340,7 @@ const SearchResults = () => {
           >
             Sort: {sortBy === "cheapest" ? "Cheapest Fare" : "Highest Confidence"}
           </Pill>
-          {["All", "bus", "keke", "taxi", "train"].map((v) => (
+          {["All", "bus", "keke", "taxi"].map((v) => (
             <Pill
               key={v}
               active={selectedVehicle.toLowerCase() === v.toLowerCase()}
@@ -256,11 +359,13 @@ const SearchResults = () => {
             <SkeletonCard />
           </div>
         ) : isError ? (
-          <div className="p-6 bg-red-50 text-red-600 rounded-2xl text-center text-sm">
-            Failed to fetch routes from server: {(error as any)?.message || "Network error"}.
+          <div className="p-6 bg-red-50 text-red-600 rounded-2xl text-center text-sm border border-red-100">
+            <p className="m-0 font-medium">
+              Failed to fetch routes from server: {(error as any)?.message || "Network error"}.
+            </p>
             <button
               onClick={() => clearFilters()}
-              className="block mx-auto mt-2 text-xs underline font-semibold"
+              className="block mx-auto mt-2 text-xs underline font-semibold text-red-700"
             >
               Try resetting search
             </button>
@@ -278,27 +383,50 @@ const SearchResults = () => {
               ))}
             </div>
 
-            {/* Bottom helper card below results list (matches wireframe) */}
+            {/* Bottom helper card below results list */}
             <div className="flex flex-col items-center gap-2.5 pt-6 pb-8 text-center">
               <div className="w-12 h-12 rounded-full bg-[#F4F1EE] flex items-center justify-center text-[#747878] shadow-2xs">
                 <Map className="w-5 h-5 text-[#747878]" />
               </div>
               <div className="flex flex-col gap-0.5">
                 <p className="text-sm font-semibold text-[#747878] m-0">
-                  Don't see your starting point?
+                  Don't see your specific corridor?
                 </p>
                 <p className="text-xs text-[#A4A7A7] leading-relaxed max-w-xs m-0">
-                  Try refining your search or exploring the map.
+                  You can contribute new routes to help fellow commuters.
                 </p>
               </div>
+              <button
+                type="button"
+                onClick={() => setShowCreateModal(true)}
+                className="mt-1 text-xs font-bold text-[#005047] hover:underline"
+              >
+                + Create a new route
+              </button>
             </div>
           </div>
         ) : (
-          <EmptyState activeQuery={activeQuery} onReset={clearFilters} />
+          <NoRouteEmptyState
+            originName={currentOrigin?.name}
+            destName={currentDest?.name}
+            onCreateRoute={() => setShowCreateModal(true)}
+            onReset={clearFilters}
+          />
         )}
       </main>
+
+      {/* Create Route Modal */}
+      {showCreateModal && (
+        <CreateRouteModal
+          isOpen={showCreateModal}
+          onClose={() => setShowCreateModal(false)}
+          initialOrigin={currentOrigin ?? undefined}
+          initialDestination={currentDest ?? undefined}
+        />
+      )}
     </div>
   );
 };
 
 export default SearchResults;
+

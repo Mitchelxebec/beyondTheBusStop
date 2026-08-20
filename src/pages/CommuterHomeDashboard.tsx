@@ -1,16 +1,18 @@
 import { useState } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { useNavigate } from "react-router-dom";
-import { Search, Clock, Shield, Hospital, Flame, MapPin } from "lucide-react";
+import { Clock, Shield, Hospital, Flame, MapPin } from "lucide-react";
 import {
   BottomNavBar,
   SectionLabel,
   RouteCard,
+  RouteSearchBox,
 } from "../components";
 import { useAuth } from "../contexts/AuthContext";
 import { useRoutes } from "../hooks/useRoutes";
 import { getSafetyPoints } from "../services/safetyPoints";
 import type { SafetyPoint, SafetyPointCategory } from "../types/safetyPoints";
+import type { LocationPlace } from "../types/routes";
 
 // ─── localStorage helpers (recent searches — no backend endpoint for this) ──────
 
@@ -36,17 +38,6 @@ function saveRecentSearch(query: string): string[] {
 }
 
 // ─── Icons & Safety Category Map ───────────────────────────────────────────────
-
-/**
- * Flagged Custom Icon Exception:
- * NavigateTurnIcon is preserved as custom SVG for exact visual match with turn arrow UI design.
- */
-const NavigateTurnIcon = () => (
-  <svg width="15" height="15" viewBox="0 0 15 15" fill="none" aria-hidden="true">
-    <path d="M8 2L13 7L8 12" stroke="white" strokeWidth="1.6" strokeLinecap="round" strokeLinejoin="round" />
-    <path d="M3 7H13" stroke="white" strokeWidth="1.6" strokeLinecap="round" />
-  </svg>
-);
 
 // Safety Point category icons using lucide-react
 const CATEGORY_ICON: Record<SafetyPointCategory, React.ReactNode> = {
@@ -132,32 +123,40 @@ const CommuterHomeDashboard = () => {
     return `Good evening, ${userName}`;
   })();
 
-  // ── Search state ────────────────────────────────────────────────────────────
-  const [searchInput, setSearchInput] = useState("");
-  const [activeSearch, setActiveSearch] = useState("");
+  // ── Search navigation ───────────────────────────────────────────────────────
   const [recentSearches, setRecentSearches] = useState<string[]>(
     loadRecentSearches
   );
 
-  const handleSearchInputChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    const val = e.target.value;
-    setSearchInput(val);
-    if (!val.trim()) {
-      setActiveSearch("");
-    }
-  };
+  const handleRouteSearch = (origin: LocationPlace, destination: LocationPlace) => {
+    const label = `${origin.name} → ${destination.name}`;
+    setRecentSearches(saveRecentSearch(label));
 
-  const handleSearch = () => {
-    const q = searchInput.trim();
-    if (!q) return;
-    setRecentSearches(saveRecentSearch(q));
-    navigate(`/search?destination=${encodeURIComponent(q)}`);
+    const params = new URLSearchParams();
+    if (origin.placeId) params.set("originPlaceId", origin.placeId);
+    if (origin.name) params.set("originName", origin.name);
+    if (origin.latitude !== undefined) params.set("originLat", String(origin.latitude));
+    if (origin.longitude !== undefined) params.set("originLng", String(origin.longitude));
+
+    if (destination.placeId) params.set("destinationPlaceId", destination.placeId);
+    if (destination.name) params.set("destinationName", destination.name);
+    if (destination.latitude !== undefined) params.set("destinationLat", String(destination.latitude));
+    if (destination.longitude !== undefined) params.set("destinationLng", String(destination.longitude));
+
+    navigate(`/search?${params.toString()}`, {
+      state: { origin, destination },
+    });
   };
 
   const handleRecentClick = (query: string) => {
-    setSearchInput(query);
-    setRecentSearches(saveRecentSearch(query));
-    navigate(`/search?destination=${encodeURIComponent(query)}`);
+    if (query.includes("→")) {
+      const [orig, dest] = query.split("→").map((s) => s.trim());
+      navigate(
+        `/search?originName=${encodeURIComponent(orig)}&destinationName=${encodeURIComponent(dest)}`
+      );
+    } else {
+      navigate(`/search?destinationName=${encodeURIComponent(query)}`);
+    }
   };
 
   // ── Data queries ────────────────────────────────────────────────────────────
@@ -166,7 +165,7 @@ const CommuterHomeDashboard = () => {
     data: displayedRoutes = [],
     isLoading: routesLoading,
     isError: routesError,
-  } = useRoutes(activeSearch);
+  } = useRoutes();
 
   const {
     data: safetyData,
@@ -179,8 +178,8 @@ const CommuterHomeDashboard = () => {
 
   // ── Derived display values ──────────────────────────────────────────────────
 
-  const isSearching = activeSearch.trim().length > 0;
   const safetyPoints: SafetyPoint[] = safetyData?.safetyPoints ?? [];
+
 
   // ── Render ──────────────────────────────────────────────────────────────────
 
@@ -216,34 +215,9 @@ const CommuterHomeDashboard = () => {
             </p>
           </section>
 
-          {/* 2 · Search Bar ───────────────────────────────────────────── */}
-          <section aria-label="Search for a destination">
-            <div className="relative flex items-center">
-              <span
-                className="absolute left-3 top-1/2 -translate-y-1/2 pointer-events-none"
-                aria-hidden="true"
-              >
-                <Search className="w-4.5 h-4.5 text-[#747878]" />
-              </span>
-              <input
-                id="destination-search"
-                type="search"
-                value={searchInput}
-                onChange={handleSearchInputChange}
-                onKeyDown={(e) => { if (e.key === "Enter") handleSearch(); }}
-                placeholder="Where are you going?"
-                aria-label="Search for your destination"
-                className="w-full h-12 pl-10 pr-14 rounded-lg bg-[#E5E2E1] text-base leading-6 text-[#1C1B1B] placeholder:text-[#C4C7C7] outline-none focus:ring-2 focus:ring-[#79F7E3]/60 transition-shadow"
-              />
-              <button
-                id="search-navigate-btn"
-                onClick={handleSearch}
-                aria-label="Search destination"
-                className="absolute right-3 top-1/2 -translate-y-1/2 w-8 h-8 rounded-full bg-[#1C1B1B] flex items-center justify-center transition-transform active:scale-95 hover:bg-black"
-              >
-                <NavigateTurnIcon />
-              </button>
-            </div>
+          {/* 2 · Dual-Input Route Search Box ─────────────────────────── */}
+          <section aria-label="Search for transit routes">
+            <RouteSearchBox onSearch={handleRouteSearch} />
           </section>
 
           {/* 3 · Routes ───────────────────────────────────────────────── */}
@@ -251,28 +225,17 @@ const CommuterHomeDashboard = () => {
             <SectionLabel
               variant="page"
               action={
-                isSearching ? (
-                  <button
-                    id="clear-search-btn"
-                    onClick={() => { setSearchInput(""); setActiveSearch(""); }}
-                    aria-label="Clear search and show all routes"
-                    className="text-[#59DBC7] text-sm font-medium hover:underline transition-colors"
-                  >
-                    Clear
-                  </button>
-                ) : (
-                  <button
-                    id="view-all-routes-btn"
-                    onClick={() => navigate(searchInput.trim() ? `/search?destination=${encodeURIComponent(searchInput.trim())}` : "/routes")}
-                    aria-label="View all routes"
-                    className="text-[#59DBC7] text-sm font-medium hover:underline transition-colors"
-                  >
-                    View All
-                  </button>
-                )
+                <button
+                  id="view-all-routes-btn"
+                  onClick={() => navigate("/routes")}
+                  aria-label="View all routes"
+                  className="text-[#005047] text-xs font-bold hover:underline transition-colors"
+                >
+                  View All
+                </button>
               }
             >
-              {isSearching ? `Results for "${activeSearch}"` : "Quick Routes"}
+              Quick Routes
             </SectionLabel>
 
             {routesLoading && (
@@ -289,9 +252,7 @@ const CommuterHomeDashboard = () => {
 
             {!routesLoading && !routesError && displayedRoutes.length === 0 && (
               <p className="text-[#444748] text-sm text-center py-6">
-                {isSearching
-                  ? `No routes found for "${activeSearch}".`
-                  : "No routes available yet."}
+                No routes available yet.
               </p>
             )}
 

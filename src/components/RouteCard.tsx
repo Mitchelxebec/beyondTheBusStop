@@ -1,6 +1,6 @@
 import { Bus, ArrowRight, Banknote, Clock } from "lucide-react";
 import ConfidenceBadge from "./ConfidenceBadge";
-import { getRoutePlaceName, type Route } from "../types/routes";
+import { getRoutePlaceName, formatFareRange, type Route } from "../types/routes";
 
 export interface RouteCardProps {
   route: Route;
@@ -30,6 +30,7 @@ export const RouteCard = ({
 }: RouteCardProps) => {
   const originName = getRoutePlaceName(route.origin);
   const destName = getRoutePlaceName(route.destination);
+  const fareDisplay = formatFareRange(route.fareLow, route.fareHigh);
 
   if (variant === "search") {
     return (
@@ -66,7 +67,7 @@ export const RouteCard = ({
             <div className="flex items-center gap-1.5">
               <Banknote className="w-4 h-4 text-[#444748]" />
               <span className="text-sm font-bold text-gray-900">
-                ₦{route.fareLow.toLocaleString()} – ₦{route.fareHigh.toLocaleString()}
+                {fareDisplay}
               </span>
             </div>
             <div className="flex items-center gap-2 flex-wrap">
@@ -132,7 +133,7 @@ export const RouteCard = ({
               {route.vehicleType}
             </span>
             <span className="text-[#444748] text-sm leading-5 font-medium">
-              ₦{route.fareLow.toLocaleString()} – ₦{route.fareHigh.toLocaleString()}
+              {fareDisplay}
             </span>
             {badgeText && (
               <span className="text-[10px] font-semibold text-[#005047] bg-[#79F7E3]/30 px-1.5 py-0.5 rounded">
@@ -158,5 +159,6 @@ export const RouteCard = ({
     </article>
   );
 };
+
 
 export default RouteCard;

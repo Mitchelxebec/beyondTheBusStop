@@ -21,6 +21,8 @@ export {
   SUPPORT_PHONE_DISPLAY,
   SUPPORT_TEL_HREF,
 } from "./HelpSupportModal";
+export { default as RouteSearchBox } from "./RouteSearchBox";
 export { DEFAULT_NAV_ITEMS, VENDOR_NAV_ITEMS } from "./navItems";
+
 
 

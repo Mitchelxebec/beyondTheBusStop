@@ -24,10 +24,18 @@ export interface NearbySearchResponse {
   places: NearbyPlace[];
 }
 
+/**
+ * Autocomplete result returned by GET /api/places/autocomplete?input=
+ * (googlePlaces.controller.js:91-130 → googleMaps.service.js:194-227)
+ *
+ * NOTE: The autocomplete endpoint returns ONLY { placeId, name, description }.
+ * It does NOT return coordinates. To get lat/lng, call getPlaceDetails(placeId).
+ */
 export interface LocationSearchResult {
   placeId: string;
   name: string;
-  address: string;
+  address: string; // maps to `description` in autocomplete response
+  /** Coordinates — only present after calling getPlaceDetails() */
   location: {
     latitude: number | null;
     longitude: number | null;
@@ -41,6 +49,80 @@ export interface LocationSearchResponse {
   places?: LocationSearchResult[];
   results?: LocationSearchResult[];
 }
+
+/**
+ * Place details response from GET /api/places/details/:placeId
+ * (googlePlaces.controller.js:135-172 → googleMaps.service.js:264-335)
+ * Returns { placeId, name, address, lat, lng }
+ */
+export interface PlaceDetailsResult {
+  placeId: string;
+  name: string;
+  address: string;
+  lat: number;
+  lng: number;
+}
+
+/**
+ * Fetches full place details including lat/lng for a given Google Place ID.
+ * Endpoint: GET /api/places/details/:placeId  (app.js:189 → googlePlaces.routes.js:27-30)
+ *
+ * Used whenever we need coordinates to submit to GET /api/routes/search,
+ * which requires originLat/originLng/destinationLat/destinationLng.
+ */
+export async function getPlaceDetails(
+  placeId: string
+): Promise<PlaceDetailsResult | null> {
+  if (!placeId) return null;
+  try {
+    const { data } = await api.get<{ success: boolean; place: PlaceDetailsResult }>(
+      `/places/details/${encodeURIComponent(placeId)}`
+    );
+    if (data.success && data.place) return data.place;
+    return null;
+  } catch (error) {
+    console.warn("[getPlaceDetails] Failed:", error);
+    return null;
+  }
+}
+
+/**
+ * Searches real-world locations via the backend Google Places autocomplete proxy.
+ * Endpoint: GET /api/places/autocomplete?input=:query
+ * (app.js:189 → googlePlaces.routes.js:17-20 → googlePlaces.controller.js:91-130)
+ *
+ * Lagos-biased via rectangular bounding box in googleMaps.service.js:171-182.
+ *
+ * IMPORTANT: The autocomplete response does NOT include coordinates.
+ * Coordinates must be resolved separately via getPlaceDetails(placeId) before
+ * submitting a route search.
+ */
+export async function searchPlaces(query: string): Promise<LocationSearchResult[]> {
+  const trimmed = query.trim();
+  if (trimmed.length < 2) return [];
+
+  try {
+    const { data } = await api.get<{
+      success: boolean;
+      count: number;
+      places?: Array<{ placeId: string; name: string; description?: string }>;
+    }>("/places/autocomplete", {
+      params: { input: trimmed },
+    });
+
+    return (data.places ?? []).map((p) => ({
+      placeId: p.placeId,
+      name: p.name,
+      address: p.description ?? "",
+      location: { latitude: null, longitude: null },
+      types: [],
+    }));
+  } catch (error) {
+    console.warn("[searchPlaces] Failed to fetch locations from backend proxy:", error);
+    return [];
+  }
+}
+
 
 /**
  * Pre-calibrated geographic coordinates for major Lagos transit hubs & corridors.

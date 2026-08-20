@@ -1,6 +1,7 @@
 import { useParams } from "react-router-dom";
 import { usePublicTrip } from "../../hooks/useTrips";
 import type { PublicTrip as PublicTripType } from "../../types/trips";
+import { formatFareRange } from "../../types/routes";
 
 // ─── Icons ─────────────────────────────────────────────────────────────────────
 
@@ -116,7 +117,7 @@ const TripCard = ({ trip }: { trip: PublicTripType }) => {
           <DetailRow
             icon={<FareIcon />}
             label="Expected Fare"
-            value={`₦${trip.fareLow.toLocaleString()} – ₦${trip.fareHigh.toLocaleString()}`}
+            value={formatFareRange(trip.fareLow, trip.fareHigh)}
           />
           {trip.confidenceScore !== undefined && (
             <DetailRow

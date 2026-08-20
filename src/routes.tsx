@@ -36,6 +36,7 @@ const PublicTrip            = lazy(() => import("./pages/commuter/PublicTrip"));
 const NotFound              = lazy(() => import("./pages/NotFound"));
 const ComponentShowcase     = lazy(() => import("./pages/ComponentShowcase"));
 const SubscriptionTrialOffer = lazy(() => import("./pages/vendor/SubscriptionTrialOffer"));
+const MyListings             = lazy(() => import("./pages/vendor/MyListings"));
 
 const s = (el: React.ReactNode) => (
   <Suspense fallback={<PageLoader />}>{el}</Suspense>
@@ -90,6 +91,7 @@ export const router = createBrowserRouter([
   { path: "/vendor/create-listing",   element: auth(<CreateListing />, "business") },
   { path: "/vendor/subscription",      element: auth(<SubscriptionManagement />, "business") },
   { path: "/vendor/subscription/trial", element: auth(<SubscriptionTrialOffer />, "business") },
+  { path: "/vendor/listings",           element: auth(<MyListings />, "business") },
 
   // ── Shared: both commuter and business roles ───────────────────────────────
   { path: "/routes",                  element: auth(<VendorRoutes />) },
@@ -114,6 +116,7 @@ export const router = createBrowserRouter([
   { path: "/dev/create-listing",      element: s(<CreateListing />) },
   { path: "/dev/subscription",         element: s(<SubscriptionManagement />) },
   { path: "/dev/subscription-trialOffer", element: s(<SubscriptionTrialOffer />) },
+  { path: "/dev/my-listings",            element: s(<MyListings />) },
   { path: "/dev/share",               element: s(<ShareTrip />) },
 
   // ── Catch-all ─────────────────────────────────────────────────────────────

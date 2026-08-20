@@ -18,7 +18,8 @@ import { BottomNavBar, Toast, VENDOR_NAV_ITEMS } from "../../components";
 import { useAuth } from "../../contexts/AuthContext";
 import { getProfile } from "../../services/auth";
 import { getSubscriptionStatus } from "../../services/payment";
-import { useRoutes } from "../../hooks/useRoutes";
+import { getMyListings } from "../../services/listings";
+// useRoutes removed — listings count now comes from GET /api/listings/my, not transit routes
 
 // ─── Figma-matched Section Label ──────────────────────────────────────────────
 
@@ -123,11 +124,16 @@ const VendorProfile = () => {
 
   const isVerified = profileData?.data?.isVerified ?? true;
 
-  // ── Live: Route count filtered by this vendor ──────────────────────────────
-  // Endpoint: GET /api/routes (route.routes.js:L19) → getAllRoutes → filter by createdBy
-  const { data: allRoutes = [] } = useRoutes();
-  const currentUserId = session?.user?._id || session?.user?.id;
-  const myListingsCount = allRoutes.filter((r) => r.createdBy === currentUserId).length;
+  // ── Live: Listings count — GET /api/listings/my ──────────────────────────
+  // Source: listing.routes.js:32-36 | listing.controller.js:123-170 | app.js:194
+  // Previously used useRoutes() filtered by createdBy — that counts transit routes, not business listings.
+  // Corrected to use the dedicated GET /api/listings/my endpoint.
+  const { data: myListingsData } = useQuery({
+    queryKey: ["listings", "my"],
+    queryFn: getMyListings,
+    enabled: !!session?.token,
+  });
+  const myListingsCount = myListingsData?.listings?.length ?? 0;
 
   // ── Live: Subscription status — GET /api/subscription/status ─────────────
   const { data: subData } = useQuery({
@@ -240,15 +246,21 @@ const VendorProfile = () => {
           {/* LIVE: myListingsCount  |  STATIC: rating, earned */}
           <section aria-label="Business statistics">
             <div className="grid grid-cols-3 bg-[#F4F1EE] rounded-2xl p-4 sm:p-5 border border-black/5 shadow-sm text-center">
-              {/* Listings — LIVE */}
-              <div className="flex flex-col items-center justify-center border-r border-black/8 pr-2">
+              {/* Listings — LIVE (GET /api/listings/my). Clickable → /vendor/listings */}
+              <button
+                type="button"
+                id="stat-listings-btn"
+                onClick={() => navigate("/vendor/listings")}
+                className="flex flex-col items-center justify-center border-r border-black/8 pr-2 hover:opacity-75 active:scale-95 transition-all cursor-pointer"
+                aria-label={`${myListingsCount} listings — view all`}
+              >
                 <span className="text-2xl sm:text-3xl font-extrabold text-[#1C1B1B]">
                   {myListingsCount}
                 </span>
                 <span className="text-[11px] sm:text-xs font-bold text-[#747878] uppercase tracking-wider mt-0.5">
                   Listings
                 </span>
-              </div>
+              </button>
 
               {/* Rating — STATIC */}
               {/* TODO: replace with real rating when GET /api/business/metrics exists */}

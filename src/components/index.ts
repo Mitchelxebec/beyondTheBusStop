@@ -14,4 +14,6 @@ export { default as ConfidenceBadge } from "./ConfidenceBadge";
 export { default as Toast } from "./Toast";
 export { default as RouteCard } from "./RouteCard";
 export { default as RouteMap } from "./RouteMap";
+export { default as EditListingModal } from "./EditListingModal";
 export { DEFAULT_NAV_ITEMS, VENDOR_NAV_ITEMS } from "./navItems";
+

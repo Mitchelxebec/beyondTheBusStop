@@ -1,6 +1,6 @@
 import { useState } from "react";
 import { useNavigate } from "react-router-dom";
-import { useQuery } from "@tanstack/react-query";
+import { useQuery, useQueryClient } from "@tanstack/react-query";
 import {
   Shield,
   Bell,
@@ -14,7 +14,13 @@ import {
   ArrowLeft,
   Star,
 } from "lucide-react";
-import { BottomNavBar, Toast, VENDOR_NAV_ITEMS, HelpSupportModal } from "../../components";
+import {
+  BottomNavBar,
+  Toast,
+  VENDOR_NAV_ITEMS,
+  HelpSupportModal,
+  EditBusinessDetailsModal,
+} from "../../components";
 import { useAuth } from "../../contexts/AuthContext";
 import { getProfile } from "../../services/auth";
 import { getSubscriptionStatus } from "../../services/payment";
@@ -89,6 +95,7 @@ const MenuRow = ({ id, icon, iconBg = "bg-[#F4F1EE]", title, subtitle, onClick, 
  */
 const VendorProfile = () => {
   const navigate = useNavigate();
+  const queryClient = useQueryClient();
   const { session, clearSession } = useAuth();
   const [activeModal, setActiveModal] = useState<string | null>(null);
   const [toastMsg, setToastMsg] = useState<string | null>(null);
@@ -121,6 +128,12 @@ const VendorProfile = () => {
     profileData?.data?.category ||
     session?.user?.category ||
     "Business";
+
+  const businessAddress =
+    profileData?.data?.businessAddress ||
+    session?.user?.businessAddress ||
+    "";
+
 
   const isVerified = profileData?.data?.isVerified ?? true;
 
@@ -443,8 +456,21 @@ const VendorProfile = () => {
         role="vendor"
       />
 
-      {/* ── Lightweight modal stub for non-data settings items (Security, Notifications, Business Details) ─────── */}
-      {activeModal && activeModal !== "Help & Support" && (
+      {/* ── Business Details Live Modal ────────────────────────────────────── */}
+      <EditBusinessDetailsModal
+        isOpen={activeModal === "Business Details"}
+        onClose={() => setActiveModal(null)}
+        initialBusinessName={businessName}
+        initialCategory={businessCategory}
+        initialBusinessAddress={businessAddress}
+        onSuccess={() => {
+          queryClient.invalidateQueries({ queryKey: ["profile"] });
+          showToast("Business details updated successfully");
+        }}
+      />
+
+      {/* ── Lightweight modal stub for non-data settings items (Security, Notifications) ─────── */}
+      {activeModal && activeModal !== "Help & Support" && activeModal !== "Business Details" && (
         <div
           role="dialog"
           aria-modal="true"
@@ -475,6 +501,7 @@ const VendorProfile = () => {
           </div>
         </div>
       )}
+
 
       {/* ── Toast ──────────────────────────────────────────────────── */}
       <Toast message={toastMsg} />

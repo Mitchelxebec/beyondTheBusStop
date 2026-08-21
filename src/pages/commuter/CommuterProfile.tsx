@@ -1,7 +1,18 @@
 import { useState } from "react";
 import { useNavigate } from "react-router-dom";
-import { BottomNavBar, PageHeader, NotificationBell, Toast, HelpSupportModal } from "../../components";
+import { useQuery, useQueryClient } from "@tanstack/react-query";
+import {
+  BottomNavBar,
+  PageHeader,
+  NotificationBell,
+  Toast,
+  HelpSupportModal,
+  EditCommuterProfileModal,
+} from "../../components";
 import { useAuth } from "../../contexts/AuthContext";
+import { getProfile } from "../../services/auth";
+import { Edit2 } from "lucide-react";
+
 
 // ── Types & Placeholder Data ───────────────────────────────────────────────────
 
@@ -94,6 +105,7 @@ const CheckCircleBadge = () => (
  */
 const CommuterProfile = () => {
   const navigate = useNavigate();
+  const queryClient = useQueryClient();
   const { session, clearSession } = useAuth();
   const [activeModal, setActiveModal] = useState<string | null>(null);
   const [toastMessage, setToastMessage] = useState<string | null>(null);
@@ -103,8 +115,17 @@ const CommuterProfile = () => {
     setTimeout(() => setToastMessage(null), 3000);
   };
 
-  // Real user identity from session with fallback placeholder
-  const userName = session?.user?.fullName ?? "Tunde Bakare";
+  // ── Live: Profile data from GET /api/auth/profile ─────────────────────────
+  const { data: profileData } = useQuery({
+    queryKey: ["profile"],
+    queryFn: getProfile,
+    enabled: !!session?.token,
+  });
+
+  const userName =
+    profileData?.data?.fullName ||
+    session?.user?.fullName ||
+    "Tunde Bakare";
 
   // Logout handler
   const handleLogout = () => {
@@ -162,13 +183,24 @@ const CommuterProfile = () => {
               <CheckCircleBadge />
             </div>
 
-            {/* User Name */}
-            <h1
-              id="profile-user-heading"
-              className="text-xl font-bold tracking-tight text-[#1C1B1B] m-0"
-            >
-              {userName}
-            </h1>
+            {/* User Name + Edit Button */}
+            <div className="flex items-center justify-center gap-2">
+              <h1
+                id="profile-user-heading"
+                className="text-xl font-bold tracking-tight text-[#1C1B1B] m-0"
+              >
+                {userName}
+              </h1>
+              <button
+                type="button"
+                id="edit-profile-btn"
+                onClick={() => setActiveModal("Edit Profile")}
+                className="p-1.5 rounded-full text-[#747878] hover:text-[#005047] hover:bg-[#005047]/10 transition-colors cursor-pointer"
+                aria-label="Edit Profile Name"
+              >
+                <Edit2 className="w-3.5 h-3.5" />
+              </button>
+            </div>
 
             {/* Commuter Level Badge */}
             <div className="flex items-center gap-1.5 mt-1.5 px-3 py-1 rounded-full bg-[#EFECE8] text-[#5A5C5D] text-xs font-semibold tracking-wider uppercase">
@@ -176,6 +208,7 @@ const CommuterProfile = () => {
               <span>COMMUTER LEVEL {STATIC_STATS.commuterLevel}</span>
             </div>
           </section>
+
 
           {/* Commuter Stats Section (3 Columns Card) */}
           <section aria-label="Commuter statistics" className="w-full">
@@ -376,8 +409,19 @@ const CommuterProfile = () => {
         role="commuter"
       />
 
+      {/* Edit Profile Modal */}
+      <EditCommuterProfileModal
+        isOpen={activeModal === "Edit Profile"}
+        onClose={() => setActiveModal(null)}
+        initialFullName={userName}
+        onSuccess={() => {
+          queryClient.invalidateQueries({ queryKey: ["profile"] });
+          showToast("Profile name updated successfully");
+        }}
+      />
+
       {/* Lightweight modal stub for non-data menu triggers (Security, Notifications, Preferences) */}
-      {activeModal && activeModal !== "Help & Support Center" && (
+      {activeModal && activeModal !== "Help & Support Center" && activeModal !== "Edit Profile" && (
         <div
           role="dialog"
           aria-modal="true"
@@ -404,6 +448,7 @@ const CommuterProfile = () => {
           </div>
         </div>
       )}
+
 
       {/* Floating Toast Notification */}
       <Toast message={toastMessage} />

@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useRef } from "react";
 import { useNavigate } from "react-router-dom";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import {
@@ -10,8 +10,9 @@ import {
   EditCommuterProfileModal,
 } from "../../components";
 import { useAuth } from "../../contexts/AuthContext";
-import { getProfile } from "../../services/auth";
-import { Edit2 } from "lucide-react";
+import { getProfile, uploadProfileAvatar } from "../../services/auth";
+import { Edit2, Camera, Loader2 } from "lucide-react";
+
 
 
 // ── Types & Placeholder Data ───────────────────────────────────────────────────
@@ -106,9 +107,11 @@ const CheckCircleBadge = () => (
 const CommuterProfile = () => {
   const navigate = useNavigate();
   const queryClient = useQueryClient();
-  const { session, clearSession } = useAuth();
+  const fileInputRef = useRef<HTMLInputElement>(null);
+  const { session, setSession, clearSession } = useAuth();
   const [activeModal, setActiveModal] = useState<string | null>(null);
   const [toastMessage, setToastMessage] = useState<string | null>(null);
+  const [isUploadingAvatar, setIsUploadingAvatar] = useState(false);
 
   const showToast = (msg: string) => {
     setToastMessage(msg);
@@ -126,6 +129,48 @@ const CommuterProfile = () => {
     profileData?.data?.fullName ||
     session?.user?.fullName ||
     "Tunde Bakare";
+
+  const profilePicture =
+    profileData?.data?.profilePicture ||
+    session?.user?.profilePicture ||
+    null;
+
+  const handleAvatarFileChange = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+
+    if (file.size > 5 * 1024 * 1024) {
+      showToast("Image file size must be less than 5MB");
+      return;
+    }
+
+    setIsUploadingAvatar(true);
+    try {
+      const res = await uploadProfileAvatar(file);
+      if (session) {
+        setSession({
+          ...session,
+          user: {
+            ...session.user,
+            profilePicture: res.profilePicture,
+          },
+        });
+      }
+      queryClient.invalidateQueries({ queryKey: ["profile"] });
+      showToast("Profile picture updated successfully");
+    } catch (err: any) {
+      const msg =
+        err?.response?.data?.message ||
+        err?.message ||
+        "Failed to upload profile picture.";
+      showToast(msg);
+    } finally {
+      setIsUploadingAvatar(false);
+      if (fileInputRef.current) {
+        fileInputRef.current.value = "";
+      }
+    }
+  };
 
   // Logout handler
   const handleLogout = () => {
@@ -164,24 +209,55 @@ const CommuterProfile = () => {
             aria-labelledby="profile-user-heading"
             className="flex flex-col items-center justify-center text-center pt-2"
           >
-            {/* Avatar with Verified Badge */}
+            {/* Avatar with Camera Upload Trigger */}
             <div className="relative mb-3.5">
-              <div className="w-24 h-24 rounded-full overflow-hidden border-2 border-white shadow-md bg-[#EBE8E7] flex items-center justify-center">
-                <img
-                  src="https://images.unsplash.com/photo-1534528741775-53994a69daeb?auto=format&fit=crop&w=256&h=256&q=80"
-                  alt={userName}
-                  className="w-full h-full object-cover"
-                  onError={(e) => {
-                    // Fallback to stylized initials if image fails
-                    (e.target as HTMLElement).style.display = "none";
-                  }}
-                />
-                <span className="text-2xl font-bold text-[#444748]">
-                  {userName.charAt(0)}
-                </span>
+              <input
+                ref={fileInputRef}
+                type="file"
+                accept="image/png,image/jpeg,image/webp,image/jpg"
+                className="hidden"
+                onChange={handleAvatarFileChange}
+              />
+              <div className="w-24 h-24 rounded-full overflow-hidden border-2 border-white shadow-md bg-[#EBE8E7] flex items-center justify-center relative">
+                {profilePicture ? (
+                  <img
+                    src={profilePicture}
+                    alt={userName}
+                    className="w-full h-full object-cover"
+                    onError={(e) => {
+                      (e.target as HTMLElement).style.display = "none";
+                    }}
+                  />
+                ) : (
+                  <span className="text-2xl font-bold text-[#444748]">
+                    {userName.charAt(0)}
+                  </span>
+                )}
+                {isUploadingAvatar && (
+                  <div className="absolute inset-0 bg-black/40 flex items-center justify-center">
+                    <Loader2 className="w-6 h-6 text-white animate-spin" />
+                  </div>
+                )}
               </div>
+
+              {/* Camera Upload Button */}
+              <button
+                type="button"
+                id="commuter-avatar-upload-btn"
+                onClick={() => fileInputRef.current?.click()}
+                disabled={isUploadingAvatar}
+                className="absolute bottom-0 right-0 w-7 h-7 rounded-full bg-[#005047] text-white border-2 border-white flex items-center justify-center shadow-md hover:bg-[#003831] active:scale-95 transition-all cursor-pointer z-10"
+                aria-label="Upload profile picture"
+              >
+                {isUploadingAvatar ? (
+                  <Loader2 className="w-3.5 h-3.5 animate-spin" />
+                ) : (
+                  <Camera className="w-3.5 h-3.5" />
+                )}
+              </button>
               <CheckCircleBadge />
             </div>
+
 
             {/* User Name + Edit Button */}
             <div className="flex items-center justify-center gap-2">

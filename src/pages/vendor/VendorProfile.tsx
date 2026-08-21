@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useRef } from "react";
 import { useNavigate } from "react-router-dom";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import {
@@ -13,6 +13,8 @@ import {
   LayoutDashboard,
   ArrowLeft,
   Star,
+  Camera,
+  Loader2,
 } from "lucide-react";
 import {
   BottomNavBar,
@@ -22,10 +24,11 @@ import {
   EditBusinessDetailsModal,
 } from "../../components";
 import { useAuth } from "../../contexts/AuthContext";
-import { getProfile } from "../../services/auth";
+import { getProfile, uploadProfileAvatar } from "../../services/auth";
 import { getSubscriptionStatus } from "../../services/payment";
 import { getMyListings } from "../../services/listings";
 import { useBusinessAnalytics } from "../../hooks/useAnalytics";
+
 
 // ─── Figma-matched Section Label ──────────────────────────────────────────────
 
@@ -96,9 +99,11 @@ const MenuRow = ({ id, icon, iconBg = "bg-[#F4F1EE]", title, subtitle, onClick, 
 const VendorProfile = () => {
   const navigate = useNavigate();
   const queryClient = useQueryClient();
-  const { session, clearSession } = useAuth();
+  const fileInputRef = useRef<HTMLInputElement>(null);
+  const { session, setSession, clearSession } = useAuth();
   const [activeModal, setActiveModal] = useState<string | null>(null);
   const [toastMsg, setToastMsg] = useState<string | null>(null);
+  const [isUploadingAvatar, setIsUploadingAvatar] = useState(false);
 
   const showToast = (msg: string) => {
     setToastMsg(msg);
@@ -133,6 +138,49 @@ const VendorProfile = () => {
     profileData?.data?.businessAddress ||
     session?.user?.businessAddress ||
     "";
+
+  const profilePicture =
+    profileData?.data?.profilePicture ||
+    session?.user?.profilePicture ||
+    null;
+
+  const handleAvatarFileChange = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+
+    if (file.size > 5 * 1024 * 1024) {
+      showToast("Image file size must be less than 5MB");
+      return;
+    }
+
+    setIsUploadingAvatar(true);
+    try {
+      const res = await uploadProfileAvatar(file);
+      if (session) {
+        setSession({
+          ...session,
+          user: {
+            ...session.user,
+            profilePicture: res.profilePicture,
+          },
+        });
+      }
+      queryClient.invalidateQueries({ queryKey: ["profile"] });
+      showToast("Profile picture updated successfully");
+    } catch (err: any) {
+      const msg =
+        err?.response?.data?.message ||
+        err?.message ||
+        "Failed to upload profile picture.";
+      showToast(msg);
+    } finally {
+      setIsUploadingAvatar(false);
+      if (fileInputRef.current) {
+        fileInputRef.current.value = "";
+      }
+    }
+  };
+
 
 
   const isVerified = profileData?.data?.isVerified ?? true;
@@ -220,22 +268,54 @@ const VendorProfile = () => {
             aria-labelledby="vendor-name-heading"
             className="flex flex-col items-center text-center gap-2 pt-1"
           >
-            {/* Avatar */}
+            {/* Avatar with Camera Upload Trigger */}
             <div className="relative mb-1">
-              <div className="w-20 h-20 sm:w-24 sm:h-24 rounded-full bg-[#005047] border-[3px] border-white shadow-md flex items-center justify-center overflow-hidden">
-                <span className="text-2xl sm:text-3xl font-bold text-white select-none">
-                  {initials}
-                </span>
+              <input
+                ref={fileInputRef}
+                type="file"
+                accept="image/png,image/jpeg,image/webp,image/jpg"
+                className="hidden"
+                onChange={handleAvatarFileChange}
+              />
+              <div className="w-20 h-20 sm:w-24 sm:h-24 rounded-full bg-[#005047] border-[3px] border-white shadow-md flex items-center justify-center overflow-hidden relative">
+                {profilePicture ? (
+                  <img
+                    src={profilePicture}
+                    alt={businessName}
+                    className="w-full h-full object-cover"
+                    onError={(e) => {
+                      (e.target as HTMLElement).style.display = "none";
+                    }}
+                  />
+                ) : (
+                  <span className="text-2xl sm:text-3xl font-bold text-white select-none">
+                    {initials}
+                  </span>
+                )}
+                {isUploadingAvatar && (
+                  <div className="absolute inset-0 bg-black/40 flex items-center justify-center">
+                    <Loader2 className="w-6 h-6 text-white animate-spin" />
+                  </div>
+                )}
               </div>
-              {isVerified && (
-                <span
-                  className="absolute bottom-0.5 right-0.5 w-6 h-6 rounded-full bg-[#00875A] border-2 border-white flex items-center justify-center shadow-sm"
-                  aria-label="Verified merchant"
-                >
-                  <BadgeCheck className="w-3.5 h-3.5 text-white" strokeWidth={2.5} />
-                </span>
-              )}
+
+              {/* Camera Upload Button */}
+              <button
+                type="button"
+                id="vendor-avatar-upload-btn"
+                onClick={() => fileInputRef.current?.click()}
+                disabled={isUploadingAvatar}
+                className="absolute bottom-0 right-0 w-7 h-7 rounded-full bg-[#005047] text-white border-2 border-white flex items-center justify-center shadow-md hover:bg-[#003831] active:scale-95 transition-all cursor-pointer z-10"
+                aria-label="Upload profile picture"
+              >
+                {isUploadingAvatar ? (
+                  <Loader2 className="w-3.5 h-3.5 animate-spin" />
+                ) : (
+                  <Camera className="w-3.5 h-3.5" />
+                )}
+              </button>
             </div>
+
 
             <h2
               id="vendor-name-heading"

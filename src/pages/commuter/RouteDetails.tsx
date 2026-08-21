@@ -1,7 +1,6 @@
 import { useState, useEffect } from "react";
 import { useParams, useNavigate } from "react-router-dom";
 import { useQuery } from "@tanstack/react-query";
-import {
   Share2,
   ArrowRight,
   TrendingUp,
@@ -9,6 +8,7 @@ import {
   X,
   Clock,
   Bookmark,
+  Flag,
 } from "lucide-react";
 import {
   BottomNavBar,
@@ -20,6 +20,7 @@ import {
   Toast,
   VENDOR_NAV_ITEMS,
   NearbyEssentialsSection,
+  ReportRouteModal,
 } from "../../components";
 import RouteMap from "../../components/RouteMap";
 import { useAuth } from "../../contexts/AuthContext";
@@ -90,6 +91,9 @@ const RouteDetails = () => {
     }
     setTimeout(() => setToastMessage(null), 3000);
   };
+
+  const [isReportModalOpen, setIsReportModalOpen] = useState(false);
+
 
   // ── 2. Coordinates Resolution for Origin & Destination ──────────────────────
   const [coords, setCoords] = useState<{
@@ -429,8 +433,34 @@ const RouteDetails = () => {
               Back to Route Network
             </SecondaryButton>
           </section>
+
+          {/* 6 · Community Issue Reporting (P0) ────────────────────────── */}
+          <div className="flex justify-center pt-2 pb-1">
+            <button
+              type="button"
+              id="report-route-issue-btn"
+              onClick={() => setIsReportModalOpen(true)}
+              className="inline-flex items-center gap-1.5 text-xs text-[#747878] hover:text-[#BA1A1A] transition-colors py-1.5 px-3 rounded-lg hover:bg-[#BA1A1A]/5 cursor-pointer font-medium"
+            >
+              <Flag className="w-3.5 h-3.5" />
+              <span>Report an issue with this route corridor</span>
+            </button>
+          </div>
         </div>
       </main>
+
+      {/* Report Route Issue Modal */}
+      <ReportRouteModal
+        isOpen={isReportModalOpen}
+        onClose={() => setIsReportModalOpen(false)}
+        routeId={routeIdToTrack}
+        originName={originName}
+        destName={destName}
+        onSuccess={() => {
+          setToastMessage("Report submitted. Thank you for keeping transit info accurate!");
+          setTimeout(() => setToastMessage(null), 4000);
+        }}
+      />
 
       {/* Floating Toast Notification */}
       <Toast message={toastMessage} />
@@ -439,3 +469,4 @@ const RouteDetails = () => {
 };
 
 export default RouteDetails;
+

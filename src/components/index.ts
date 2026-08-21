@@ -27,3 +27,5 @@ export {
   default as NearbyEssentialsSection,
   type EssentialsCategoryFilter,
 } from "./NearbyEssentialsSection";
+export { default as ReportRouteModal } from "./ReportRouteModal";
+

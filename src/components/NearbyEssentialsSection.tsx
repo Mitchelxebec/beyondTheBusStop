@@ -6,8 +6,11 @@ import {
   MapPin,
   Store as VendorIcon,
   ArrowRight,
+  ExternalLink,
 } from "lucide-react";
 import type { NearbyPlace } from "../services/locations";
+import ListingDetailModal from "./ListingDetailModal";
+
 
 export type EssentialsCategoryFilter =
   | "all"
@@ -52,6 +55,9 @@ export const NearbyEssentialsSection: React.FC<NearbyEssentialsSectionProps> = (
 }) => {
   const [activeCategoryFilter, setActiveCategoryFilter] =
     useState<EssentialsCategoryFilter>(initialFilter);
+  const [selectedListingId, setSelectedListingId] = useState<string | null>(
+    null
+  );
 
   const filteredEssentials = places.filter((item) => {
     if (activeCategoryFilter === "all") return true;
@@ -143,7 +149,16 @@ export const NearbyEssentialsSection: React.FC<NearbyEssentialsSectionProps> = (
             return (
               <article
                 key={place.placeId}
-                className="bg-white rounded-xl p-3.5 border border-neutral-100 shadow-xs flex items-start gap-3 hover:border-neutral-300 transition-colors"
+                onClick={() => {
+                  if (isVendor) {
+                    setSelectedListingId(place.placeId);
+                  }
+                }}
+                className={`bg-white rounded-xl p-3.5 border border-neutral-100 shadow-xs flex items-start gap-3 transition-all ${
+                  isVendor
+                    ? "hover:border-[#005047]/40 hover:shadow-sm cursor-pointer"
+                    : "hover:border-neutral-300"
+                }`}
               >
                 <div
                   className={`w-9 h-9 rounded-xl ${bg} flex items-center justify-center shrink-0`}
@@ -156,8 +171,9 @@ export const NearbyEssentialsSection: React.FC<NearbyEssentialsSectionProps> = (
                       {place.name}
                     </span>
                     {isVendor && (
-                      <span className="text-[9px] font-bold px-1.5 py-0.2 rounded bg-[#79F7E3]/30 text-[#005047] shrink-0">
+                      <span className="inline-flex items-center gap-0.5 text-[9px] font-bold px-1.5 py-0.2 rounded bg-[#79F7E3]/30 text-[#005047] shrink-0">
                         Vendor
+                        <ExternalLink className="w-2.5 h-2.5" />
                       </span>
                     )}
                   </div>
@@ -205,8 +221,16 @@ export const NearbyEssentialsSection: React.FC<NearbyEssentialsSectionProps> = (
           </button>
         </div>
       )}
+
+      {/* Live Listing Detail & View Tracking Modal */}
+      <ListingDetailModal
+        isOpen={Boolean(selectedListingId)}
+        onClose={() => setSelectedListingId(null)}
+        listingId={selectedListingId}
+      />
     </section>
   );
 };
 
 export default NearbyEssentialsSection;
+

@@ -30,3 +30,5 @@ export {
 export { default as ReportRouteModal } from "./ReportRouteModal";
 export { default as EditBusinessDetailsModal } from "./EditBusinessDetailsModal";
 export { default as EditCommuterProfileModal } from "./EditCommuterProfileModal";
+export { default as ListingDetailModal } from "./ListingDetailModal";
+

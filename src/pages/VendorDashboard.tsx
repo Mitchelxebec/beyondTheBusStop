@@ -183,6 +183,11 @@ const VendorDashboard = () => {
               <h2 className="text-xl sm:text-2xl md:text-3xl font-bold text-[#1C1B1B] m-0 tracking-tight truncate">
                 {businessName}
               </h2>
+              {businessCategory && (
+                <span className="text-[11px] text-[#747878] capitalize font-medium">
+                  {businessCategory}
+                </span>
+              )}
             </div>
 
             {/* Circular Store Avatar with Green Online Dot */}

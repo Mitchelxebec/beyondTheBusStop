@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
 import {
   BottomNavBar,
@@ -8,115 +8,29 @@ import {
   ConfidenceBadge,
   Toast,
 } from "../../components";
-import type { ConfidenceLevel } from "../../types/routes";
-
-// ── Types ─────────────────────────────────────────────────────────────────────
-
-export interface SavedRouteItem {
-  id: string;
-  from: string;
-  to: string;
-  fareLow: number;
-  fareHigh: number;
-  duration: string;
-  distance: string;
-  confidence: ConfidenceLevel;
-  vehicleType: string;
-  stopsCount: number;
-  savedAt: string;
-  notes?: string;
-}
-
-// ── Static / Placeholder Dataset ───────────────────────────────────────────────
+import { useAuth } from "../../contexts/AuthContext";
+import { useRoutes } from "../../hooks/useRoutes";
+import {
+  getRoutePlaceName,
+  formatFareRange,
+  formatTimeAgo,
+  type Route,
+} from "../../types/routes";
+import {
+  getSavedRouteIds,
+  removeRouteId,
+} from "../../services/savedRoutes";
 
 /**
- * Static Mock Data for Saved Routes.
+ * Saved Routes Screen — Dedicated commuter page.
  *
- * // TODO: replace with real API response when saved-routes endpoint exists
- * // (feature agreed with team, not yet in PRD or backend as of 2026-08-14).
- * // Backend GET /api/routes exists for all routes, but no user-specific saved/favorite routes endpoint exists yet.
+ * KNOWN ARCHITECTURAL LIMITATION & FUTURE BACKEND TASK:
+ * Saved routes are persisted to browser `localStorage` namespaced by user ID (`session.user._id`).
+ * Because there is currently no user saved-routes endpoint in BTBS-BACKEND, this is scoped strictly
+ * per-browser/per-device and does not synchronize across devices.
+ * Future Backend Task: Replace localStorage persistence with a dedicated backend API endpoint
+ * (e.g. GET/POST/DELETE /api/users/saved-routes) once server schema is introduced.
  */
-const STATIC_SAVED_ROUTES: SavedRouteItem[] = [
-  {
-    id: "saved-1",
-    from: "Egbeda (Idimu Road)",
-    to: "Ikeja / Computer Village",
-    fareLow: 300,
-    fareHigh: 500,
-    duration: "~45 mins",
-    distance: "14.2 km",
-    confidence: "High",
-    vehicleType: "Bus",
-    stopsCount: 6,
-    savedAt: "Daily Commute",
-    notes: "Direct Danfo from Egbeda bus stop to Under Bridge.",
-  },
-  {
-    id: "saved-2",
-    from: "Oshodi Interchange",
-    to: "Victoria Island (CMS / Eko)",
-    fareLow: 400,
-    fareHigh: 700,
-    duration: "~35 mins",
-    distance: "18.5 km",
-    confidence: "High",
-    vehicleType: "BRT",
-    stopsCount: 4,
-    savedAt: "Work Route",
-    notes: "BRT corridor is fastest between 7:00 AM - 9:00 AM.",
-  },
-  {
-    id: "saved-3",
-    from: "Yaba (Tech Hub / Commercial)",
-    to: "Lekki Phase 1",
-    fareLow: 500,
-    fareHigh: 900,
-    duration: "~50 mins",
-    distance: "21.0 km",
-    confidence: "Medium",
-    vehicleType: "Bus",
-    stopsCount: 8,
-    savedAt: "Weekend Route",
-    notes: "Switch at Obalende or take express via Toll Gate.",
-  },
-];
-
-const SAVED_ROUTES_STORAGE_KEY = "btbs_saved_routes";
-
-/**
- * Reads saved routes from localStorage safely.
- * Returns default static routes if storage is uninitialized or corrupted.
- */
-function getStoredSavedRoutes(): SavedRouteItem[] {
-  try {
-    const raw = localStorage.getItem(SAVED_ROUTES_STORAGE_KEY);
-    if (!raw) {
-      localStorage.setItem(SAVED_ROUTES_STORAGE_KEY, JSON.stringify(STATIC_SAVED_ROUTES));
-      return STATIC_SAVED_ROUTES;
-    }
-    const parsed = JSON.parse(raw);
-    if (Array.isArray(parsed)) {
-      return parsed;
-    }
-    console.warn("[SavedRoutes] Invalid stored data format, resetting storage.");
-    localStorage.setItem(SAVED_ROUTES_STORAGE_KEY, JSON.stringify(STATIC_SAVED_ROUTES));
-    return STATIC_SAVED_ROUTES;
-  } catch (err) {
-    console.warn("[SavedRoutes] Error reading from localStorage:", err);
-    return STATIC_SAVED_ROUTES;
-  }
-}
-
-/**
- * Writes updated saved routes to localStorage safely.
- */
-function saveStoredRoutes(routesList: SavedRouteItem[]): void {
-  try {
-    localStorage.setItem(SAVED_ROUTES_STORAGE_KEY, JSON.stringify(routesList));
-  } catch (err) {
-    console.warn("[SavedRoutes] Error writing to localStorage:", err);
-  }
-}
 
 // ── Icons ──────────────────────────────────────────────────────────────────────
 
@@ -148,44 +62,62 @@ const ArrowRightIcon = () => (
 
 // ─── Component ─────────────────────────────────────────────────────────────────
 
-/**
- * Saved Routes Screen — Dedicated commuter page.
- * Displays commuter's saved / bookmarked daily routes with confidence indicators,
- * transit fares, estimated time, and route detail preview modal.
- * Persists additions and removals to browser localStorage.
- */
 const SavedRoutes = () => {
   const navigate = useNavigate();
-  const [routes, setRoutes] = useState<SavedRouteItem[]>(() => getStoredSavedRoutes());
+  const { session } = useAuth();
+  const userId = session?.user?._id || session?.user?.id;
+
+  // Live query for all routes across the transit network
+  const { data: allRoutes = [], isLoading } = useRoutes();
+
+  // Read persisted saved route IDs from namespaced localStorage
+  const [savedIds, setSavedIds] = useState<string[]>(() => getSavedRouteIds(userId));
   const [filterQuery, setFilterQuery] = useState("");
-  const [selectedRoute, setSelectedRoute] = useState<SavedRouteItem | null>(null);
+  const [selectedRoute, setSelectedRoute] = useState<Route | null>(null);
   const [toastMessage, setToastMessage] = useState<string | null>(null);
+
+  // Sync state if user changes
+  useEffect(() => {
+    setSavedIds(getSavedRouteIds(userId));
+  }, [userId]);
 
   const showToast = (msg: string) => {
     setToastMessage(msg);
     setTimeout(() => setToastMessage(null), 3000);
   };
 
-  const handleRemoveSaved = (id: string, e: React.MouseEvent) => {
+  // Filter live routes down to only user-saved IDs
+  const savedRoutes: Route[] = allRoutes.filter(
+    (r) => savedIds.includes(r._id) || (r.id && savedIds.includes(r.id))
+  );
+
+  // Remove action — permanently persists to localStorage
+  const handleRemoveSaved = (routeId: string, e: React.MouseEvent) => {
     e.stopPropagation();
-    setRoutes((prev) => {
-      const updated = prev.filter((r) => r.id !== id);
-      saveStoredRoutes(updated);
-      return updated;
-    });
+    const updatedIds = removeRouteId(routeId, userId);
+    setSavedIds(updatedIds);
+    if (selectedRoute && (selectedRoute._id === routeId || selectedRoute.id === routeId)) {
+      setSelectedRoute(null);
+    }
     showToast("Route removed from saved list");
   };
 
-  const filteredRoutes = routes.filter(
-    (r) =>
-      r.from.toLowerCase().includes(filterQuery.toLowerCase()) ||
-      r.to.toLowerCase().includes(filterQuery.toLowerCase()) ||
-      r.vehicleType.toLowerCase().includes(filterQuery.toLowerCase())
-  );
+  // Client-side text filter on saved corridors
+  const filteredRoutes = savedRoutes.filter((r) => {
+    const origin = getRoutePlaceName(r.origin).toLowerCase();
+    const dest = getRoutePlaceName(r.destination).toLowerCase();
+    const vehicle = (r.vehicleType || "").toLowerCase();
+    const query = filterQuery.toLowerCase();
+    return (
+      origin.includes(query) ||
+      dest.includes(query) ||
+      vehicle.includes(query)
+    );
+  });
 
   return (
     <div className="flex flex-col min-h-dvh bg-[#FDFCFA] text-[#1C1B1B]">
-      {/* 1 · Fixed Top Navigation Bar (Untouched per core rules) */}
+      {/* 1 · Fixed Top Navigation Bar */}
       <BottomNavBar />
 
       {/* 2 · Main Content Area */}
@@ -216,111 +148,130 @@ const SavedRoutes = () => {
               Quick access to your regular commute corridors
             </p>
             <span className="text-xs font-semibold px-2.5 py-1 rounded-full bg-[#F4F1EE] text-[#5A5C5D]">
-              {routes.length} Saved
+              {savedRoutes.length} Saved
             </span>
           </div>
 
-          {/* Search Filter Input */}
-          <div className="relative flex items-center">
-            <span className="absolute left-3 top-1/2 -translate-y-1/2 pointer-events-none" aria-hidden="true">
-              <SearchIcon />
-            </span>
-            <input
-              id="saved-routes-filter"
-              type="text"
-              value={filterQuery}
-              onChange={(e) => setFilterQuery(e.target.value)}
-              placeholder="Search saved origins or destinations…"
-              className="w-full h-11 pl-10 pr-4 rounded-xl bg-[#F4F1EE] text-sm text-[#1C1B1B] placeholder:text-[#747878] outline-none focus:ring-2 focus:ring-[#79F7E3]/60 transition-all border border-black/5"
-            />
-          </div>
+          {/* Search Filter Input (shown when user has saved routes) */}
+          {savedRoutes.length > 0 && (
+            <div className="relative flex items-center">
+              <span className="absolute left-3 top-1/2 -translate-y-1/2 pointer-events-none" aria-hidden="true">
+                <SearchIcon />
+              </span>
+              <input
+                id="saved-routes-filter"
+                type="text"
+                value={filterQuery}
+                onChange={(e) => setFilterQuery(e.target.value)}
+                placeholder="Search saved origins or destinations…"
+                className="w-full h-11 pl-10 pr-4 rounded-xl bg-[#F4F1EE] text-sm text-[#1C1B1B] placeholder:text-[#747878] outline-none focus:ring-2 focus:ring-[#79F7E3]/60 transition-all border border-black/5"
+              />
+            </div>
+          )}
 
           {/* Routes List */}
           <section aria-label="Saved routes list" className="flex flex-col gap-3.5 pt-1">
-            {filteredRoutes.length === 0 ? (
+            {isLoading ? (
+              <div className="flex flex-col items-center justify-center py-16 text-center">
+                <div className="w-8 h-8 border-3 border-[#005047] border-t-transparent rounded-full animate-spin mb-3" />
+                <p className="text-xs text-[#747878]">Loading your saved routes…</p>
+              </div>
+            ) : filteredRoutes.length === 0 ? (
+              /* Genuine Empty State */
               <div className="flex flex-col items-center justify-center py-16 px-4 text-center bg-white rounded-2xl border border-black/6">
                 <div className="w-14 h-14 rounded-full bg-[#F4F1EE] flex items-center justify-center text-[#747878] mb-3">
                   <BookmarkFilledIcon />
                 </div>
                 <h3 className="text-base font-bold text-[#1C1B1B] m-0">
-                  {routes.length === 0 ? "No saved routes yet" : "No matches found"}
+                  {savedRoutes.length === 0 ? "No saved routes yet" : "No matches found"}
                 </h3>
                 <p className="text-xs sm:text-sm text-[#747878] max-w-xs mt-1 mb-5">
-                  {routes.length === 0
-                    ? "Bookmark your frequent transit routes from search results for 1-tap commute updates."
+                  {savedRoutes.length === 0
+                    ? "Bookmark your frequent transit routes from route details for 1-tap commute updates."
                     : "Try searching with a different station or bus stop name."}
                 </p>
                 <button
                   type="button"
+                  id="explore-routes-btn"
                   onClick={() => navigate("/routes")}
-                  className="py-2.5 px-5 rounded-xl bg-[#FFC72C] text-[#1C1B1B] font-bold text-sm hover:brightness-95 active:scale-95 transition-all shadow-sm"
+                  className="py-2.5 px-5 rounded-xl bg-[#FFC72C] text-[#1C1B1B] font-bold text-sm hover:brightness-95 active:scale-95 transition-all shadow-sm cursor-pointer"
                 >
                   Explore Routes
                 </button>
               </div>
             ) : (
-              filteredRoutes.map((route) => (
-                <div
-                  key={route.id}
-                  onClick={() => setSelectedRoute(route)}
-                  className="bg-white rounded-2xl p-4 sm:p-5 border border-black/6 shadow-sm hover:border-black/15 transition-all cursor-pointer group flex flex-col gap-3"
-                  role="button"
-                  tabIndex={0}
-                  onKeyDown={(e) => {
-                    if (e.key === "Enter" || e.key === " ") setSelectedRoute(route);
-                  }}
-                  aria-label={`View details for route from ${route.from} to ${route.to}`}
-                >
-                  {/* Top row: Tags + Bookmark toggle */}
-                  <div className="flex items-center justify-between">
-                    <div className="flex items-center gap-2">
-                      <span className="px-2.5 py-0.5 rounded-full bg-[#F4F1EE] text-[#444748] text-xs font-semibold">
-                        {route.vehicleType}
-                      </span>
-                      <ConfidenceBadge level={route.confidence} />
+              /* Live Filtered Saved Route Cards */
+              filteredRoutes.map((route) => {
+                const originName = getRoutePlaceName(route.origin);
+                const destName = getRoutePlaceName(route.destination);
+                const fareDisplay = formatFareRange(route.fareLow, route.fareHigh);
+                const routeKey = route._id || route.id || "";
+
+                return (
+                  <div
+                    key={routeKey}
+                    onClick={() => setSelectedRoute(route)}
+                    className="bg-white rounded-2xl p-4 sm:p-5 border border-black/6 shadow-sm hover:border-black/15 transition-all cursor-pointer group flex flex-col gap-3"
+                    role="button"
+                    tabIndex={0}
+                    onKeyDown={(e) => {
+                      if (e.key === "Enter" || e.key === " ") setSelectedRoute(route);
+                    }}
+                    aria-label={`View details for route from ${originName} to ${destName}`}
+                  >
+                    {/* Top row: Tags + Bookmark toggle */}
+                    <div className="flex items-center justify-between">
+                      <div className="flex items-center gap-2">
+                        <span className="px-2.5 py-0.5 rounded-full bg-[#F4F1EE] text-[#444748] text-xs font-semibold capitalize">
+                          {route.vehicleType}
+                        </span>
+                        <ConfidenceBadge level={route.confidenceLevel} />
+                      </div>
+                      <button
+                        type="button"
+                        onClick={(e) => handleRemoveSaved(routeKey, e)}
+                        title="Remove from saved routes"
+                        className="p-1.5 rounded-lg text-[#FFC72C] hover:bg-[#F4F1EE] transition-colors cursor-pointer"
+                        aria-label={`Remove ${originName} to ${destName} from saved routes`}
+                      >
+                        <BookmarkFilledIcon />
+                      </button>
                     </div>
-                    <button
-                      type="button"
-                      onClick={(e) => handleRemoveSaved(route.id, e)}
-                      title="Remove from saved routes"
-                      className="p-1.5 rounded-lg text-[#FFC72C] hover:bg-[#F4F1EE] transition-colors"
-                      aria-label={`Remove ${route.from} to ${route.to} from saved routes`}
-                    >
-                      <BookmarkFilledIcon />
-                    </button>
-                  </div>
 
-                  {/* Middle row: Origin -> Destination */}
-                  <div className="flex items-center gap-2 text-[#1C1B1B]">
-                    <span className="font-bold text-base sm:text-lg tracking-tight">
-                      {route.from}
-                    </span>
-                    <span className="text-[#747878] shrink-0">
-                      <ArrowRightIcon />
-                    </span>
-                    <span className="font-bold text-base sm:text-lg tracking-tight">
-                      {route.to}
-                    </span>
-                  </div>
-
-                  {/* Bottom row: Time, Fare range, Category */}
-                  <div className="flex items-center justify-between pt-2 border-t border-black/5 text-xs text-[#747878]">
-                    <div className="flex items-center gap-3">
-                      <span className="flex items-center gap-1 font-medium">
-                        <ClockIcon />
-                        {route.duration}
+                    {/* Middle row: Origin -> Destination */}
+                    <div className="flex items-center gap-2 text-[#1C1B1B]">
+                      <span className="font-bold text-base sm:text-lg tracking-tight truncate">
+                        {originName}
                       </span>
-                      <span>•</span>
-                      <span className="font-bold text-[#1C1B1B]">
-                        ₦{route.fareLow} - ₦{route.fareHigh}
+                      <span className="text-[#747878] shrink-0">
+                        <ArrowRightIcon />
+                      </span>
+                      <span className="font-bold text-base sm:text-lg tracking-tight truncate">
+                        {destName}
                       </span>
                     </div>
-                    <span className="text-[11px] font-semibold text-[#5A5C5D] bg-[#F4F1EE] px-2 py-0.5 rounded-md">
-                      {route.savedAt}
-                    </span>
+
+                    {/* Bottom row: Creation timestamp / Fare range */}
+                    <div className="flex items-center justify-between pt-2 border-t border-black/5 text-xs text-[#747878]">
+                      <div className="flex items-center gap-3">
+                        {route.createdAt && (
+                          <span className="flex items-center gap-1 font-medium">
+                            <ClockIcon />
+                            {formatTimeAgo(route.createdAt)}
+                          </span>
+                        )}
+                        {route.createdAt && <span>•</span>}
+                        <span className="font-bold text-[#1C1B1B]">
+                          {fareDisplay}
+                        </span>
+                      </div>
+                      <span className="text-[11px] font-semibold text-[#005047] bg-[#79F7E3]/30 px-2 py-0.5 rounded-md">
+                        Saved Corridor
+                      </span>
+                    </div>
                   </div>
-                </div>
-              ))
+                );
+              })
             )}
           </section>
 
@@ -343,16 +294,18 @@ const SavedRoutes = () => {
             <div className="flex items-center justify-between border-b border-black/8 pb-3">
               <div>
                 <span className="text-xs font-bold uppercase tracking-wider text-[#747878]">
-                  Route Details
+                  Saved Corridor
                 </span>
-                <h3 className="text-lg font-bold text-[#1C1B1B] m-0">
-                  {selectedRoute.from} → {selectedRoute.to}
+                <h3 className="text-lg font-bold text-[#1C1B1B] m-0 flex items-center gap-1.5">
+                  <span>{getRoutePlaceName(selectedRoute.origin)}</span>
+                  <span className="text-[#747878]">→</span>
+                  <span>{getRoutePlaceName(selectedRoute.destination)}</span>
                 </h3>
               </div>
               <button
                 type="button"
                 onClick={() => setSelectedRoute(null)}
-                className="w-8 h-8 rounded-full bg-[#F4F1EE] flex items-center justify-center text-[#444748] hover:bg-[#EAE7E4] transition-colors"
+                className="w-8 h-8 rounded-full bg-[#F4F1EE] flex items-center justify-center text-[#444748] hover:bg-[#EAE7E4] transition-colors cursor-pointer"
                 aria-label="Close route detail modal"
               >
                 ✕
@@ -360,40 +313,31 @@ const SavedRoutes = () => {
             </div>
 
             {/* Quick Metrics Grid */}
-            <div className="grid grid-cols-3 gap-2 bg-[#F9F8F6] p-3.5 rounded-xl border border-black/5 text-center">
+            <div className="grid grid-cols-2 gap-2 bg-[#F9F8F6] p-3.5 rounded-xl border border-black/5 text-center">
               <div>
                 <span className="text-xs text-[#747878] block">Est. Fare</span>
                 <span className="text-sm sm:text-base font-bold text-[#1C1B1B]">
-                  ₦{selectedRoute.fareLow} - ₦{selectedRoute.fareHigh}
+                  {formatFareRange(selectedRoute.fareLow, selectedRoute.fareHigh)}
                 </span>
               </div>
-              <div className="border-x border-black/8">
-                <span className="text-xs text-[#747878] block">Duration</span>
-                <span className="text-sm sm:text-base font-bold text-[#1C1B1B]">
-                  {selectedRoute.duration}
-                </span>
-              </div>
-              <div>
-                <span className="text-xs text-[#747878] block">Stops</span>
-                <span className="text-sm sm:text-base font-bold text-[#1C1B1B]">
-                  {selectedRoute.stopsCount} Stops
+              <div className="border-l border-black/8">
+                <span className="text-xs text-[#747878] block">Transit Mode</span>
+                <span className="text-sm sm:text-base font-bold text-[#1C1B1B] capitalize">
+                  {selectedRoute.vehicleType}
                 </span>
               </div>
             </div>
 
-            {/* Transit Notes & Confidence */}
-            <div className="flex flex-col gap-2 text-sm text-[#444748]">
+            {/* Transit Guidance & Confidence */}
+            <div className="flex flex-col gap-2.5 text-sm text-[#444748]">
               <div className="flex items-center justify-between">
                 <span className="font-semibold text-[#1C1B1B]">Confidence Score</span>
-                <ConfidenceBadge level={selectedRoute.confidence} />
+                <ConfidenceBadge level={selectedRoute.confidenceLevel} />
               </div>
-              <div className="flex items-center justify-between">
-                <span className="font-semibold text-[#1C1B1B]">Transit Mode</span>
-                <span className="font-medium text-[#1C1B1B]">{selectedRoute.vehicleType}</span>
-              </div>
-              {selectedRoute.notes && (
-                <div className="p-3 bg-[#FEF7E0]/60 rounded-xl border border-[#FEEFC3] text-xs text-[#8A5800] mt-1">
-                  <strong>Commute Note:</strong> {selectedRoute.notes}
+              {selectedRoute.boardingPoint && (
+                <div className="p-3 bg-[#F4F1EE] rounded-xl text-xs text-[#444748]">
+                  <strong className="text-[#1C1B1B]">Boarding Point:</strong>{" "}
+                  {getRoutePlaceName(selectedRoute.boardingPoint)}
                 </div>
               )}
             </div>
@@ -403,17 +347,18 @@ const SavedRoutes = () => {
               <button
                 type="button"
                 onClick={() => {
+                  const targetId = selectedRoute._id || selectedRoute.id;
                   setSelectedRoute(null);
-                  navigate(`/search?from=${encodeURIComponent(selectedRoute.from)}&to=${encodeURIComponent(selectedRoute.to)}`);
+                  navigate(`/routes/${targetId}`);
                 }}
-                className="flex-1 py-3 px-4 rounded-xl bg-[#FFC72C] text-[#1C1B1B] font-bold text-sm hover:brightness-95 transition-all text-center"
+                className="flex-1 py-3 px-4 rounded-xl bg-[#FFC72C] text-[#1C1B1B] font-bold text-sm hover:brightness-95 transition-all text-center cursor-pointer shadow-xs"
               >
-                Search Live Buses
+                View Full Route Details
               </button>
               <button
                 type="button"
                 onClick={() => setSelectedRoute(null)}
-                className="py-3 px-4 rounded-xl bg-[#F4F1EE] text-[#1C1B1B] font-medium text-sm hover:bg-[#EAE7E4] transition-colors"
+                className="py-3 px-4 rounded-xl bg-[#F4F1EE] text-[#1C1B1B] font-medium text-sm hover:bg-[#EAE7E4] transition-colors cursor-pointer"
               >
                 Close
               </button>

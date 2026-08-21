@@ -14,6 +14,7 @@ import {
   Store as VendorIcon,
   Info,
   Clock,
+  Bookmark,
 } from "lucide-react";
 import {
   BottomNavBar,
@@ -22,12 +23,18 @@ import {
   ConfidenceBadge,
   PrimaryButton,
   SecondaryButton,
+  Toast,
   VENDOR_NAV_ITEMS,
 } from "../../components";
 import RouteMap from "../../components/RouteMap";
 import { useAuth } from "../../contexts/AuthContext";
 import { useRouteById } from "../../hooks/useRoutes";
 import { getRoutePlaceName, formatFareRange, formatTimeAgo } from "../../types/routes";
+import {
+  isRouteSaved,
+  saveRouteId,
+  removeRouteId,
+} from "../../services/savedRoutes";
 import {
   resolveCoordinates,
   getMergedNearbyEssentials,
@@ -78,6 +85,32 @@ const RouteDetails = () => {
   const boardingName = getRoutePlaceName(route?.boardingPoint) || originName;
   const transferName = getRoutePlaceName(route?.transferPoint);
   const dropOffName = getRoutePlaceName(route?.dropOffPoint) || destName;
+
+  // ── Saved Route (Bookmark) State ────────────────────────────────────────────
+  const userId = session?.user?._id || session?.user?.id;
+  const routeIdToTrack = route?._id || id;
+  const [isSaved, setIsSaved] = useState<boolean>(() => isRouteSaved(routeIdToTrack, userId));
+  const [toastMessage, setToastMessage] = useState<string | null>(null);
+
+  useEffect(() => {
+    if (routeIdToTrack) {
+      setIsSaved(isRouteSaved(routeIdToTrack, userId));
+    }
+  }, [routeIdToTrack, userId]);
+
+  const handleToggleSave = () => {
+    if (!routeIdToTrack) return;
+    if (isSaved) {
+      removeRouteId(routeIdToTrack, userId);
+      setIsSaved(false);
+      setToastMessage("Route removed from saved list");
+    } else {
+      saveRouteId(routeIdToTrack, userId);
+      setIsSaved(true);
+      setToastMessage("Route bookmarked to saved routes");
+    }
+    setTimeout(() => setToastMessage(null), 3000);
+  };
 
   // ── 2. Coordinates Resolution for Origin & Destination ──────────────────────
   const [coords, setCoords] = useState<{
@@ -188,22 +221,43 @@ const RouteDetails = () => {
               />
             }
             trailing={
-              <button
-                type="button"
-                onClick={() => navigate("/share", {
-                  state: {
-                    origin: originName,
-                    destination: destName,
-                    fare: formatFareRange(route.fareLow, route.fareHigh),
-                    routeId: route._id,
-                  }
-                })}
-                className="w-9 h-9 rounded-xl bg-white border border-neutral-200 flex items-center justify-center text-[#1C1B1B] hover:bg-neutral-50 transition-colors shadow-2xs"
-                aria-label="Share trip details"
-                title="Share Trip"
-              >
-                <Share2 className="w-4 h-4 text-[#005047]" />
-              </button>
+              <div className="flex items-center gap-2">
+                <button
+                  type="button"
+                  id="toggle-save-route-btn"
+                  onClick={handleToggleSave}
+                  className={`w-9 h-9 rounded-xl border flex items-center justify-center transition-all active:scale-95 shadow-2xs cursor-pointer ${
+                    isSaved
+                      ? "bg-[#FFF8E6] border-[#FFC72C]/80 text-[#B88A00]"
+                      : "bg-white border-neutral-200 text-[#747878] hover:text-[#1C1B1B] hover:bg-neutral-50"
+                  }`}
+                  aria-label={isSaved ? "Remove from saved routes" : "Save this route"}
+                  title={isSaved ? "Saved in bookmarks" : "Save route"}
+                >
+                  <Bookmark
+                    className={`w-4 h-4 transition-transform ${
+                      isSaved ? "fill-[#FFC72C] text-[#B88A00] scale-105" : "text-[#747878]"
+                    }`}
+                  />
+                </button>
+
+                <button
+                  type="button"
+                  onClick={() => navigate("/share", {
+                    state: {
+                      origin: originName,
+                      destination: destName,
+                      fare: formatFareRange(route.fareLow, route.fareHigh),
+                      routeId: route._id,
+                    }
+                  })}
+                  className="w-9 h-9 rounded-xl bg-white border border-neutral-200 flex items-center justify-center text-[#1C1B1B] hover:bg-neutral-50 transition-colors shadow-2xs"
+                  aria-label="Share trip details"
+                  title="Share Trip"
+                >
+                  <Share2 className="w-4 h-4 text-[#005047]" />
+                </button>
+              </div>
             }
           />
 
@@ -522,6 +576,9 @@ const RouteDetails = () => {
           </section>
         </div>
       </main>
+
+      {/* Floating Toast Notification */}
+      <Toast message={toastMessage} />
     </div>
   );
 };

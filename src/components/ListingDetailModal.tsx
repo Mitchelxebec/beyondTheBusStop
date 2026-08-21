@@ -13,6 +13,8 @@ import {
   Sparkles,
 } from "lucide-react";
 import { getListingById } from "../services/listings";
+import ListingReviewsSection from "./ListingReviewsSection";
+
 
 interface ListingDetailModalProps {
   isOpen: boolean;
@@ -191,10 +193,13 @@ export const ListingDetailModal: React.FC<ListingDetailModalProps> = ({
                 </div>
               )}
 
-              {/* Slot for Step 6 Reviews & Ratings */}
+              {/* Step 6 Reviews & Ratings Component */}
+              <ListingReviewsSection listingId={listing._id} />
+
               {children}
             </>
           ) : null}
+
         </div>
       </div>
     </div>

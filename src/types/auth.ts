@@ -15,6 +15,8 @@ export interface AuthUser {
   fullName?: string;
   businessName?: string;
   category?: string;
+  businessAddress?: string | null;
+  profilePicture?: string | null;
   email: string;
   role: UserRole;
   token: string; // JWT lives inside user object per this API
@@ -84,6 +86,8 @@ export interface ProfileData {
   fullName?: string;
   businessName?: string;
   category?: string;
+  businessAddress?: string | null;
+  profilePicture?: string | null;
   email: string;
   isVerified: boolean;
   timestamp: string;
@@ -94,6 +98,55 @@ export interface ProfileResponse {
   data: ProfileData;
 }
 
+/* ── Update Profile ───────────────────────────────────────────────────────── */
+
+export interface UpdateBusinessProfilePayload {
+  businessName?: string;
+  category?: string;
+  businessAddress?: string | null;
+}
+
+export interface UpdateCommuterProfilePayload {
+  fullName?: string;
+}
+
+export type UpdateProfilePayload =
+  | UpdateBusinessProfilePayload
+  | UpdateCommuterProfilePayload;
+
+export interface UpdateProfileResponse {
+  success: boolean;
+  message: string;
+  user: {
+    id: string;
+    fullName?: string;
+    businessName?: string;
+    category?: string;
+    businessAddress?: string | null;
+    email: string;
+    role: UserRole;
+    profilePicture?: string | null;
+  };
+}
+
+/* ── Upload Profile Avatar ────────────────────────────────────────────────── */
+
+export interface UploadAvatarResponse {
+  success: boolean;
+  message: string;
+  profilePicture: string;
+  user: {
+    id: string;
+    fullName?: string;
+    businessName?: string;
+    category?: string;
+    businessAddress?: string | null;
+    email: string;
+    role: UserRole;
+    profilePicture: string;
+  };
+}
+
 /* ── Session (stored in context / localStorage) ───────────────────────────── */
 
 export interface AuthSession {
@@ -101,3 +154,4 @@ export interface AuthSession {
   user: AuthUser;
   role: UserRole;
 }
+

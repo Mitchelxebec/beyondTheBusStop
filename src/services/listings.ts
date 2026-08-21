@@ -158,3 +158,38 @@ export async function deleteListing(listingId: string): Promise<{ success: boole
   return data;
 }
 
+export interface GetSingleListingResponse {
+  success: boolean;
+  listing: MyListing & {
+    businessId?: {
+      _id: string;
+      businessName: string;
+      category: string;
+      ownerId: string;
+      isPremium?: boolean;
+      subscriptionStatus?: string;
+    };
+  };
+}
+
+/**
+ * GET /api/listings/:listingId — public
+ * Fetches a single listing and automatically registers a view event on the backend.
+ * Optional lat/lng coordinates record the viewer's location.
+ * Mounted: app.js:194 → /api/listings
+ * Controller: BTBS-BACKEND/src/controllers/listing.controller.js:321-380
+ */
+export async function getListingById(
+  listingId: string,
+  coords?: { lat?: number; lng?: number }
+): Promise<GetSingleListingResponse> {
+  const { data } = await api.get<GetSingleListingResponse>(
+    `/listings/${listingId}`,
+    {
+      params: coords,
+    }
+  );
+  return data;
+}
+
+

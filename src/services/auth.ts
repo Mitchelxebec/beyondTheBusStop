@@ -9,6 +9,9 @@ import type {
   VerifyOtpPayload,
   VerifyOtpResponse,
   ProfileResponse,
+  UpdateProfilePayload,
+  UpdateProfileResponse,
+  UploadAvatarResponse,
 } from "../types/auth";
 
 /** POST /auth/register-commuter */
@@ -58,3 +61,40 @@ export async function getProfile(): Promise<ProfileResponse> {
   const { data } = await api.get<ProfileResponse>("/auth/profile");
   return data;
 }
+
+/**
+ * PATCH /auth/profile — requires Bearer token
+ * Updates businessName, category, businessAddress for businesses, or fullName for commuters.
+ */
+export async function updateProfile(
+  payload: UpdateProfilePayload
+): Promise<UpdateProfileResponse> {
+  const { data } = await api.patch<UpdateProfileResponse>(
+    "/auth/profile",
+    payload
+  );
+  return data;
+}
+
+/**
+ * POST /auth/profile/avatar — requires Bearer token
+ * Uploads multipart form field `profilePicture` to Cloudinary.
+ */
+export async function uploadProfileAvatar(
+  file: File
+): Promise<UploadAvatarResponse> {
+  const formData = new FormData();
+  formData.append("profilePicture", file);
+
+  const { data } = await api.post<UploadAvatarResponse>(
+    "/auth/profile/avatar",
+    formData,
+    {
+      headers: {
+        "Content-Type": "multipart/form-data",
+      },
+    }
+  );
+  return data;
+}
+

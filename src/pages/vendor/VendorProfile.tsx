@@ -19,7 +19,7 @@ import { useAuth } from "../../contexts/AuthContext";
 import { getProfile } from "../../services/auth";
 import { getSubscriptionStatus } from "../../services/payment";
 import { getMyListings } from "../../services/listings";
-// useRoutes removed — listings count now comes from GET /api/listings/my, not transit routes
+import { useBusinessAnalytics } from "../../hooks/useAnalytics";
 
 // ─── Figma-matched Section Label ──────────────────────────────────────────────
 
@@ -150,10 +150,14 @@ const VendorProfile = () => {
     ? "Expired — Renew Now"
     : "Free Tier";
 
-  // ── Static: Rating & Earnings ──────────────────────────────────────────────
-  // TODO: replace with real API response when GET /api/business/metrics endpoint exists
+  // ── Live: Rating from GET /api/analytics/business?period=7 ─────────────────
+  const { data: analytics } = useBusinessAnalytics(7);
+  const liveRating = analytics?.averageRating ? analytics.averageRating.toFixed(1) : "0.0";
+
+  /* ── LEGACY SPEC (PRESERVED): Static placeholders ──────────────────────────
   const STATIC_RATING = 4.8;
   const STATIC_EARNED = "₦6.5M";
+  ─────────────────────────────────────────────────────────────────────────── */
 
   // ── Handlers ──────────────────────────────────────────────────────────────
   const handleLogout = () => {
@@ -243,7 +247,6 @@ const VendorProfile = () => {
           </section>
 
           {/* 3 · Stats Row: Listings · Rating · Earned ──────────────── */}
-          {/* LIVE: myListingsCount  |  STATIC: rating, earned */}
           <section aria-label="Business statistics">
             <div className="grid grid-cols-3 bg-[#F4F1EE] rounded-2xl p-4 sm:p-5 border border-black/5 shadow-sm text-center">
               {/* Listings — LIVE (GET /api/listings/my). Clickable → /vendor/listings */}
@@ -262,11 +265,10 @@ const VendorProfile = () => {
                 </span>
               </button>
 
-              {/* Rating — STATIC */}
-              {/* TODO: replace with real rating when GET /api/business/metrics exists */}
+              {/* Rating — LIVE (GET /api/analytics/business) */}
               <div className="flex flex-col items-center justify-center border-r border-black/8 px-2">
                 <span className="text-2xl sm:text-3xl font-extrabold text-[#1C1B1B] flex items-baseline gap-0.5">
-                  {STATIC_RATING}
+                  {liveRating}
                   <Star className="w-4 h-4 text-[#FFC72C] fill-[#FFC72C] mb-0.5" />
                 </span>
                 <span className="text-[11px] sm:text-xs font-bold text-[#747878] uppercase tracking-wider mt-0.5">
@@ -274,13 +276,12 @@ const VendorProfile = () => {
                 </span>
               </div>
 
-              {/* Earned — STATIC */}
-              {/* TODO: replace with real earnings when GET /api/business/earnings exists */}
-              <div className="flex flex-col items-center justify-center pl-2">
-                <span className="text-xl sm:text-2xl font-extrabold text-[#946A00]">
-                  {STATIC_EARNED}
+              {/* Earned — PENDING (No backend revenue model yet; marked as pending consistent with CTR/Conversion) */}
+              <div className="flex flex-col items-center justify-center pl-2" title="Revenue tracking coming soon">
+                <span className="text-2xl sm:text-3xl font-extrabold text-[#747878]">
+                  --
                 </span>
-                <span className="text-[11px] sm:text-xs font-bold text-[#946A00] uppercase tracking-wider mt-0.5">
+                <span className="text-[11px] sm:text-xs font-bold text-[#747878] uppercase tracking-wider mt-0.5">
                   Earned
                 </span>
               </div>

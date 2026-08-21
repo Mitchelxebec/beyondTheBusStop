@@ -8,6 +8,7 @@ import {
 } from "../components";
 import { useAuth } from "../contexts/AuthContext";
 import { getProfile } from "../services/auth";
+import { useBusinessAnalytics } from "../hooks/useAnalytics";
 
 // ─── Exact Figma Icons ─────────────────────────────────────────────────────────
 
@@ -106,6 +107,9 @@ const VendorDashboard = () => {
     enabled: !!session?.token,
   });
 
+  // ── Live Vendor Business Analytics (GET /api/analytics/business?period=7) ───
+  const { data: analytics } = useBusinessAnalytics(7);
+
   // Dynamic businessName & category from backend User model (BTBS-BACKEND/src/models/user.model.js)
   const businessName =
     profileData?.data?.businessName ||
@@ -193,8 +197,7 @@ const VendorDashboard = () => {
             </div>
           </div>
 
-          {/* ── 3. Top Metrics Cards Grid (Figma: Total Views & Listing Rating) ── */}
-          {/* TODO: replace with real API response when metrics endpoint exists (GET /api/business/metrics) */}
+          {/* ── 3. Top Metrics Cards Grid (Live GET /api/analytics/business) ──── */}
           <div className="grid grid-cols-2 gap-3 sm:gap-4">
             {/* Total Views Card */}
             <div className="bg-white rounded-2xl p-4 sm:p-5 border border-black/5 shadow-xs flex flex-col justify-between hover:shadow-sm transition-shadow">
@@ -206,11 +209,13 @@ const VendorDashboard = () => {
               </div>
               <div className="mt-3">
                 <span className="text-2xl sm:text-3xl font-bold text-[#1C1B1B] tracking-tight">
-                  4,821
+                  {(analytics?.totalViews ?? 0).toLocaleString()}
                 </span>
                 <div className="flex items-center gap-1 text-[11px] sm:text-xs font-semibold text-[#00C9A7] mt-0.5">
                   <TrendingUpGreenIcon />
-                  <span>+12% this week</span>
+                  <span>
+                    {(analytics?.viewsChange ?? 0) >= 0 ? `+${analytics?.viewsChange ?? 0}%` : `${analytics?.viewsChange}%`} this week
+                  </span>
                 </div>
               </div>
             </div>
@@ -226,13 +231,13 @@ const VendorDashboard = () => {
               <div className="mt-3">
                 <div className="flex items-baseline gap-1">
                   <span className="text-2xl sm:text-3xl font-bold text-[#1C1B1B] tracking-tight">
-                    4.8
+                    {analytics?.averageRating ? analytics.averageRating.toFixed(1) : "0.0"}
                   </span>
                   <span className="text-xs sm:text-sm text-[#747878] font-normal">/ 5.0</span>
                 </div>
                 <div className="flex items-center gap-1 text-[11px] sm:text-xs text-[#747878] font-normal mt-0.5">
                   <MessageSquareIcon />
-                  <span>From 142 reviews</span>
+                  <span>From {analytics?.totalReviews ?? 0} reviews</span>
                 </div>
               </div>
             </div>
@@ -247,7 +252,6 @@ const VendorDashboard = () => {
             {/* Row 1: Two Large Prominent Feature Cards */}
             <div className="grid grid-cols-2 gap-3 sm:gap-4">
               {/* Create Listing (Brand Gold/Yellow Card — Free & Unlocked) */}
-              {/* TODO: replace with real API response when create listing endpoint exists (POST /api/business/listings) */}
               <button
                 id="create-listing-btn"
                 type="button"
@@ -263,7 +267,6 @@ const VendorDashboard = () => {
               </button>
 
               {/* Boost Listing (Deep Dark Teal Gradient Card — Rocket Icon) */}
-              {/* TODO: replace with real subscriptionStatus check when endpoint exists (POST /api/business/listings/:id/boost) */}
               <button
                 id="boost-listing-btn"
                 type="button"
@@ -285,7 +288,6 @@ const VendorDashboard = () => {
             {/* Row 2: Three Equal Action Buttons (Payments, Analytics, Renew) */}
             <div className="grid grid-cols-3 gap-2.5 sm:gap-3.5">
               {/* Payments */}
-              {/* TODO: replace with real subscription/payments endpoint when ready (GET /api/business/payments) */}
               <button
                 id="payments-btn"
                 type="button"
@@ -299,7 +301,6 @@ const VendorDashboard = () => {
               </button>
 
               {/* Analytics */}
-              {/* TODO: replace with real analytics endpoint when ready (GET /api/business/analytics) */}
               <button
                 id="analytics-btn"
                 type="button"
@@ -313,7 +314,6 @@ const VendorDashboard = () => {
               </button>
 
               {/* Renew */}
-              {/* TODO: replace with real subscription renewal endpoint when ready (POST /api/business/subscription/renew) */}
               <button
                 id="renew-btn"
                 type="button"
@@ -328,8 +328,7 @@ const VendorDashboard = () => {
             </div>
           </section>
 
-          {/* ── 5. Performance Snapshot (Figma: Exactly at the Bottom with Progress Bars) ── */}
-          {/* TODO: replace with real API response when performance snapshot endpoint exists (GET /api/business/performance) */}
+          {/* ── 5. Performance Snapshot (Live Commuter Reach & Engagement) ──── */}
           <section className="bg-[#EBEAE6]/65 rounded-3xl p-4 sm:p-5 border border-black/5 flex flex-col gap-4 shadow-xs mt-1">
             {/* Header: Title + ACTIVE Pill Badge */}
             <div className="flex items-center justify-between">
@@ -344,38 +343,90 @@ const VendorDashboard = () => {
 
             {/* Subtext */}
             <p className="text-xs sm:text-sm text-[#747878] m-0 -mt-2 leading-relaxed">
-              Compared to other {businessCategory} vendors near Oshodi Terminal.
+              Commuter reach and visibility for {businessName} across transit hubs.
             </p>
 
-            {/* Metric 1: Click-through Rate */}
+            {/* Real Metric 1: Top Commuter Reach Areas */}
+            <div className="flex flex-col gap-2 pt-1">
+              <span className="text-xs font-semibold text-[#1C1B1B]">Top Commuter Locations</span>
+              {analytics?.commuterReach && analytics.commuterReach.length > 0 ? (
+                analytics.commuterReach.slice(0, 3).map((item, idx) => {
+                  const maxVal = Math.max(...analytics.commuterReach.map((r) => r.views), 1);
+                  const pct = Math.round((item.views / maxVal) * 100);
+                  return (
+                    <div key={idx} className="flex flex-col gap-1">
+                      <div className="flex items-center justify-between text-xs sm:text-sm">
+                        <span className="font-semibold text-[#1C1B1B]">{item.location}</span>
+                        <span className="font-bold text-[#00C9A7]">{item.views} views</span>
+                      </div>
+                      <div className="w-full bg-[#DCDAD5] h-2 sm:h-2.5 rounded-full overflow-hidden">
+                        <div
+                          className="bg-[#00C9A7] h-full rounded-full transition-all duration-500"
+                          style={{ width: `${Math.max(pct, 5)}%` }}
+                        />
+                      </div>
+                    </div>
+                  );
+                })
+              ) : (
+                <div className="bg-white/60 rounded-xl p-3 text-center">
+                  <p className="text-xs text-[#747878] m-0">No commuter area views recorded yet this week.</p>
+                </div>
+              )}
+            </div>
+
+            {/* Real Metric 2: 7-Day Peak Activity Day */}
+            {analytics?.listingViews && analytics.listingViews.length > 0 && (
+              <div className="flex flex-col gap-1.5 pt-1">
+                {(() => {
+                  const peak = [...analytics.listingViews].sort((a, b) => b.views - a.views)[0];
+                  const total = analytics.totalViews || 1;
+                  const pct = Math.min(100, Math.round(((peak?.views || 0) / total) * 100));
+                  return (
+                    <>
+                      <div className="flex items-center justify-between text-xs sm:text-sm">
+                        <span className="font-semibold text-[#1C1B1B]">Peak Engagement Day</span>
+                        <span className="font-bold text-[#F8BA2A]">
+                          {peak?.day || "N/A"} ({peak?.views || 0} views)
+                        </span>
+                      </div>
+                      <div className="w-full bg-[#DCDAD5] h-2 sm:h-2.5 rounded-full overflow-hidden">
+                        <div
+                          className="bg-[#F8BA2A] h-full rounded-full transition-all duration-500"
+                          style={{ width: `${Math.max(pct, 5)}%` }}
+                        />
+                      </div>
+                      <span className="text-[10px] sm:text-xs text-[#747878]">Based on 7-day activity</span>
+                    </>
+                  );
+                })()}
+              </div>
+            )}
+
+            {/* ── LEGACY SPEC (PRESERVED): Click-through Rate & Conversion ─────────────
+                Preserved for reference. Backend currently does not track click/conversion funnels.
             <div className="flex flex-col gap-1.5 pt-1">
               <div className="flex items-center justify-between text-xs sm:text-sm">
                 <span className="font-semibold text-[#1C1B1B]">Click-through Rate</span>
                 <span className="font-bold text-[#00C9A7]">8.4%</span>
               </div>
               <div className="w-full bg-[#DCDAD5] h-2 sm:h-2.5 rounded-full overflow-hidden">
-                <div
-                  className="bg-[#00C9A7] h-full rounded-full transition-all duration-500"
-                  style={{ width: "65%" }}
-                />
+                <div className="bg-[#00C9A7] h-full rounded-full transition-all duration-500" style={{ width: "65%" }} />
               </div>
               <span className="text-[10px] sm:text-xs text-[#747878]">Market Avg: 5.2%</span>
             </div>
 
-            {/* Metric 2: Conversion to Directions */}
             <div className="flex flex-col gap-1.5 pt-1">
               <div className="flex items-center justify-between text-xs sm:text-sm">
                 <span className="font-semibold text-[#1C1B1B]">Conversion to Directions</span>
                 <span className="font-bold text-[#F8BA2A]">12.1%</span>
               </div>
               <div className="w-full bg-[#DCDAD5] h-2 sm:h-2.5 rounded-full overflow-hidden">
-                <div
-                  className="bg-[#F8BA2A] h-full rounded-full transition-all duration-500"
-                  style={{ width: "80%" }}
-                />
+                <div className="bg-[#F8BA2A] h-full rounded-full transition-all duration-500" style={{ width: "80%" }} />
               </div>
               <span className="text-[10px] sm:text-xs text-[#747878]">Market Avg: 9.8%</span>
             </div>
+            ────────────────────────────────────────────────────────────────────────── */}
           </section>
 
         </div>

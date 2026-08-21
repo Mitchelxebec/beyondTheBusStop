@@ -1,6 +1,6 @@
 import { Bus, ArrowRight, Banknote, Clock } from "lucide-react";
 import ConfidenceBadge from "./ConfidenceBadge";
-import { getRoutePlaceName, formatFareRange, type Route } from "../types/routes";
+import { getRoutePlaceName, formatFareRange, formatTimeAgo, type Route } from "../types/routes";
 
 export interface RouteCardProps {
   route: Route;
@@ -76,6 +76,11 @@ export const RouteCard = ({
                 {route.vehicleType}
               </span>
               <ConfidenceBadge level={route.confidenceLevel} />
+              {route.createdAt && (
+                <span className="text-[11px] text-[#747878] font-normal">
+                  Added {formatTimeAgo(route.createdAt)}
+                </span>
+              )}
               {badgeText && (
                 <span className="text-[10px] font-semibold text-[#005047] bg-[#79F7E3]/30 px-1.5 py-0.5 rounded">
                   {badgeText}
@@ -135,6 +140,11 @@ export const RouteCard = ({
             <span className="text-[#444748] text-sm leading-5 font-medium">
               {fareDisplay}
             </span>
+            {route.createdAt && (
+              <span className="text-[11px] text-[#747878] font-normal">
+                • {formatTimeAgo(route.createdAt)}
+              </span>
+            )}
             {badgeText && (
               <span className="text-[10px] font-semibold text-[#005047] bg-[#79F7E3]/30 px-1.5 py-0.5 rounded">
                 {badgeText}

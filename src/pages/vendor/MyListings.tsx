@@ -23,6 +23,7 @@ import {
 import { useAuth } from "../../contexts/AuthContext";
 import { getMyListings, deleteListing, type MyListing } from "../../services/listings";
 import { getSubscriptionStatus } from "../../services/payment";
+import { useListingPerformance } from "../../hooks/useAnalytics";
 
 // ─── Skeleton ─────────────────────────────────────────────────────────────────
 
@@ -82,6 +83,7 @@ const EmptyState = ({ onAdd }: { onAdd: () => void }) => (
 
 interface ListingCardProps {
   listing: MyListing;
+  viewsCount: number;
   isPremium: boolean;
   onEdit: (id: string) => void;
   onBoost: (id: string) => void;
@@ -91,6 +93,7 @@ interface ListingCardProps {
 
 const ListingCard = ({
   listing,
+  viewsCount,
   isPremium,
   onEdit,
   onBoost,
@@ -98,7 +101,6 @@ const ListingCard = ({
   onDelete,
 }: ListingCardProps) => {
   const locationLabel = `${listing.location.lat.toFixed(4)}, ${listing.location.lng.toFixed(4)}`;
-  // TODO: replace locationLabel with reverse-geocoded area name when backend adds it to GET /api/listings/my response
 
   return (
     <div className="bg-[#00C9A7] rounded-2xl p-4 flex flex-col gap-3">
@@ -113,29 +115,42 @@ const ListingCard = ({
             <span className="truncate">{listing.category} · {locationLabel}</span>
           </div>
         </div>
-        {/* LIVE badge — all fetched listings are confirmed created.
-            TODO: update to dynamic status when backend Listing model adds a `status` field */}
+        {/* LIVE badge */}
         <span className="flex items-center gap-1 px-2 py-0.5 rounded-full bg-[#00875A] text-white text-[10px] font-bold shrink-0">
           <span className="w-1.5 h-1.5 rounded-full bg-white animate-pulse" />
           LIVE
         </span>
       </div>
 
-      {/* Stats chip — views/clicks not in GET /api/listings/my response.
-          TODO: wire to GET /api/analytics/listings/:id when backend analytics endpoint is ready */}
-      <div className="bg-white rounded-xl px-4 py-2.5 flex gap-6">
+      {/* Stats chip — wired to real GET /api/analytics/listings response */}
+      <div className="bg-white rounded-xl px-4 py-2.5 flex items-center justify-between">
         <div className="flex flex-col">
           <span className="text-[10px] font-bold text-[#747878] uppercase tracking-wider">
             Views (7D)
           </span>
-          <span className="text-lg font-extrabold text-[#1C1B1B]">--</span>
+          <span className="text-lg font-extrabold text-[#1C1B1B]">
+            {viewsCount.toLocaleString()}
+          </span>
         </div>
+
+        <div className="flex flex-col items-end">
+          <span className="text-[10px] font-bold text-[#747878] uppercase tracking-wider">
+            Status
+          </span>
+          <span className="text-xs font-bold text-[#00875A] flex items-center gap-1 mt-0.5">
+            <span className="w-1.5 h-1.5 rounded-full bg-[#00875A] animate-pulse" />
+            Active
+          </span>
+        </div>
+
+        {/* ── LEGACY SPEC (PRESERVED): Clicks Metric ──
         <div className="flex flex-col">
           <span className="text-[10px] font-bold text-[#747878] uppercase tracking-wider">
             Clicks
           </span>
           <span className="text-lg font-extrabold text-[#1C1B1B]">--</span>
         </div>
+        ──────────────────────────────────────────── */}
       </div>
 
       {/* Action buttons — Edit and Delete require active subscription on backend.
@@ -319,6 +334,12 @@ const MyListings = () => {
 
   const listings = listingsData?.listings ?? [];
 
+  // ── Live: per-listing view performance — GET /api/analytics/listings ─────
+  const { data: performanceData } = useListingPerformance(7);
+  const listingViewsMap = new Map<string, number>(
+    (performanceData || []).map((item) => [item.listingId, item.views])
+  );
+
   // ── Live: subscription status — GET /api/subscription/status ─────────────
   const { data: subData } = useQuery({
     queryKey: ["business", "subscription"],
@@ -447,10 +468,7 @@ const MyListings = () => {
                 <EmptyState onAdd={() => navigate("/vendor/create-listing")} />
               ) : (
                 <>
-                  {/* Active Listings section
-                      NOTE: All fetched listings are treated as "live" — backend Listing model
-                      has no `status` field (listing.model.js confirmed).
-                      TODO: add Pending section when backend adds `status` to Listing schema. */}
+                  {/* Active Listings section */}
                   <div className="flex flex-col gap-1">
                     <SectionLabel>Active Listings</SectionLabel>
                     <div className="flex flex-col gap-4 mt-2">
@@ -458,6 +476,7 @@ const MyListings = () => {
                         <ListingCard
                           key={listing._id}
                           listing={listing}
+                          viewsCount={listingViewsMap.get(listing._id) ?? 0}
                           isPremium={isPremium}
                           onEdit={handleEdit}
                           onBoost={handleBoost}

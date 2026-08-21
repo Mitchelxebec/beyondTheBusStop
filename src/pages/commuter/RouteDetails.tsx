@@ -13,6 +13,7 @@ import {
   X,
   Store as VendorIcon,
   Info,
+  Clock,
 } from "lucide-react";
 import {
   BottomNavBar,
@@ -26,7 +27,7 @@ import {
 import RouteMap from "../../components/RouteMap";
 import { useAuth } from "../../contexts/AuthContext";
 import { useRouteById } from "../../hooks/useRoutes";
-import { getRoutePlaceName, formatFareRange } from "../../types/routes";
+import { getRoutePlaceName, formatFareRange, formatTimeAgo } from "../../types/routes";
 import {
   resolveCoordinates,
   getMergedNearbyEssentials,
@@ -237,6 +238,12 @@ const RouteDetails = () => {
                 <ArrowRight className="w-5 h-5 text-[#C4C7C7] shrink-0" aria-hidden="true" />
                 <span>{destName}</span>
               </h1>
+              {route.createdAt && (
+                <div className="flex items-center gap-1.5 text-xs text-[#747878] mt-0.5">
+                  <Clock className="w-3.5 h-3.5 text-[#005047]" />
+                  <span>Added {formatTimeAgo(route.createdAt)}</span>
+                </div>
+              )}
             </div>
 
             {/* Fare & Mode Key Metrics Grid */}

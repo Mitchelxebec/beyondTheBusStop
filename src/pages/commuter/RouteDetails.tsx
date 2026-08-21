@@ -1,6 +1,7 @@
 import { useState, useEffect } from "react";
 import { useParams, useNavigate } from "react-router-dom";
 import { useQuery } from "@tanstack/react-query";
+import {
   Share2,
   ArrowRight,
   TrendingUp,
@@ -10,6 +11,7 @@ import { useQuery } from "@tanstack/react-query";
   Bookmark,
   Flag,
 } from "lucide-react";
+
 import {
   BottomNavBar,
   PageHeader,
@@ -451,9 +453,9 @@ const RouteDetails = () => {
 
       {/* Report Route Issue Modal */}
       <ReportRouteModal
-        isOpen={isReportModalOpen}
+        isOpen={isReportModalOpen && Boolean(routeIdToTrack)}
         onClose={() => setIsReportModalOpen(false)}
-        routeId={routeIdToTrack}
+        routeId={routeIdToTrack || ""}
         originName={originName}
         destName={destName}
         onSuccess={() => {
@@ -461,6 +463,7 @@ const RouteDetails = () => {
           setTimeout(() => setToastMessage(null), 4000);
         }}
       />
+
 
       {/* Floating Toast Notification */}
       <Toast message={toastMessage} />

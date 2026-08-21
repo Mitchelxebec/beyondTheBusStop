@@ -325,10 +325,13 @@ const VendorProfile = () => {
             </h2>
 
             {/* Verified Merchant pill — Figma: green bg, white text */}
-            <span className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-[#00875A] text-white text-xs font-semibold">
-              <BadgeCheck className="w-3.5 h-3.5" strokeWidth={2.5} />
-              Verified Merchant
-            </span>
+            {isVerified && (
+              <span className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-[#00875A] text-white text-xs font-semibold">
+                <BadgeCheck className="w-3.5 h-3.5" strokeWidth={2.5} />
+                Verified Merchant
+              </span>
+            )}
+
 
             {/* Category + Email sub-labels */}
             {businessCategory && (

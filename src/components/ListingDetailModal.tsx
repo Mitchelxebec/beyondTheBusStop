@@ -4,14 +4,13 @@ import {
   X,
   Store,
   MapPin,
-  Star,
-  Clock,
   Loader2,
   AlertCircle,
   ChevronLeft,
   ChevronRight,
   Sparkles,
 } from "lucide-react";
+
 import { getListingById } from "../services/listings";
 import ListingReviewsSection from "./ListingReviewsSection";
 

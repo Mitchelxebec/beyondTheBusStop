@@ -19,9 +19,16 @@ export interface MyListing {
   updatedAt?: string;
 }
 
+export type PublicListing = MyListing;
+
 export interface GetMyListingsResponse {
   success: boolean;
   listings: MyListing[];
+}
+
+export interface GetPublicListingsResponse {
+  success: boolean;
+  listings: PublicListing[];
 }
 
 /**
@@ -32,6 +39,23 @@ export interface GetMyListingsResponse {
  */
 export async function getMyListings(): Promise<GetMyListingsResponse> {
   const { data } = await api.get<GetMyListingsResponse>("/listings/my");
+  return data;
+}
+
+/**
+ * GET /api/listings
+ * Returns all public listings across all vendors.
+ * Optional query params: lat, lng, radius (in km).
+ * Mounted: app.js:194 → /api/listings.
+ */
+export async function getPublicListings(params?: {
+  lat?: number;
+  lng?: number;
+  radius?: number;
+}): Promise<GetPublicListingsResponse> {
+  const { data } = await api.get<GetPublicListingsResponse>("/listings", {
+    params,
+  });
   return data;
 }
 

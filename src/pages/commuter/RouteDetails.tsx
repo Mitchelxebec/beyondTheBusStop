@@ -3,16 +3,10 @@ import { useParams, useNavigate } from "react-router-dom";
 import { useQuery } from "@tanstack/react-query";
 import {
   Share2,
-  Shield,
-  Hospital,
-  Store,
-  MapPin,
   ArrowRight,
   TrendingUp,
   Coins,
   X,
-  Store as VendorIcon,
-  Info,
   Clock,
   Bookmark,
 } from "lucide-react";
@@ -25,6 +19,7 @@ import {
   SecondaryButton,
   Toast,
   VENDOR_NAV_ITEMS,
+  NearbyEssentialsSection,
 } from "../../components";
 import RouteMap from "../../components/RouteMap";
 import { useAuth } from "../../contexts/AuthContext";
@@ -38,24 +33,8 @@ import {
 import {
   resolveCoordinates,
   getMergedNearbyEssentials,
-  STATIC_CORRIDOR_VENDORS,
-  type NearbyPlace,
 } from "../../services/locations";
 
-// ── Category Icon Mapper ───────────────────────────────────────────────────────
-const PLACE_CATEGORY_ICON: Record<string, React.ReactNode> = {
-  hospital: <Hospital className="w-4 h-4 text-[#BA1A1A]" />,
-  police: <Shield className="w-4 h-4 text-[#005047]" />,
-  market: <Store className="w-4 h-4 text-[#8A6200]" />,
-  vendor: <VendorIcon className="w-4 h-4 text-[#005047]" />,
-};
-
-const PLACE_CATEGORY_BG: Record<string, string> = {
-  hospital: "bg-[#FCE8E6]",
-  police: "bg-[#E6FAF6]",
-  market: "bg-[#FFF8E6]",
-  vendor: "bg-[#79F7E3]/25",
-};
 
 /**
  * RouteDetails Page Component
@@ -138,28 +117,13 @@ const RouteDetails = () => {
     };
   }, [originName, destName]);
 
-  // ── 3. Live Nearby Essentials Query (Concurrent Origin & Destination) ───────
+  // ── 3. Live Nearby Essentials Query (Concurrent Origin & Destination + Live Vendors) ─
   const { data: liveNearbyPlaces = [], isLoading: isNearbyLoading } = useQuery({
     queryKey: ["nearby-essentials", coords.origin.lat, coords.origin.lng, coords.dest.lat, coords.dest.lng],
     queryFn: () => getMergedNearbyEssentials(coords.origin, coords.dest),
     enabled: Boolean(coords.origin.lat && coords.dest.lat),
   });
 
-  // Filter state for Nearby Essentials
-  const [activeCategoryFilter, setActiveCategoryFilter] = useState<
-    "all" | "hospital" | "police" | "market" | "vendor"
-  >("all");
-
-  // Merge live Google Places with Static Listed Vendors
-  const allMergedEssentials: NearbyPlace[] = [
-    ...liveNearbyPlaces,
-    ...STATIC_CORRIDOR_VENDORS,
-  ];
-
-  const filteredEssentials = allMergedEssentials.filter((item) => {
-    if (activeCategoryFilter === "all") return true;
-    return item.category === activeCategoryFilter;
-  });
 
   // ── 4. Loading & Error States ───────────────────────────────────────────────
   if (isRouteLoading) {
@@ -425,128 +389,19 @@ const RouteDetails = () => {
             </div>
           </section>
 
-          {/* 4 · Nearby Essentials (Live Google Places + Static Vendors) ──── */}
-          <section
-            aria-labelledby="nearby-essentials-heading"
-            className="flex flex-col gap-3 pt-1"
-          >
-            <div className="flex items-center justify-between">
-              <div>
-                <span className="text-[10px] font-bold uppercase tracking-wider text-[#59DBC7]">
-                  Safety & Surroundings
-                </span>
-                <h2 id="nearby-essentials-heading" className="text-base sm:text-lg font-bold text-[#1C1B1B] m-0">
-                  Nearby Essentials Along Route
-                </h2>
-              </div>
-              <span className="text-xs font-semibold px-2.5 py-1 rounded-full bg-[#F4F1EE] text-[#444748]">
-                {filteredEssentials.length} Found
-              </span>
-            </div>
+          {/* 4 · Nearby Essentials (Live Google Places + Live Corridor Vendors, Capped to 6) ──── */}
+          <NearbyEssentialsSection
+            places={liveNearbyPlaces}
+            isLoading={isNearbyLoading}
+            destName={destName}
+            maxItems={6}
+            onViewAll={(activeFilter) =>
+              navigate(`/routes/${routeIdToTrack}/nearby-essentials`, {
+                state: { activeFilter },
+              })
+            }
+          />
 
-            {/* Filter Pills */}
-            <div className="flex items-center gap-2 overflow-x-auto no-scrollbar pb-1">
-              {[
-                { id: "all", label: "All Essentials" },
-                { id: "hospital", label: "Hospitals", icon: Hospital },
-                { id: "police", label: "Police Stations", icon: Shield },
-                { id: "market", label: "Markets", icon: Store },
-                { id: "vendor", label: "Listed Vendors (Static)", icon: VendorIcon },
-              ].map((tab) => {
-                const isActive = activeCategoryFilter === tab.id;
-                const Icon = tab.icon;
-                return (
-                  <button
-                    key={tab.id}
-                    type="button"
-                    onClick={() => setActiveCategoryFilter(tab.id as any)}
-                    className={`inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full text-xs font-semibold shrink-0 transition-all cursor-pointer ${
-                      isActive
-                        ? "bg-[#005047] text-white shadow-xs"
-                        : "bg-white text-[#444748] border border-neutral-200 hover:border-neutral-400"
-                    }`}
-                  >
-                    {Icon && <Icon className="w-3.5 h-3.5" />}
-                    <span>{tab.label}</span>
-                  </button>
-                );
-              })}
-            </div>
-
-            {/* Notice for Listed Vendors static status */}
-            {(activeCategoryFilter === "all" || activeCategoryFilter === "vendor") && (
-              <div className="bg-[#FEF7E0] border border-[#FFC72C]/40 rounded-xl p-3 flex items-start gap-2 text-xs text-[#6F5400]">
-                <Info className="w-4 h-4 shrink-0 mt-0.5 text-[#6F5400]" />
-                <div className="flex flex-col gap-0.5">
-                  <span className="font-bold">Vendor Proximity Preview</span>
-                  <span>
-                    Vendor listings are currently static previews. Real-time proximity search requires vendor geolocation coordinates on the Business model.
-                  </span>
-                </div>
-              </div>
-            )}
-
-            {/* Essentials Grid / Cards */}
-            {isNearbyLoading ? (
-              <div className="bg-white rounded-2xl p-6 text-center text-xs text-[#747878] border border-neutral-100">
-                Finding hospitals, police stations, and essentials near {destName}…
-              </div>
-            ) : filteredEssentials.length === 0 ? (
-              <div className="bg-white rounded-2xl p-6 text-center text-xs text-[#747878] border border-neutral-100">
-                No nearby locations found for this filter.
-              </div>
-            ) : (
-              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-                {filteredEssentials.map((place) => {
-                  const cat = place.category || "market";
-                  const icon = PLACE_CATEGORY_ICON[cat] || <MapPin className="w-4 h-4 text-[#747878]" />;
-                  const bg = PLACE_CATEGORY_BG[cat] || "bg-neutral-100";
-                  const isStaticVendor = cat === "vendor";
-
-                  return (
-                    <article
-                      key={place.placeId}
-                      className="bg-white rounded-xl p-3.5 border border-neutral-100 shadow-xs flex items-start gap-3 hover:border-neutral-300 transition-colors"
-                    >
-                      <div className={`w-9 h-9 rounded-xl ${bg} flex items-center justify-center shrink-0`}>
-                        {icon}
-                      </div>
-                      <div className="flex flex-col min-w-0 flex-1">
-                        <div className="flex items-center justify-between gap-1">
-                          <span className="text-xs font-bold text-[#1C1B1B] truncate">
-                            {place.name}
-                          </span>
-                          {isStaticVendor && (
-                            <span className="text-[9px] font-bold px-1.5 py-0.2 rounded bg-[#79F7E3]/30 text-[#005047] shrink-0">
-                              Vendor
-                            </span>
-                          )}
-                        </div>
-
-                        <span className="text-[11px] text-[#747878] truncate">
-                          {place.address}
-                        </span>
-
-                        <div className="flex items-center gap-2 mt-1 text-[11px] font-medium text-[#444748]">
-                          <span className="font-bold text-[#005047]">
-                            {place.distance} {place.distanceUnit || "km"} away
-                          </span>
-                          {place.rating && (
-                            <span>• ⭐ {place.rating}</span>
-                          )}
-                          {place.openNow !== undefined && place.openNow !== null && (
-                            <span className={place.openNow ? "text-[#007A62] font-semibold" : "text-[#BA1A1A]"}>
-                              • {place.openNow ? "Open Now" : "Closed"}
-                            </span>
-                          )}
-                        </div>
-                      </div>
-                    </article>
-                  );
-                })}
-              </div>
-            )}
-          </section>
 
           {/* 5 · Action Buttons ───────────────────────────────────────── */}
           <section className="flex flex-col sm:flex-row gap-3 pt-3">

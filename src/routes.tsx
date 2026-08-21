@@ -32,7 +32,9 @@ const CommuterProfile       = lazy(() => import("./pages/commuter/CommuterProfil
 const SavedRoutes           = lazy(() => import("./pages/commuter/SavedRoutes"));
 const ShareTrip             = lazy(() => import("./pages/commuter/ShareTrip"));
 const RouteDetails          = lazy(() => import("./pages/commuter/RouteDetails"));
+const RouteNearbyEssentials = lazy(() => import("./pages/commuter/RouteNearbyEssentials"));
 const PublicTrip            = lazy(() => import("./pages/commuter/PublicTrip"));
+
 const NotFound              = lazy(() => import("./pages/NotFound"));
 const ComponentShowcase     = lazy(() => import("./pages/ComponentShowcase"));
 const SubscriptionTrialOffer = lazy(() => import("./pages/vendor/SubscriptionTrialOffer"));
@@ -101,7 +103,9 @@ export const router = createBrowserRouter([
   { path: "/routes/saved",            element: auth(<SavedRoutes />, "commuter") },
   { path: "/saved-routes",            element: auth(<SavedRoutes />, "commuter") },
   { path: "/routes/:id",              element: auth(<RouteDetails />) },
+  { path: "/routes/:id/nearby-essentials", element: auth(<RouteNearbyEssentials />) },
   { path: "/share",                   element: auth(<ShareTrip />, "commuter") },
+
   { path: "/profile",                 element: auth(<CommuterProfile />, "commuter") },
 
   // ── Dev (unguarded) ───────────────────────────────────────────────────────

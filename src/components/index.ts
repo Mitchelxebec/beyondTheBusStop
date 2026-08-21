@@ -23,6 +23,7 @@ export {
 } from "./HelpSupportModal";
 export { default as RouteSearchBox } from "./RouteSearchBox";
 export { DEFAULT_NAV_ITEMS, VENDOR_NAV_ITEMS } from "./navItems";
-
-
-
+export {
+  default as NearbyEssentialsSection,
+  type EssentialsCategoryFilter,
+} from "./NearbyEssentialsSection";

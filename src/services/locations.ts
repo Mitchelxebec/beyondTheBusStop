@@ -1,4 +1,5 @@
 import { api } from "../lib/axios";
+import { getPublicListings } from "./listings";
 
 export interface NearbyPlace {
   placeId: string;
@@ -267,9 +268,95 @@ export async function getNearbyPlaces(
 }
 
 /**
- * Static placeholder dataset for Listed Vendors in transit corridors.
- * // TODO: replace with real API response when vendor proximity endpoint exists
- * // (no geolocation on the Business model in BTBS-BACKEND as of August 2026).
+ * Calculates the great-circle distance between two geographic coordinates using the Haversine formula.
+ * Returns distance in kilometers (km).
+ */
+export function calculateHaversineDistanceKm(
+  lat1: number,
+  lon1: number,
+  lat2: number,
+  lon2: number
+): number {
+  const earthRadius = 6371; // Earth radius in km
+  const lat1Rad = (lat1 * Math.PI) / 180;
+  const lat2Rad = (lat2 * Math.PI) / 180;
+  const deltaLat = ((lat2 - lat1) * Math.PI) / 180;
+  const deltaLon = ((lon2 - lon1) * Math.PI) / 180;
+
+  const a =
+    Math.sin(deltaLat / 2) ** 2 +
+    Math.cos(lat1Rad) * Math.cos(lat2Rad) * Math.sin(deltaLon / 2) ** 2;
+  const c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
+
+  return earthRadius * c;
+}
+
+/**
+ * Fetches live public listings across all vendors from GET /api/listings
+ * and computes client-side proximity to the route corridor's origin and destination.
+ */
+export async function getLiveCorridorVendors(
+  originCoords: { lat: number; lng: number },
+  destCoords: { lat: number; lng: number }
+): Promise<NearbyPlace[]> {
+  try {
+    const res = await getPublicListings();
+    const listings = res.listings || [];
+
+    const vendorPlaces: NearbyPlace[] = [];
+
+    for (const item of listings) {
+      if (
+        !item.location ||
+        typeof item.location.lat !== "number" ||
+        typeof item.location.lng !== "number"
+      ) {
+        continue;
+      }
+
+      const distToOrigin = calculateHaversineDistanceKm(
+        originCoords.lat,
+        originCoords.lng,
+        item.location.lat,
+        item.location.lng
+      );
+
+      const distToDest = calculateHaversineDistanceKm(
+        destCoords.lat,
+        destCoords.lng,
+        item.location.lat,
+        item.location.lng
+      );
+
+      const minDistance = Math.min(distToOrigin, distToDest);
+
+      vendorPlaces.push({
+        placeId: item._id,
+        name: item.businessName,
+        address: item.description,
+        location: {
+          lat: item.location.lat,
+          lng: item.location.lng,
+        },
+        distance: Number(minDistance.toFixed(2)),
+        distanceUnit: "km",
+        rating: null,
+        userRatingsTotal: 0,
+        openNow: true,
+        types: ["vendor", item.category || "retail"],
+        category: "vendor",
+      });
+    }
+
+    return vendorPlaces;
+  } catch (error) {
+    console.warn("[getLiveCorridorVendors] Failed to fetch live vendor listings:", error);
+    return [];
+  }
+}
+
+/**
+ * @deprecated Use live vendor listings fetched dynamically via getMergedNearbyEssentials
  */
 export const STATIC_CORRIDOR_VENDORS: NearbyPlace[] = [
   {
@@ -314,7 +401,7 @@ export const STATIC_CORRIDOR_VENDORS: NearbyPlace[] = [
 ];
 
 /**
- * Runs two concurrent Places proximity queries (origin and destination),
+ * Runs Places proximity queries (origin and destination) and fetches live corridor vendors,
  * merges and deduplicates by place ID, and returns a sorted list by distance.
  */
 export async function getMergedNearbyEssentials(
@@ -340,7 +427,13 @@ export async function getMergedNearbyEssentials(
       )
     );
 
-    const results = await Promise.all([...originPromises, ...destPromises]);
+    const vendorsPromise = getLiveCorridorVendors(originCoords, destCoords);
+
+    const results = await Promise.all([
+      ...originPromises,
+      ...destPromises,
+      vendorsPromise,
+    ]);
     const flattened = results.flat();
 
     // Deduplicate by placeId

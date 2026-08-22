@@ -88,6 +88,93 @@ export async function getPlaceDetails(
 }
 
 /**
+ * COSMETIC PATCH ONLY:
+ * Strips leading Google Open Location Codes (Plus Codes), e.g. "483H+FWX, Ojere, ...".
+ *
+ * NOTE: The actual fix belongs in the backend's Google Geocoding API call
+ * (which is currently missing the `language=en` query parameter and result type
+ * prioritization to favor `street_address` / `route` / `premise` over `plus_code`).
+ *
+ * @param address - Raw formatted address or location name from geocoding.
+ * @returns Sanitized address without leading Plus Code, or null if empty / Plus-Code-only.
+ */
+export function stripPlusCode(address?: string | null): string | null {
+  if (!address || typeof address !== "string") return null;
+
+  const trimmed = address.trim();
+  if (!trimmed) return null;
+
+  // Leading Plus Code: 4-8 alphanumeric chars, '+', 2-4 alphanumeric chars, optional comma & space
+  const PLUS_CODE_PREFIX_REGEX = /^[A-Z0-9]{4,8}\+[A-Z0-9]{2,4}(?:,\s*|\s+)?/i;
+
+  if (PLUS_CODE_PREFIX_REGEX.test(trimmed)) {
+    const cleaned = trimmed.replace(PLUS_CODE_PREFIX_REGEX, "").trim();
+    return cleaned.length > 0 ? cleaned : null;
+  }
+
+  return trimmed;
+}
+
+/**
+ * Result returned by GET /api/places/reverse-geocode?lat=...&lng=...
+ * (googlePlaces.controller.js:174-215 → googleMaps.service.js:485-567)
+ */
+export interface ReverseGeocodeResult {
+  placeId: string | null;
+  formattedAddress: string | null;
+  name: string;
+  latitude: number;
+  longitude: number;
+  addressComponents?: any[];
+  types?: string[];
+}
+
+/**
+ * Converts GPS latitude & longitude coordinates to a human-readable street name and place ID.
+ * Endpoint: GET /api/places/reverse-geocode?lat=:lat&lng=:lng
+ */
+export async function reverseGeocode(
+  lat: number,
+  lng: number
+): Promise<ReverseGeocodeResult | null> {
+  if (!Number.isFinite(lat) || !Number.isFinite(lng)) return null;
+  try {
+    const { data } = await api.get<{
+      success: boolean;
+      location?: ReverseGeocodeResult;
+      place?: ReverseGeocodeResult;
+    }>("/places/reverse-geocode", {
+      params: { lat, lng },
+      timeout: 5000,
+    });
+    if (data.success && (data.location || data.place)) {
+      const raw = data.location || data.place;
+      if (!raw) return null;
+
+      const cleanedName = stripPlusCode(raw.name);
+      const cleanedFormattedAddress = stripPlusCode(raw.formattedAddress);
+
+      // If the address was purely a Plus Code, cleanedName & cleanedFormattedAddress will be null.
+      // In that case, return null so downstream callers fall back to raw coordinates or "Current Location".
+      const finalName = cleanedName || cleanedFormattedAddress;
+      if (!finalName) {
+        return null;
+      }
+
+      return {
+        ...raw,
+        name: finalName,
+        formattedAddress: cleanedFormattedAddress || finalName,
+      };
+    }
+    return null;
+  } catch (error) {
+    console.warn("[reverseGeocode] Lookup failed:", error);
+    return null;
+  }
+}
+
+/**
  * Searches real-world locations via the backend Google Places autocomplete proxy.
  * Endpoint: GET /api/places/autocomplete?input=:query
  * (app.js:189 → googlePlaces.routes.js:17-20 → googlePlaces.controller.js:91-130)
@@ -204,7 +291,7 @@ export async function resolveCoordinates(
 export async function getNearbyPlaces(
   lat: number,
   lng: number,
-  type: "hospital" | "police" | "market"
+  type: "hospital" | "police"
 ): Promise<NearbySearchResponse> {
   try {
     const { data } = await api.get<{
@@ -408,10 +495,9 @@ export async function getMergedNearbyEssentials(
   originCoords: { lat: number; lng: number },
   destCoords: { lat: number; lng: number }
 ): Promise<NearbyPlace[]> {
-  const types: Array<"hospital" | "police" | "market"> = [
+  const types: Array<"hospital" | "police"> = [
     "hospital",
     "police",
-    "market",
   ];
 
   try {

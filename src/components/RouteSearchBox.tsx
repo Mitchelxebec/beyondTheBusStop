@@ -1,6 +1,11 @@
 import { useState, useEffect, useRef } from "react";
 import { Search, MapPin, X, Loader2, ArrowRight, Navigation } from "lucide-react";
-import { searchPlaces, getPlaceDetails, resolveCoordinates } from "../services/locations";
+import {
+  searchPlaces,
+  getPlaceDetails,
+  resolveCoordinates,
+  reverseGeocode,
+} from "../services/locations";
 import type { LocationPlace } from "../types/routes";
 import type { LocationSearchResult } from "../services/locations";
 
@@ -147,18 +152,45 @@ export const RouteSearchBox = ({
     setValidationError(null);
 
     navigator.geolocation.getCurrentPosition(
-      (pos) => {
+      async (pos) => {
         const latitude = pos.coords.latitude;
         const longitude = pos.coords.longitude;
-        const loc: LocationPlace = {
-          name: "Current Location",
-          latitude,
-          longitude,
-        };
-        setSelectedOrigin(loc);
-        setOriginInput("Current Location");
-        setShowOriginDropdown(false);
-        setIsGpsLoading(false);
+
+        try {
+          const geocoded = await reverseGeocode(latitude, longitude);
+          if (geocoded && geocoded.name) {
+            const loc: LocationPlace = {
+              placeId: geocoded.placeId || undefined,
+              name: geocoded.name || geocoded.formattedAddress || "Current Location",
+              address: geocoded.formattedAddress || undefined,
+              latitude: geocoded.latitude ?? latitude,
+              longitude: geocoded.longitude ?? longitude,
+            };
+            setSelectedOrigin(loc);
+            setOriginInput(loc.name);
+          } else {
+            // Option 1: Silent coordinate fallback
+            const fallbackLoc: LocationPlace = {
+              name: "Current Location",
+              latitude,
+              longitude,
+            };
+            setSelectedOrigin(fallbackLoc);
+            setOriginInput("Current Location");
+          }
+        } catch {
+          // Option 1: Silent coordinate fallback
+          const fallbackLoc: LocationPlace = {
+            name: "Current Location",
+            latitude,
+            longitude,
+          };
+          setSelectedOrigin(fallbackLoc);
+          setOriginInput("Current Location");
+        } finally {
+          setShowOriginDropdown(false);
+          setIsGpsLoading(false);
+        }
       },
       (err) => {
         setIsGpsLoading(false);
@@ -168,7 +200,7 @@ export const RouteSearchBox = ({
           setValidationError("Could not determine your current location. Please search for a location.");
         }
       },
-      { enableHighAccuracy: true, timeout: 10000 }
+      { enableHighAccuracy: true, timeout: 10000, maximumAge: 0 }
     );
   };
 

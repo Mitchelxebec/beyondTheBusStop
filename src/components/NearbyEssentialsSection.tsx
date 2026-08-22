@@ -2,7 +2,6 @@ import React, { useState } from "react";
 import {
   Shield,
   Hospital,
-  Store,
   MapPin,
   Store as VendorIcon,
   ArrowRight,
@@ -16,21 +15,18 @@ export type EssentialsCategoryFilter =
   | "all"
   | "hospital"
   | "police"
-  | "market"
   | "vendor";
 
 // ── Category Icon Mapper ───────────────────────────────────────────────────────
 const PLACE_CATEGORY_ICON: Record<string, React.ReactNode> = {
   hospital: <Hospital className="w-4 h-4 text-[#BA1A1A]" />,
   police: <Shield className="w-4 h-4 text-[#005047]" />,
-  market: <Store className="w-4 h-4 text-[#8A6200]" />,
   vendor: <VendorIcon className="w-4 h-4 text-[#005047]" />,
 };
 
 const PLACE_CATEGORY_BG: Record<string, string> = {
   hospital: "bg-[#FCE8E6]",
   police: "bg-[#E6FAF6]",
-  market: "bg-[#FFF8E6]",
   vendor: "bg-[#79F7E3]/25",
 };
 
@@ -101,7 +97,6 @@ export const NearbyEssentialsSection: React.FC<NearbyEssentialsSectionProps> = (
           { id: "all", label: "All Essentials" },
           { id: "hospital", label: "Hospitals", icon: Hospital },
           { id: "police", label: "Police Stations", icon: Shield },
-          { id: "market", label: "Markets", icon: Store },
           { id: "vendor", label: "Listed Vendors", icon: VendorIcon },
         ].map((tab) => {
           const isActive = activeCategoryFilter === tab.id;
@@ -138,7 +133,7 @@ export const NearbyEssentialsSection: React.FC<NearbyEssentialsSectionProps> = (
       ) : (
         <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
           {displayedEssentials.map((place) => {
-            const cat = place.category || "market";
+            const cat = place.category || "vendor";
             const icon =
               PLACE_CATEGORY_ICON[cat] || (
                 <MapPin className="w-4 h-4 text-[#747878]" />

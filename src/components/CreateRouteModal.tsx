@@ -25,6 +25,11 @@ export interface CreateRouteModalProps {
  * Enforces backend schema: structured origin/destination { placeId, name, lat, lng },
  * boardingPoint, dropOffPoint, and valid vehicle types ('bus' | 'keke' | 'taxi').
  */
+const isGenericGpsName = (val?: string | null): boolean => {
+  if (!val) return false;
+  return val.trim().toLowerCase() === "current location";
+};
+
 export const CreateRouteModal = ({
   isOpen,
   onClose,
@@ -34,42 +39,65 @@ export const CreateRouteModal = ({
 }: CreateRouteModalProps) => {
   const queryClient = useQueryClient();
 
-  const [originName, setOriginName] = useState(initialOrigin?.name ?? "");
-  const [originPlaceId, setOriginPlaceId] = useState(initialOrigin?.placeId ?? "");
+  const initialOriginIsGps = isGenericGpsName(initialOrigin?.name);
+  const [originName, setOriginName] = useState(initialOriginIsGps ? "" : (initialOrigin?.name ?? ""));
+  const [originPlaceId, setOriginPlaceId] = useState(initialOriginIsGps ? "" : (initialOrigin?.placeId ?? ""));
   const [originLat, setOriginLat] = useState<number | undefined>(initialOrigin?.latitude);
   const [originLng, setOriginLng] = useState<number | undefined>(initialOrigin?.longitude);
 
-  const [destName, setDestName] = useState(initialDestination?.name ?? "");
-  const [destPlaceId, setDestPlaceId] = useState(initialDestination?.placeId ?? "");
+  const initialDestIsGps = isGenericGpsName(initialDestination?.name);
+  const [destName, setDestName] = useState(initialDestIsGps ? "" : (initialDestination?.name ?? ""));
+  const [destPlaceId, setDestPlaceId] = useState(initialDestIsGps ? "" : (initialDestination?.placeId ?? ""));
   const [destLat, setDestLat] = useState<number | undefined>(initialDestination?.latitude);
   const [destLng, setDestLng] = useState<number | undefined>(initialDestination?.longitude);
 
-  const [boardingPoint, setBoardingPoint] = useState(initialOrigin?.name ?? "");
-  const [dropOffPoint, setDropOffPoint] = useState(initialDestination?.name ?? "");
+  const [boardingPoint, setBoardingPoint] = useState(initialOriginIsGps ? "" : (initialOrigin?.name ?? ""));
+  const [dropOffPoint, setDropOffPoint] = useState(initialDestIsGps ? "" : (initialDestination?.name ?? ""));
 
   const [vehicleType, setVehicleType] = useState<VehicleType>("bus");
   const [fareLow, setFareLow] = useState<number>(200);
   const [fareHigh, setFareHigh] = useState<number>(500);
 
-  const [formError, setFormError] = useState("");
+  const [formError, setFormError] = useState(
+    initialOriginIsGps
+      ? "We couldn't detect your street name from GPS — please enter your starting point manually."
+      : ""
+  );
 
   useEffect(() => {
     if (initialOrigin) {
-      setOriginName(initialOrigin.name);
-      setOriginPlaceId(initialOrigin.placeId ?? "");
-      setOriginLat(initialOrigin.latitude);
-      setOriginLng(initialOrigin.longitude);
-      setBoardingPoint(initialOrigin.name);
+      if (isGenericGpsName(initialOrigin.name)) {
+        setOriginName("");
+        setOriginPlaceId("");
+        setOriginLat(initialOrigin.latitude);
+        setOriginLng(initialOrigin.longitude);
+        setBoardingPoint("");
+        setFormError("We couldn't detect your street name from GPS — please enter your starting point manually.");
+      } else {
+        setOriginName(initialOrigin.name);
+        setOriginPlaceId(initialOrigin.placeId ?? "");
+        setOriginLat(initialOrigin.latitude);
+        setOriginLng(initialOrigin.longitude);
+        setBoardingPoint(initialOrigin.name);
+      }
     }
   }, [initialOrigin]);
 
   useEffect(() => {
     if (initialDestination) {
-      setDestName(initialDestination.name);
-      setDestPlaceId(initialDestination.placeId ?? "");
-      setDestLat(initialDestination.latitude);
-      setDestLng(initialDestination.longitude);
-      setDropOffPoint(initialDestination.name);
+      if (isGenericGpsName(initialDestination.name)) {
+        setDestName("");
+        setDestPlaceId("");
+        setDestLat(initialDestination.latitude);
+        setDestLng(initialDestination.longitude);
+        setDropOffPoint("");
+      } else {
+        setDestName(initialDestination.name);
+        setDestPlaceId(initialDestination.placeId ?? "");
+        setDestLat(initialDestination.latitude);
+        setDestLng(initialDestination.longitude);
+        setDropOffPoint(initialDestination.name);
+      }
     }
   }, [initialDestination]);
 
@@ -103,6 +131,22 @@ export const CreateRouteModal = ({
 
     if (!oName || !dName) {
       setFormError("Please enter both origin and destination");
+      return;
+    }
+    if (isGenericGpsName(oName)) {
+      setFormError("Please provide a specific street, bus stop, or landmark name instead of 'Current Location'.");
+      return;
+    }
+    if (isGenericGpsName(dName)) {
+      setFormError("Please provide a specific destination street or landmark name instead of 'Current Location'.");
+      return;
+    }
+    if (isGenericGpsName(bName)) {
+      setFormError("Please provide a specific boarding stop or landmark name instead of 'Current Location'.");
+      return;
+    }
+    if (isGenericGpsName(dpName)) {
+      setFormError("Please provide a specific drop-off stop or landmark name instead of 'Current Location'.");
       return;
     }
     if (fareLow <= 0 || fareHigh < fareLow) {

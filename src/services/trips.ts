@@ -7,6 +7,7 @@ import type {
   ShareTripResponse,
   GetPublicTripResponse,
   UpdateLocationResponse,
+  GetTripDirectionsResponse,
 } from "../types/trips";
 
 /** POST /trips — creates a trip from a routeId, generates shareToken automatically */
@@ -42,6 +43,12 @@ export async function shareTrip(tripId: string): Promise<ShareTripResponse> {
 /** GET /trips/public/:shareToken — no auth required, for recipients */
 export async function getPublicTrip(shareToken: string): Promise<GetPublicTripResponse> {
   const { data } = await api.get<GetPublicTripResponse>(`/trips/public/${shareToken}`);
+  return data;
+}
+
+/** GET /trips/public/:shareToken/directions — returns route directions & polyline (no auth required) */
+export async function getTripDirections(shareToken: string): Promise<GetTripDirectionsResponse> {
+  const { data } = await api.get<GetTripDirectionsResponse>(`/trips/public/${shareToken}/directions`);
   return data;
 }
 

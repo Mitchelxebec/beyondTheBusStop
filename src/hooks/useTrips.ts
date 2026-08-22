@@ -6,11 +6,13 @@ import {
   endTrip,
   shareTrip,
   getPublicTrip,
+  getTripDirections,
   updateTripLocation,
 } from "../services/trips";
 import type {
   Trip,
   PublicTrip,
+  TripDirections,
   CreateTripResponse,
   StartTripResponse,
   EndTripResponse,
@@ -24,6 +26,7 @@ export const TRIP_QUERY_KEYS = {
   detail: (tripId: string) => ["trips", "detail", tripId] as const,
   share: (tripId: string) => ["trips", "share", tripId] as const,
   public: (shareToken: string) => ["trips", "public", shareToken] as const,
+  directions: (shareToken: string) => ["trips", "directions", shareToken] as const,
 };
 
 // ─── Queries ───────────────────────────────────────────────────────────────────
@@ -61,6 +64,20 @@ export function usePublicTrip(shareToken?: string): UseQueryResult<PublicTrip, E
       return res.trip;
     },
     enabled: Boolean(shareToken),
+  });
+}
+
+/** Fetch public trip directions & polyline by shareToken (no auth required). Cached indefinitely for the session. */
+export function useTripDirections(shareToken?: string): UseQueryResult<TripDirections, Error> {
+  return useQuery<TripDirections, Error>({
+    queryKey: TRIP_QUERY_KEYS.directions(shareToken ?? ""),
+    queryFn: async () => {
+      const res = await getTripDirections(shareToken!);
+      return res.directions;
+    },
+    enabled: Boolean(shareToken),
+    staleTime: Infinity,
+    retry: 1,
   });
 }
 

@@ -1,9 +1,51 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef } from "react";
 import { useParams } from "react-router-dom";
-import { usePublicTrip } from "../../hooks/useTrips";
+import L from "leaflet";
+import "leaflet/dist/leaflet.css";
+import { usePublicTrip, useTripDirections } from "../../hooks/useTrips";
 import { getSocket, type LocationUpdatedEvent } from "../../lib/socket";
-import type { PublicTrip as PublicTripType } from "../../types/trips";
+import type { PublicTrip as PublicTripType, TripDirections } from "../../types/trips";
 import { formatFareRange } from "../../types/routes";
+
+// ─── Polyline Decoding Utility ─────────────────────────────────────────────────
+
+/**
+ * Decodes a Google Encoded Polyline string into an array of [latitude, longitude] pairs.
+ */
+function decodePolyline(encoded: string): [number, number][] {
+  const points: [number, number][] = [];
+  let index = 0;
+  const len = encoded.length;
+  let lat = 0;
+  let lng = 0;
+
+  while (index < len) {
+    let b: number;
+    let shift = 0;
+    let result = 0;
+    do {
+      b = encoded.charCodeAt(index++) - 63;
+      result |= (b & 0x1f) << shift;
+      shift += 5;
+    } while (b >= 0x20);
+    const dlat = (result & 1) !== 0 ? ~(result >> 1) : result >> 1;
+    lat += dlat;
+
+    shift = 0;
+    result = 0;
+    do {
+      b = encoded.charCodeAt(index++) - 63;
+      result |= (b & 0x1f) << shift;
+      shift += 5;
+    } while (b >= 0x20);
+    const dlng = (result & 1) !== 0 ? ~(result >> 1) : result >> 1;
+    lng += dlng;
+
+    points.push([lat / 1e5, lng / 1e5]);
+  }
+
+  return points;
+}
 
 // ─── Icons ─────────────────────────────────────────────────────────────────────
 
@@ -66,15 +108,196 @@ const DetailRow = ({
   </div>
 );
 
+// ─── Public Trip Map Component ─────────────────────────────────────────────────
+
+interface PublicTripMapProps {
+  trip: PublicTripType;
+  directions?: TripDirections | null;
+  liveLocation: { latitude: number; longitude: number; updatedAt: string } | null;
+}
+
+const PublicTripMap = ({ trip, directions, liveLocation }: PublicTripMapProps) => {
+  const mapContainerRef = useRef<HTMLDivElement>(null);
+  const mapInstanceRef = useRef<L.Map | null>(null);
+  const liveMarkerRef = useRef<L.Marker | null>(null);
+
+  const effectiveLocation = liveLocation || trip.currentLocation;
+
+  // 1. Initialize and render base map + polyline + origin/destination markers
+  useEffect(() => {
+    if (!mapContainerRef.current) return;
+
+    if (mapInstanceRef.current) {
+      mapInstanceRef.current.remove();
+      mapInstanceRef.current = null;
+    }
+
+    // Default coordinates if directions resolution fails
+    const oLat = directions?.originLocation?.latitude || 6.5538;
+    const oLng = directions?.originLocation?.longitude || 3.3552;
+    const dLat = directions?.destinationLocation?.latitude || 6.6018;
+    const dLng = directions?.destinationLocation?.longitude || 3.3515;
+
+    const map = L.map(mapContainerRef.current, {
+      zoomControl: false,
+      attributionControl: false,
+      scrollWheelZoom: false,
+    });
+    mapInstanceRef.current = map;
+
+    // Tile layer
+    L.tileLayer("https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png", {
+      maxZoom: 19,
+      subdomains: ["a", "b", "c"],
+    }).addTo(map);
+
+    // Custom Origin Marker Icon
+    const originIcon = L.divIcon({
+      className: "custom-leaflet-origin-marker",
+      html: `
+        <div style="display: flex; flex-direction: column; align-items: center; transform: translate(-50%, -100%);">
+          <div style="background-color: #005047; color: #79F7E3; border: 2px solid white; box-shadow: 0 4px 10px rgba(0,0,0,0.3); border-radius: 9999px; padding: 4px 8px; font-size: 10px; font-weight: 700; display: flex; align-items: center; gap: 4px; white-space: nowrap;">
+            <span style="width: 6px; height: 6px; border-radius: 9999px; background-color: #79F7E3;"></span>
+            ${trip.boardingPoint.name || trip.origin.name}
+          </div>
+          <div style="width: 0; height: 0; border-left: 6px solid transparent; border-right: 6px solid transparent; border-top: 8px solid #005047; margin-top: -1px;"></div>
+        </div>
+      `,
+      iconSize: [0, 0],
+      iconAnchor: [0, 0],
+    });
+
+    // Custom Destination Marker Icon
+    const destIcon = L.divIcon({
+      className: "custom-leaflet-dest-marker",
+      html: `
+        <div style="display: flex; flex-direction: column; align-items: center; transform: translate(-50%, -100%);">
+          <div style="background-color: #FFC72C; color: #1C1B1B; border: 2px solid white; box-shadow: 0 4px 10px rgba(0,0,0,0.3); border-radius: 9999px; padding: 4px 8px; font-size: 10px; font-weight: 800; display: flex; align-items: center; gap: 4px; white-space: nowrap;">
+            <span style="width: 6px; height: 6px; border-radius: 9999px; background-color: #6F5400;"></span>
+            ${trip.dropOffPoint.name || trip.destination.name}
+          </div>
+          <div style="width: 0; height: 0; border-left: 6px solid transparent; border-right: 6px solid transparent; border-top: 8px solid #FFC72C; margin-top: -1px;"></div>
+        </div>
+      `,
+      iconSize: [0, 0],
+      iconAnchor: [0, 0],
+    });
+
+    const originMarker = L.marker([oLat, oLng], { icon: originIcon }).addTo(map);
+    const destMarker = L.marker([dLat, dLng], { icon: destIcon }).addTo(map);
+
+    originMarker.bindPopup(`<b>Boarding Point:</b> ${trip.boardingPoint.name || trip.origin.name}`);
+    destMarker.bindPopup(`<b>Drop-off Point:</b> ${trip.dropOffPoint.name || trip.destination.name}`);
+
+    // Draw Polyline: Decoded polyline if available, or Option A straight dashed fallback line
+    let polylineCoords: [number, number][] = [];
+    if (directions?.encodedPolyline) {
+      try {
+        polylineCoords = decodePolyline(directions.encodedPolyline);
+      } catch (err) {
+        console.warn("[PublicTripMap] Failed to decode polyline:", err);
+      }
+    }
+
+    if (polylineCoords.length > 0) {
+      L.polyline(polylineCoords, {
+        color: "#005047",
+        weight: 5,
+        opacity: 0.9,
+        lineCap: "round",
+        lineJoin: "round",
+      }).addTo(map);
+
+      map.fitBounds(L.latLngBounds(polylineCoords), {
+        padding: [36, 36],
+        maxZoom: 16,
+      });
+    } else {
+      // Option A: Straight dashed line fallback (no error banner)
+      L.polyline(
+        [
+          [oLat, oLng],
+          [dLat, dLng],
+        ],
+        {
+          color: "#005047",
+          weight: 4,
+          dashArray: "6, 8",
+          opacity: 0.85,
+          lineCap: "round",
+          lineJoin: "round",
+        }
+      ).addTo(map);
+
+      map.fitBounds(
+        L.latLngBounds([
+          [oLat, oLng],
+          [dLat, dLng],
+        ]),
+        {
+          padding: [36, 36],
+          maxZoom: 15,
+        }
+      );
+    }
+
+    return () => {
+      if (mapInstanceRef.current) {
+        mapInstanceRef.current.remove();
+        mapInstanceRef.current = null;
+      }
+    };
+  }, [trip, directions]);
+
+  // 2. Real-time Live Location Pin Updates via Socket.IO
+  useEffect(() => {
+    const map = mapInstanceRef.current;
+    if (!map) return;
+
+    if (effectiveLocation && typeof effectiveLocation.latitude === "number" && typeof effectiveLocation.longitude === "number") {
+      const lat = effectiveLocation.latitude;
+      const lng = effectiveLocation.longitude;
+
+      const liveIcon = L.divIcon({
+        className: "custom-leaflet-live-commuter-marker",
+        html: `
+          <div style="position: relative; width: 32px; height: 32px; display: flex; align-items: center; justify-content: center; transform: translate(-50%, -50%);">
+            <span style="position: absolute; width: 32px; height: 32px; border-radius: 9999px; background-color: #00C9A7; opacity: 0.4; animation: ping 1.5s cubic-bezier(0, 0, 0.2, 1) infinite;"></span>
+            <div style="position: relative; width: 22px; height: 22px; border-radius: 9999px; background-color: #005047; border: 3px solid white; box-shadow: 0 4px 10px rgba(0,0,0,0.35); display: flex; align-items: center; justify-content: center; margin: auto;">
+              <span style="width: 8px; height: 8px; border-radius: 9999px; background-color: #79F7E3;"></span>
+            </div>
+          </div>
+        `,
+        iconSize: [32, 32],
+        iconAnchor: [16, 16],
+      });
+
+      if (!liveMarkerRef.current) {
+        liveMarkerRef.current = L.marker([lat, lng], { icon: liveIcon, zIndexOffset: 1000 }).addTo(map);
+        liveMarkerRef.current.bindPopup("<b>Commuter Live Location</b>");
+      } else {
+        liveMarkerRef.current.setLatLng([lat, lng]);
+      }
+    }
+  }, [effectiveLocation]);
+
+  return (
+    <div className="w-full h-64 sm:h-72 rounded-2xl overflow-hidden shadow-inner border border-black/5 relative z-0">
+      <div ref={mapContainerRef} className="w-full h-full" />
+    </div>
+  );
+};
+
 // ─── Trip card ────────────────────────────────────────────────────────────────
 
 interface TripCardProps {
   trip: PublicTripType;
+  directions?: TripDirections | null;
   liveLocation: { latitude: number; longitude: number; updatedAt: string } | null;
   sharingStopped: boolean;
 }
 
-const TripCard = ({ trip, liveLocation, sharingStopped }: TripCardProps) => {
+const TripCard = ({ trip, directions, liveLocation, sharingStopped }: TripCardProps) => {
   const status = STATUS_STYLES[trip.status] ?? STATUS_STYLES.planned;
   const effectiveLocation = liveLocation || trip.currentLocation;
 
@@ -102,6 +325,13 @@ const TripCard = ({ trip, liveLocation, sharingStopped }: TripCardProps) => {
           </div>
         </div>
       </div>
+
+      {/* Interactive Live Map & Route Polyline */}
+      <PublicTripMap
+        trip={trip}
+        directions={directions}
+        liveLocation={liveLocation}
+      />
 
       {/* Details card */}
       <div className="bg-white rounded-2xl p-5 border border-black/5 flex flex-col gap-4">
@@ -195,6 +425,7 @@ const TripCard = ({ trip, liveLocation, sharingStopped }: TripCardProps) => {
 const PublicTrip = () => {
   const { shareToken } = useParams<{ shareToken: string }>();
   const { data: trip, isLoading, isError, error } = usePublicTrip(shareToken);
+  const { data: directions } = useTripDirections(shareToken);
   const [liveLocation, setLiveLocation] = useState<{
     latitude: number;
     longitude: number;
@@ -278,6 +509,7 @@ const PublicTrip = () => {
         {trip && (
           <TripCard
             trip={trip}
+            directions={directions}
             liveLocation={liveLocation}
             sharingStopped={sharingStopped}
           />
@@ -288,4 +520,3 @@ const PublicTrip = () => {
 };
 
 export default PublicTrip;
-

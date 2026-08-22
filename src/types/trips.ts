@@ -88,3 +88,17 @@ export interface UpdateLocationResponse {
   message: string;
   location: TripLocation;
 }
+
+// ─── Public trip directions (returned by GET /trips/public/:shareToken/directions)
+export interface TripDirections {
+  encodedPolyline: string | null;
+  distanceMeters: number | null;
+  duration: string | null;
+  originLocation: { latitude: number; longitude: number } | null;
+  destinationLocation: { latitude: number; longitude: number } | null;
+}
+
+export interface GetTripDirectionsResponse {
+  success: boolean;
+  directions: TripDirections;
+}

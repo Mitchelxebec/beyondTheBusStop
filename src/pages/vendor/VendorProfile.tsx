@@ -25,6 +25,7 @@ import {
 } from "../../components";
 import { useAuth } from "../../contexts/AuthContext";
 import { getProfile, uploadProfileAvatar } from "../../services/auth";
+import type { ProfileResponse } from "../../types/auth";
 import { getSubscriptionStatus } from "../../services/payment";
 import { getMyListings } from "../../services/listings";
 import { useBusinessAnalytics } from "../../hooks/useAnalytics";
@@ -144,12 +145,29 @@ const VendorProfile = () => {
     session?.user?.profilePicture ||
     null;
 
+  const ALLOWED_IMAGE_TYPES = [
+    "image/jpeg",
+    "image/jpg",
+    "image/png",
+    "image/gif",
+    "image/webp",
+  ];
+  const ALLOWED_EXTENSIONS = [".jpeg", ".jpg", ".png", ".gif", ".webp"];
+
   const handleAvatarFileChange = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     if (!file) return;
 
+    const extension = file.name.slice(file.name.lastIndexOf(".")).toLowerCase();
+    if (!ALLOWED_IMAGE_TYPES.includes(file.type) && !ALLOWED_EXTENSIONS.includes(extension)) {
+      showToast("Only JPEG, JPG, PNG, GIF, and WEBP image formats are supported.");
+      if (fileInputRef.current) fileInputRef.current.value = "";
+      return;
+    }
+
     if (file.size > 5 * 1024 * 1024) {
-      showToast("Image file size must be less than 5MB");
+      showToast("Image file size must be less than 5MB.");
+      if (fileInputRef.current) fileInputRef.current.value = "";
       return;
     }
 
@@ -165,11 +183,24 @@ const VendorProfile = () => {
           },
         });
       }
+      queryClient.setQueryData<ProfileResponse>(["profile"], (old) => {
+        if (!old) return old;
+        return {
+          ...old,
+          data: {
+            ...old.data,
+            profilePicture: res.profilePicture,
+          },
+        };
+      });
       queryClient.invalidateQueries({ queryKey: ["profile"] });
       showToast("Profile picture updated successfully");
     } catch (err: any) {
       const msg =
         err?.response?.data?.message ||
+        (typeof err?.response?.data === "string" && !err.response.data.startsWith("<")
+          ? err.response.data
+          : null) ||
         err?.message ||
         "Failed to upload profile picture.";
       showToast(msg);
@@ -273,7 +304,7 @@ const VendorProfile = () => {
               <input
                 ref={fileInputRef}
                 type="file"
-                accept="image/png,image/jpeg,image/webp,image/jpg"
+                accept="image/jpeg,image/jpg,image/png,image/gif,image/webp"
                 className="hidden"
                 onChange={handleAvatarFileChange}
               />

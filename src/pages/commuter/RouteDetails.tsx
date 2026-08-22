@@ -1,6 +1,6 @@
 import { useState, useEffect } from "react";
 import { useParams, useNavigate } from "react-router-dom";
-import { useQuery } from "@tanstack/react-query";
+import { useQuery, useQueryClient } from "@tanstack/react-query";
 import {
   Share2,
   ArrowRight,
@@ -10,6 +10,7 @@ import {
   Clock,
   Bookmark,
   Flag,
+  CheckCircle2,
 } from "lucide-react";
 
 import {
@@ -23,11 +24,12 @@ import {
   VENDOR_NAV_ITEMS,
   NearbyEssentialsSection,
   ReportRouteModal,
+  ConfirmRouteModal,
 } from "../../components";
 import RouteMap from "../../components/RouteMap";
 import { useAuth } from "../../contexts/AuthContext";
-import { useRouteById } from "../../hooks/useRoutes";
-import { getRoutePlaceName, formatFareRange, formatTimeAgo } from "../../types/routes";
+import { useRouteById, ROUTE_QUERY_KEYS } from "../../hooks/useRoutes";
+import { getRoutePlaceName, formatFareRange, formatTimeAgo, normalizeRoute, type Route } from "../../types/routes";
 import {
   isRouteSaved,
   saveRouteId,
@@ -38,6 +40,31 @@ import {
   getMergedNearbyEssentials,
 } from "../../services/locations";
 
+const getSessionConfirmed = (rId?: string): boolean => {
+  if (!rId) return false;
+  try {
+    const raw = sessionStorage.getItem("btbs_confirmed_routes");
+    if (!raw) return false;
+    const list: string[] = JSON.parse(raw);
+    return Array.isArray(list) && list.includes(rId);
+  } catch {
+    return false;
+  }
+};
+
+const recordSessionConfirmed = (rId?: string): void => {
+  if (!rId) return;
+  try {
+    const raw = sessionStorage.getItem("btbs_confirmed_routes");
+    const list: string[] = raw ? JSON.parse(raw) : [];
+    if (!list.includes(rId)) {
+      list.push(rId);
+      sessionStorage.setItem("btbs_confirmed_routes", JSON.stringify(list));
+    }
+  } catch {
+    // Ignore storage errors
+  }
+};
 
 /**
  * RouteDetails Page Component
@@ -50,6 +77,7 @@ import {
 const RouteDetails = () => {
   const { id } = useParams<{ id: string }>();
   const navigate = useNavigate();
+  const queryClient = useQueryClient();
   const { session } = useAuth();
   const isBusiness = session?.role === "business";
 
@@ -95,7 +123,16 @@ const RouteDetails = () => {
   };
 
   const [isReportModalOpen, setIsReportModalOpen] = useState(false);
+  const [isConfirmModalOpen, setIsConfirmModalOpen] = useState(false);
+  const [isSessionConfirmed, setIsSessionConfirmed] = useState<boolean>(() =>
+    getSessionConfirmed(routeIdToTrack)
+  );
 
+  useEffect(() => {
+    if (routeIdToTrack) {
+      setIsSessionConfirmed(getSessionConfirmed(routeIdToTrack));
+    }
+  }, [routeIdToTrack]);
 
   // ── 2. Coordinates Resolution for Origin & Destination ──────────────────────
   const [coords, setCoords] = useState<{
@@ -129,7 +166,6 @@ const RouteDetails = () => {
     queryFn: () => getMergedNearbyEssentials(coords.origin, coords.dest),
     enabled: Boolean(coords.origin.lat && coords.dest.lat),
   });
-
 
   // ── 4. Loading & Error States ───────────────────────────────────────────────
   if (isRouteLoading) {
@@ -165,6 +201,13 @@ const RouteDetails = () => {
       </div>
     );
   }
+
+  const calculatedInitialFare =
+    typeof route.averageFare === "number" && route.averageFare > 0
+      ? route.averageFare
+      : typeof route.fareLow === "number" && typeof route.fareHigh === "number"
+      ? Math.round((route.fareLow + route.fareHigh) / 2)
+      : route.fareLow || 0;
 
   // ── 6. Render Full Route Details ────────────────────────────────────────────
   return (
@@ -314,7 +357,48 @@ const RouteDetails = () => {
             </div>
           </section>
 
-          {/* 3 · Step-by-Step Waypoints Corridor Timeline ────────────────── */}
+          {/* 3 · Route Confirmation Section (Help Other Commuters) ─────────── */}
+          <section
+            aria-labelledby="confirm-route-section-heading"
+            className="bg-white rounded-2xl p-5 border border-neutral-200/80 shadow-xs flex flex-col gap-3.5"
+          >
+            <div className="flex items-start justify-between gap-3">
+              <div className="flex flex-col gap-1">
+                <span className="text-[10px] font-bold uppercase tracking-wider text-[#005047]">
+                  Community Reliability
+                </span>
+                <h2 id="confirm-route-section-heading" className="text-base font-bold text-[#1C1B1B] m-0">
+                  Help other commuters
+                </h2>
+                <p className="text-xs text-[#747878] m-0 leading-relaxed">
+                  Did you use this route recently? Confirm the fare and your experience to keep corridor information accurate.
+                </p>
+              </div>
+              <div className="w-10 h-10 rounded-xl bg-[#005047]/10 flex items-center justify-center text-[#005047] shrink-0">
+                <CheckCircle2 className="w-5 h-5" />
+              </div>
+            </div>
+
+            <div className="pt-1">
+              {isSessionConfirmed ? (
+                <div className="flex items-center justify-center gap-2 py-3 px-4 rounded-xl bg-[#E6FAF6] border border-[#00C9A7]/30 text-[#007A62] text-xs font-bold w-full select-none">
+                  <CheckCircle2 className="w-4 h-4 text-[#00C9A7]" />
+                  <span>Route Confirmed ✓</span>
+                </div>
+              ) : (
+                <PrimaryButton
+                  id="open-confirm-route-modal-btn"
+                  onClick={() => setIsConfirmModalOpen(true)}
+                  width="full"
+                >
+                  <CheckCircle2 className="w-4 h-4" />
+                  <span>Yes, I used this route</span>
+                </PrimaryButton>
+              )}
+            </div>
+          </section>
+
+          {/* 4 · Step-by-Step Waypoints Corridor Timeline ────────────────── */}
           <section
             aria-labelledby="waypoints-heading"
             className="bg-white rounded-2xl p-5 border border-neutral-200/80 shadow-xs flex flex-col gap-3"
@@ -395,7 +479,7 @@ const RouteDetails = () => {
             </div>
           </section>
 
-          {/* 4 · Nearby Essentials (Live Google Places + Live Corridor Vendors, Capped to 6) ──── */}
+          {/* 5 · Nearby Essentials (Live Google Places + Live Corridor Vendors, Capped to 6) ──── */}
           <NearbyEssentialsSection
             places={liveNearbyPlaces}
             isLoading={isNearbyLoading}
@@ -409,7 +493,7 @@ const RouteDetails = () => {
           />
 
 
-          {/* 5 · Action Buttons ───────────────────────────────────────── */}
+          {/* 6 · Action Buttons ───────────────────────────────────────── */}
           <section className="flex flex-col sm:flex-row gap-3 pt-3">
             <PrimaryButton
               id="share-trip-btn"
@@ -436,7 +520,7 @@ const RouteDetails = () => {
             </SecondaryButton>
           </section>
 
-          {/* 6 · Community Issue Reporting (P0) ────────────────────────── */}
+          {/* 7 · Community Issue Reporting (P0) ────────────────────────── */}
           <div className="flex justify-center pt-2 pb-1">
             <button
               type="button"
@@ -451,6 +535,35 @@ const RouteDetails = () => {
         </div>
       </main>
 
+      {/* Confirm Route Experience Modal */}
+      <ConfirmRouteModal
+        isOpen={isConfirmModalOpen && Boolean(routeIdToTrack)}
+        onClose={() => setIsConfirmModalOpen(false)}
+        routeId={routeIdToTrack || ""}
+        originName={originName}
+        destName={destName}
+        initialFare={calculatedInitialFare}
+        onSuccess={(response) => {
+          if (routeIdToTrack && response?.route) {
+            queryClient.setQueryData<Route | null>(
+              ROUTE_QUERY_KEYS.detail(routeIdToTrack),
+              (oldRoute) => {
+                if (!oldRoute) return null;
+                return normalizeRoute({
+                  ...oldRoute,
+                  ...response.route,
+                });
+              }
+            );
+            queryClient.invalidateQueries({ queryKey: ROUTE_QUERY_KEYS.all });
+            recordSessionConfirmed(routeIdToTrack);
+            setIsSessionConfirmed(true);
+          }
+          setToastMessage("Thank you! Your confirmation helps improve this route's reliability.");
+          setTimeout(() => setToastMessage(null), 4000);
+        }}
+      />
+
       {/* Report Route Issue Modal */}
       <ReportRouteModal
         isOpen={isReportModalOpen && Boolean(routeIdToTrack)}
@@ -464,7 +577,6 @@ const RouteDetails = () => {
         }}
       />
 
-
       {/* Floating Toast Notification */}
       <Toast message={toastMessage} />
     </div>
@@ -472,4 +584,5 @@ const RouteDetails = () => {
 };
 
 export default RouteDetails;
+
 

@@ -25,7 +25,10 @@ export async function createConfirmation(
 ): Promise<CreateConfirmationResponse> {
   const { data } = await api.post<CreateConfirmationResponse>(
     `/confirmations/${routeId}`,
-    payload
+    {
+      ...payload,
+      routeId,
+    }
   );
   return data;
 }

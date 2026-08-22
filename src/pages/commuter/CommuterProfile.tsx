@@ -11,33 +11,9 @@ import {
 } from "../../components";
 import { useAuth } from "../../contexts/AuthContext";
 import { getProfile, uploadProfileAvatar } from "../../services/auth";
+import { getSavedRouteIds } from "../../services/savedRoutes";
 import type { ProfileResponse } from "../../types/auth";
 import { Edit2, Camera, Loader2 } from "lucide-react";
-
-
-
-// ── Types & Placeholder Data ───────────────────────────────────────────────────
-
-/**
- * Commuter Profile Stats & Preferences shape.
- *
- * // TODO: replace with real API response when user-stats endpoint exists
- * // (feature agreed with team, not yet in PRD or backend as of 2026-08-14).
- * // Backend GET /api/auth/profile currently returns only basic user identity fields.
- */
-interface CommuterStats {
-  routesCount: number;
-  tripsCount: number;
-  badgesCount: number;
-  commuterLevel: number;
-}
-
-const STATIC_STATS: CommuterStats = {
-  routesCount: 12,
-  tripsCount: 48,
-  badgesCount: 3,
-  commuterLevel: 4,
-};
 
 // ── Icons ──────────────────────────────────────────────────────────────────────
 
@@ -91,8 +67,8 @@ const LogoutIcon = () => (
 );
 
 const CheckCircleBadge = () => (
-  <span className="absolute bottom-0 right-0 w-6 h-6 rounded-full bg-[#00875A] border-2 border-white flex items-center justify-center text-white shadow-sm" aria-label="Verified commuter">
-    <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="3" strokeLinecap="round" strokeLinejoin="round">
+  <span className="inline-flex w-4.5 h-4.5 rounded-full bg-[#00875A] border border-white items-center justify-center text-white shadow-2xs shrink-0" aria-label="Verified commuter" title="Verified Commuter">
+    <svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="3" strokeLinecap="round" strokeLinejoin="round">
       <polyline points="20 6 9 17 4 12" />
     </svg>
   </span>
@@ -102,7 +78,7 @@ const CheckCircleBadge = () => (
 
 /**
  * Commuter Profile Screen — Figma node 178:387.
- * Displays user identity, stats card, navigation menu items,
+ * Displays verified user identity, real saved-routes count, navigation menu items,
  * direct link to Vendors Dashboard (/vendor/home), and session logout.
  */
 const CommuterProfile = () => {
@@ -135,6 +111,11 @@ const CommuterProfile = () => {
     profileData?.data?.profilePicture ||
     session?.user?.profilePicture ||
     null;
+
+  // ── Real Saved Routes Count from LocalStorage Service ─────────────────────
+  const userId = session?.user?.id || (session?.user as any)?._id;
+  const savedRouteIds = getSavedRouteIds(userId);
+  const savedRoutesCount = savedRouteIds.length;
 
   const ALLOWED_IMAGE_TYPES = [
     "image/jpeg",
@@ -235,7 +216,7 @@ const CommuterProfile = () => {
             }
           />
 
-          {/* User Hero Section (Avatar + Name + Level) */}
+          {/* User Hero Section (Avatar + Name) */}
           <section
             aria-labelledby="profile-user-heading"
             className="flex flex-col items-center justify-center text-center pt-2"
@@ -286,11 +267,10 @@ const CommuterProfile = () => {
                   <Camera className="w-3.5 h-3.5" />
                 )}
               </button>
-              <CheckCircleBadge />
             </div>
 
 
-            {/* User Name + Edit Button */}
+            {/* User Name + Verified Badge + Edit Button */}
             <div className="flex items-center justify-center gap-2">
               <h1
                 id="profile-user-heading"
@@ -298,6 +278,7 @@ const CommuterProfile = () => {
               >
                 {userName}
               </h1>
+              <CheckCircleBadge />
               <button
                 type="button"
                 id="edit-profile-btn"
@@ -308,48 +289,40 @@ const CommuterProfile = () => {
                 <Edit2 className="w-3.5 h-3.5" />
               </button>
             </div>
-
-            {/* Commuter Level Badge */}
-            <div className="flex items-center gap-1.5 mt-1.5 px-3 py-1 rounded-full bg-[#EFECE8] text-[#5A5C5D] text-xs font-semibold tracking-wider uppercase">
-              <span className="text-[#FFC72C]">★</span>
-              <span>COMMUTER LEVEL {STATIC_STATS.commuterLevel}</span>
-            </div>
           </section>
 
-
-          {/* Commuter Stats Section (3 Columns Card) */}
-          <section aria-label="Commuter statistics" className="w-full">
-            <div className="grid grid-cols-3 bg-[#F4F1EE] rounded-2xl p-4 sm:p-5 border border-black/5 shadow-sm text-center">
-              {/* Stat 1 · Routes */}
-              <div className="flex flex-col items-center justify-center border-r border-black/8 pr-2">
-                <span className="text-2xl sm:text-3xl font-extrabold text-[#1C1B1B]">
-                  {STATIC_STATS.routesCount}
+          {/* Commuter Quick Stats Section (Real Saved Routes Count) */}
+          <section aria-label="Saved routes summary" className="w-full">
+            <button
+              type="button"
+              id="profile-saved-routes-card"
+              onClick={() => navigate("/saved-routes")}
+              className="w-full bg-[#F4F1EE] rounded-2xl p-4 sm:p-5 border border-black/5 shadow-2xs flex items-center justify-between hover:bg-[#EBE7E4] active:scale-[0.99] transition-all cursor-pointer text-left group"
+            >
+              <div className="flex items-center gap-3.5">
+                <div className="w-12 h-12 rounded-xl bg-[#005047]/10 flex items-center justify-center text-[#005047] shrink-0 group-hover:scale-105 transition-transform">
+                  <BookmarkNavIcon />
+                </div>
+                <div className="flex flex-col">
+                  <span className="text-xs font-bold text-[#747878] uppercase tracking-wider">
+                    Saved Routes
+                  </span>
+                  <span className="text-sm font-semibold text-[#1C1B1B]">
+                    {savedRoutesCount === 1
+                      ? "1 route bookmarked"
+                      : `${savedRoutesCount} routes bookmarked`}
+                  </span>
+                </div>
+              </div>
+              <div className="flex items-center gap-3">
+                <span className="text-2xl sm:text-3xl font-extrabold text-[#005047]">
+                  {savedRoutesCount}
                 </span>
-                <span className="text-[11px] sm:text-xs font-bold text-[#747878] uppercase tracking-wider mt-0.5">
-                  Routes
+                <span className="text-[#A4A7A7] group-hover:text-[#1C1B1B] transition-colors">
+                  <ChevronRightIcon />
                 </span>
               </div>
-
-              {/* Stat 2 · Trips */}
-              <div className="flex flex-col items-center justify-center border-r border-black/8 px-2">
-                <span className="text-2xl sm:text-3xl font-extrabold text-[#1C1B1B]">
-                  {STATIC_STATS.tripsCount}
-                </span>
-                <span className="text-[11px] sm:text-xs font-bold text-[#747878] uppercase tracking-wider mt-0.5">
-                  Trips
-                </span>
-              </div>
-
-              {/* Stat 3 · Badges (Gold Highlight) */}
-              <div className="flex flex-col items-center justify-center pl-2">
-                <span className="text-2xl sm:text-3xl font-extrabold text-[#946A00]">
-                  {STATIC_STATS.badgesCount}
-                </span>
-                <span className="text-[11px] sm:text-xs font-bold text-[#946A00] uppercase tracking-wider mt-0.5">
-                  Badges
-                </span>
-              </div>
-            </div>
+            </button>
           </section>
 
           {/* Menu Action Items Card */}

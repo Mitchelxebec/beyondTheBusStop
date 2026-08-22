@@ -156,9 +156,20 @@ export const NearbyEssentialsSection: React.FC<NearbyEssentialsSectionProps> = (
                 }`}
               >
                 <div
-                  className={`w-9 h-9 rounded-xl ${bg} flex items-center justify-center shrink-0`}
+                  className={`w-9 h-9 rounded-xl ${bg} flex items-center justify-center shrink-0 overflow-hidden border border-black/5`}
                 >
-                  {icon}
+                  {isVendor && (place.imageUrl || place.profilePicture) ? (
+                    <img
+                      src={place.imageUrl || place.profilePicture || ""}
+                      alt={place.name}
+                      className="w-full h-full object-cover"
+                      onError={(e) => {
+                        (e.target as HTMLElement).style.display = "none";
+                      }}
+                    />
+                  ) : (
+                    icon
+                  )}
                 </div>
                 <div className="flex flex-col min-w-0 flex-1">
                   <div className="flex items-center justify-between gap-1">

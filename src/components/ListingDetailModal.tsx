@@ -65,9 +65,27 @@ export const ListingDetailModal: React.FC<ListingDetailModalProps> = ({
         {/* Header */}
         <div className="flex items-center justify-between px-5 sm:px-6 py-4 border-b border-black/5 shrink-0 bg-white sticky top-0 z-20">
           <div className="flex items-center gap-3">
-            <div className="w-10 h-10 rounded-xl bg-[#005047]/10 flex items-center justify-center text-[#005047] shrink-0">
-              <Store className="w-5 h-5" />
-            </div>
+            {listing?.photoUrls?.[0] || listing?.profilePicture || listing?.vendorAvatar ? (
+              <div className="w-10 h-10 rounded-xl overflow-hidden border border-black/5 shrink-0 bg-neutral-100 flex items-center justify-center">
+                <img
+                  src={
+                    listing.photoUrls?.[0] ||
+                    listing.profilePicture ||
+                    listing.vendorAvatar ||
+                    ""
+                  }
+                  alt={listing.businessName || "Vendor"}
+                  className="w-full h-full object-cover"
+                  onError={(e) => {
+                    (e.target as HTMLElement).style.display = "none";
+                  }}
+                />
+              </div>
+            ) : (
+              <div className="w-10 h-10 rounded-xl bg-[#005047]/10 flex items-center justify-center text-[#005047] shrink-0">
+                <Store className="w-5 h-5" />
+              </div>
+            )}
             <div>
               <h3
                 id="listing-detail-title"

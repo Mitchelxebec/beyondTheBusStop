@@ -16,6 +16,8 @@ export interface NearbyPlace {
   openNow?: boolean | null;
   types: string[];
   category?: "hospital" | "police" | "market" | "vendor";
+  imageUrl?: string | null;
+  profilePicture?: string | null;
 }
 
 export interface NearbySearchResponse {
@@ -416,6 +418,11 @@ export async function getLiveCorridorVendors(
       );
 
       const minDistance = Math.min(distToOrigin, distToDest);
+      const vendorImage =
+        item.photoUrls?.[0] ||
+        item.profilePicture ||
+        item.vendorAvatar ||
+        null;
 
       vendorPlaces.push({
         placeId: item._id,
@@ -432,6 +439,8 @@ export async function getLiveCorridorVendors(
         openNow: true,
         types: ["vendor", item.category || "retail"],
         category: "vendor",
+        imageUrl: vendorImage,
+        profilePicture: item.profilePicture || null,
       });
     }
 

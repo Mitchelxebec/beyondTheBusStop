@@ -15,6 +15,8 @@ export interface MyListing {
   };
   photoUrls: string[];
   vendorId: string;
+  profilePicture?: string | null;
+  vendorAvatar?: string | null;
   createdAt: string;
   updatedAt?: string;
 }
